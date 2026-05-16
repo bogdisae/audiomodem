@@ -78,7 +78,7 @@ def channel_equalise(block, h):
     Y = np.fft.fft(block)          # 1024-point DFT
     H = np.fft.fft(h, 1024)        # channel IR zero-padded to 1024
     X = Y / H                       # equalise all bins
-    data_bins = X[1:512]
+    data_bins = X[1:511]
     return data_bins
 
 def block_symbolise(equilised_data):
