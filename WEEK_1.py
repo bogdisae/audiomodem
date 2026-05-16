@@ -64,15 +64,15 @@ def plot_argand_complex(data):
     quadrant_colors = np.array(["tab:blue", "tab:orange", "tab:green", "tab:red"])
     point_colors = quadrant_colors[quadrants]
 
-    plt.figure(figsize=(8, 8))
-    plt.scatter(x, y, c=point_colors, s=18, alpha=0.85, edgecolors="none")
+    # plt.figure(figsize=(8, 8))
+    # plt.scatter(x, y, c=point_colors, s=18, alpha=0.85, edgecolors="none")
 
-    plt.xlabel("Real Part")
-    plt.ylabel("Imaginary Part")
-    plt.title("Argand Diagram of Equalised Data")
-    plt.grid()
-    plt.axis('equal')
-    plt.show()
+    # plt.xlabel("Real Part")
+    # plt.ylabel("Imaginary Part")
+    # plt.title("Argand Diagram of Equalised Data")
+    # plt.grid()
+    # plt.axis('equal')
+    # plt.show()
 
 def channel_equalise(block, h):
     Y = np.fft.fft(block)          # 1024-point DFT
@@ -87,17 +87,17 @@ def block_symbolise(equilised_data):
     #Assign symbols to bits according to quadrant of constellation point
     for symbol in equilised_data:
         if symbol.real > 0 and symbol.imag > 0:
-            b_list.append(0)
-            b_list.append(0)
+            b_list.append('0')
+            b_list.append('0')
         elif symbol.real < 0 and symbol.imag > 0:
-            b_list.append(1)
-            b_list.append(0)
+            b_list.append('0')
+            b_list.append('1')
         elif symbol.real < 0 and symbol.imag < 0:
-            b_list.append(1)
-            b_list.append(1)
+            b_list.append('1')
+            b_list.append('1')
         else:
-            b_list.append(0)
-            b_list.append(1)
+            b_list.append('1')
+            b_list.append('0')
     return b_list
 
 #print(split_pattern(samples)[0])
@@ -123,6 +123,22 @@ for i in range(0, len(blocks), 2):
         print(np.shape(block_bit_list))
         print(block_bit_list[0:10])
     master_bit_list.extend(block_bit_list)
+
+bytes = []
+for i in range (0,len(master_bit_list)//8):
+    bytes.append(int(''.join(master_bit_list[8*i: 8*i+8]), 2))
+
+print(bytes)
+
+# from matplotlib import pyplot as plt
+
+# im = []
+# w = 30
+# for i in range (0, len(bytes)//w):
+#     im.append(bytes[w*i:w*i+w])
+
+plt.imshow([im])
+plt.show()
 
 print(np.shape(master_bit_list))
 print(f"Master bit list {master_bit_list[0:1000]}")
