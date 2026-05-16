@@ -78,7 +78,7 @@ def channel_equalise(block, h):
     Y = np.fft.fft(block)          # 1024-point DFT
     H = np.fft.fft(h, 1024)        # channel IR zero-padded to 1024
     X = Y / H                       # equalise all bins
-    data_bins = X[1:512]
+    data_bins = X[1:511]
     return data_bins
 
 def block_symbolise(equilised_data):
@@ -87,17 +87,17 @@ def block_symbolise(equilised_data):
     #Assign symbols to bits according to quadrant of constellation point
     for symbol in equilised_data:
         if symbol.real > 0 and symbol.imag > 0:
-            b_list.append(0)
-            b_list.append(0)
+            b_list.append('0')
+            b_list.append('0')
         elif symbol.real < 0 and symbol.imag > 0:
-            b_list.append(1)
-            b_list.append(0)
+            b_list.append('0')
+            b_list.append('1')
         elif symbol.real < 0 and symbol.imag < 0:
-            b_list.append(1)
-            b_list.append(1)
+            b_list.append('1')
+            b_list.append('1')
         else:
-            b_list.append(0)
-            b_list.append(1)
+            b_list.append('1')
+            b_list.append('0')
     return b_list
 
 #print(split_pattern(samples)[0])
