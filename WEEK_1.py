@@ -46,8 +46,27 @@ def split_pattern(x):
 
 def plot_argand_complex(data):
     import matplotlib.pyplot as plt
+    from scipy.stats import gaussian_kde
 
-    plt.scatter(data.real, data.imag)
+    x = np.asarray(data.real)
+    y = np.asarray(data.imag)
+
+    quadrants = np.where(
+        (x >= 0) & (y >= 0),
+        0,
+        np.where(
+            (x < 0) & (y >= 0),
+            1,
+            np.where((x < 0) & (y < 0), 2, 3)
+        )
+    )
+
+    quadrant_colors = np.array(["tab:blue", "tab:orange", "tab:green", "tab:red"])
+    point_colors = quadrant_colors[quadrants]
+
+    plt.figure(figsize=(8, 8))
+    plt.scatter(x, y, c=point_colors, s=18, alpha=0.85, edgecolors="none")
+
     plt.xlabel("Real Part")
     plt.ylabel("Imaginary Part")
     plt.title("Argand Diagram of Equalised Data")
@@ -62,20 +81,44 @@ def channel_equalise(block, h):
     data_bins = X[1:512]
     return data_bins
 
+def block_symbolise(equilised_data):
+    b_list = []
+
+    #Assign symbols to bits according to quadrant of constellation point
+    for symbol in equilised_data:
+        if symbol.real > 0 and symbol.imag > 0:
+            b_list.append(0b00)
+        elif symbol.real < 0 and symbol.imag > 0:
+            b_list.append(0b01)
+        elif symbol.real < 0 and symbol.imag < 0:
+            b_list.append(0b11)
+        else:
+            b_list.append(0b10)
+    return b_list
 
 #print(split_pattern(samples)[0])
 
 blocks = split_pattern(samples)
+master_bit_list = []
 
 for i in range(0, len(blocks), 2):
     prefix = blocks[i]
     data_block = blocks[i+1]
 
     equalised_data = channel_equalise(data_block, channelResponse)
-    if i == 0:
+    if i == 4:
         print(np.shape(equalised_data))
         print(equalised_data[0:10])
-        plot_argand_complex(equalised_data)
+        #plot_argand_complex(equalised_data)
 
+    #Complete Gray's encoding
+    block_bit_list = block_symbolise(equalised_data)
+    
+    if i == 2:
+        print("Block 2 bit list:")
+        print(np.shape(block_bit_list))
+        print(block_bit_list[0:10])
+    master_bit_list.extend(block_bit_list)
 
-
+print(np.shape(master_bit_list))
+print(f"Master bit list {master_bit_list[0:10]}")
