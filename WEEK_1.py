@@ -128,16 +128,16 @@ bytes = []
 for i in range (0,len(master_bit_list)//8):
     bytes.append(int(''.join(master_bit_list[8*i: 8*i+8]), 2))
 
-print(bytes)
+print(bytes[-100:])
 
-# from matplotlib import pyplot as plt
+from matplotlib import pyplot as plt
 
 # im = []
 # w = 30
 # for i in range (0, len(bytes)//w):
 #     im.append(bytes[w*i:w*i+w])
 
-plt.imshow([im])
+plt.imshow(np.array(bytes[22:8671]).reshape(93, 93), cmap="gray")
 plt.show()
 
 print(np.shape(master_bit_list))
