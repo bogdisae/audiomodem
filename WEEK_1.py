@@ -44,6 +44,16 @@ def split_pattern(x):
 
     return blocks
 
+def plot_argand_complex(data):
+    import matplotlib.pyplot as plt
+
+    plt.scatter(data.real, data.imag)
+    plt.xlabel("Real Part")
+    plt.ylabel("Imaginary Part")
+    plt.title("Argand Diagram of Equalised Data")
+    plt.grid()
+    plt.axis('equal')
+    plt.show()
 
 def channel_equalise(block, h):
     Y = np.fft.fft(block)          # 1024-point DFT
@@ -65,3 +75,7 @@ for i in range(0, len(blocks), 2):
     if i == 0:
         print(np.shape(equalised_data))
         print(equalised_data[0:10])
+        plot_argand_complex(equalised_data)
+
+
+
