@@ -21,8 +21,9 @@ channelDFT = np.fft.fft(channelResponse, 1024)
 fs, samples = wavfile.read("WEEK_1_FILES/file01.wav")
 
 print(fs)
+print(f"Shape of samples: {np.shape(samples)}")
 print(samples)
-print(len(samples))
+
 
 
 # THIS FUNCTION RETURNS A LIST OF BLOCKS.
@@ -43,4 +44,24 @@ def split_pattern(x):
 
     return blocks
 
-print(split_pattern(samples)[0])
+
+def channel_equalise(block, h):
+    Y = np.fft.fft(block)          # 1024-point DFT
+    H = np.fft.fft(h, 1024)        # channel IR zero-padded to 1024
+    X = Y / H                       # equalise all bins
+    data_bins = X[1:512]
+    return data_bins
+
+
+#print(split_pattern(samples)[0])
+
+blocks = split_pattern(samples)
+
+for i in range(0, len(blocks), 2):
+    prefix = blocks[i]
+    data_block = blocks[i+1]
+
+    equalised_data = channel_equalise(data_block, channelResponse)
+    if i == 0:
+        print(np.shape(equalised_data))
+        print(equalised_data[0:10])
