@@ -22,3 +22,25 @@ fs, samples = wavfile.read("WEEK_1_FILES/file01.wav")
 
 print(fs)
 print(samples)
+print(len(samples))
+
+
+# THIS FUNCTION RETURNS A LIST OF BLOCKS.
+# WHERE BLOCK[0] IS FIRST CYCLIC PREFIX, BLOCK [1] IS FIRST IDFT, BLOCK[2] IS SECOND PREFIX ETC
+def split_pattern(x):
+    i = 0
+    blocks = []
+    pattern = [32, 1024]
+
+    p = 0
+    n = len(x)
+
+    while i < n:
+        size = pattern[p % 2]
+        blocks.append(x[i:i+size])
+        i += size
+        p += 1
+
+    return blocks
+
+print(split_pattern(samples)[0])
