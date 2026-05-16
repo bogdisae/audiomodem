@@ -1,6 +1,8 @@
 import csv
 import numpy as np
 from scipy.io import wavfile
+import matplotlib.pyplot as plt
+from scipy.stats import gaussian_kde
 
 channelResponse = []
 
@@ -45,8 +47,6 @@ def split_pattern(x):
     return blocks
 
 def plot_argand_complex(data):
-    import matplotlib.pyplot as plt
-    from scipy.stats import gaussian_kde
 
     x = np.asarray(data.real)
     y = np.asarray(data.imag)
@@ -87,13 +87,17 @@ def block_symbolise(equilised_data):
     #Assign symbols to bits according to quadrant of constellation point
     for symbol in equilised_data:
         if symbol.real > 0 and symbol.imag > 0:
-            b_list.append(0b00)
+            b_list.append(0)
+            b_list.append(0)
         elif symbol.real < 0 and symbol.imag > 0:
-            b_list.append(0b01)
+            b_list.append(1)
+            b_list.append(0)
         elif symbol.real < 0 and symbol.imag < 0:
-            b_list.append(0b11)
+            b_list.append(1)
+            b_list.append(1)
         else:
-            b_list.append(0b10)
+            b_list.append(0)
+            b_list.append(1)
     return b_list
 
 #print(split_pattern(samples)[0])
@@ -109,7 +113,7 @@ for i in range(0, len(blocks), 2):
     if i == 4:
         print(np.shape(equalised_data))
         print(equalised_data[0:10])
-        #plot_argand_complex(equalised_data)
+        plot_argand_complex(equalised_data)
 
     #Complete Gray's encoding
     block_bit_list = block_symbolise(equalised_data)
@@ -121,4 +125,4 @@ for i in range(0, len(blocks), 2):
     master_bit_list.extend(block_bit_list)
 
 print(np.shape(master_bit_list))
-print(f"Master bit list {master_bit_list[0:10]}")
+print(f"Master bit list {master_bit_list[0:1000]}")
