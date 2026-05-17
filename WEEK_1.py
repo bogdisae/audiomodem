@@ -20,7 +20,7 @@ with open("WEEK_1_FILES/channel.csv", newline="", encoding="utf-8") as csvfile:
 channelFFT = np.fft.fft(channelResponse, 1024)
 
 # Open first WAV file
-fs, samples = wavfile.read("WEEK_1_FILES/file03.wav")
+fs, samples = wavfile.read("WEEK_1_FILES/file12.wav")
 
 # THIS FUNCTION RETURNS A LIST OF BLOCKS.
 # WHERE BLOCK[0] IS FIRST CYCLIC PREFIX, BLOCK [1] IS FIRST IDFT, BLOCK[2] IS SECOND PREFIX ETC
@@ -68,21 +68,31 @@ def plot_argand_complex(data):
     plt.axis('equal')
     plt.show()
 
-def render_greyscale(data_bytes, length, width):
+def render_greyscale(data_bytes, length, width, cmap = "gray"):
     h = length // width
     data_bytes = np.array(data_bytes[:width*h]).reshape(h, width)
     
-    plt.imshow(data_bytes, cmap="gray")
+    plt.imshow(data_bytes, cmap=cmap)
     plt.show()
 
-def render_4byte_greyscale(data_bytes, length, width):
+def render_2byte_greyscale(data_bytes, length, width, cmap = "gray"):
+    arr = np.array(data_bytes[:2*(len(data_bytes)//2)], dtype=np.uint8)
+    h = length // (width*2)
+
+    # Little-endian uint16 (standard for most TIFFs):
+    data_bytes = arr.view(np.uint16).byteswap()[:width*h].reshape(h, width)
+
+    plt.imshow(data_bytes, cmap=cmap)
+    plt.show()
+
+def render_4byte_greyscale(data_bytes, length, width, cmap = "gray"):
     arr = np.array(data_bytes[:4*(len(data_bytes)//4)], dtype=np.uint8)
     h = length // (width*4)
 
     # Little-endian uint16 (standard for most TIFFs):
     data_bytes = arr.view(np.uint32).byteswap()[:width*h].reshape(h, width)
 
-    plt.imshow(data_bytes, cmap="gray")
+    plt.imshow(data_bytes, cmap=cmap)
     plt.show()
 
 def channel_equalise(block, H):
@@ -151,4 +161,20 @@ print(f"filename: {filename} length: {length} data start index: {second_null+1} 
 # Image 2:
 # render_greyscale(data_bytes,length, width = 400)
 # Image 3: 
-render_4byte_greyscale(data_bytes, length, width = 122)
+# render_4byte_greyscale(data_bytes, length, width = 122)
+# Audio 4:
+
+# Image 5:
+# render_4byte_greyscale(data_bytes, length, width=150)
+# Image 6:
+# render_4byte_greyscale(data_bytes,length, width = 200) # image start misaligned
+# Image 7:
+# render_4byte_greyscale(data_bytes,length, width = 200)
+# Image 8:
+# render_4byte_greyscale(data_bytes,length, width = 200) 
+# Image 9:
+# render_2byte_greyscale(data_bytes,length, width = 375) 
+# Image 10:
+# render_4byte_greyscale(data_bytes,length, width = 200, cmap="viridis") 
+# Image 11:
+# render_4byte_greyscale(data_bytes,length, width = 250) 
