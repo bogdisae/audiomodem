@@ -20,7 +20,7 @@ with open("WEEK_1_FILES/channel.csv", newline="", encoding="utf-8") as csvfile:
 channelFFT = np.fft.fft(channelResponse, 1024)
 
 # Open first WAV file
-fs, samples = wavfile.read("WEEK_1_FILES/file12.wav")
+fs, samples = wavfile.read("WEEK_1_FILES/file14.wav")
 
 # THIS FUNCTION RETURNS A LIST OF BLOCKS.
 # WHERE BLOCK[0] IS FIRST CYCLIC PREFIX, BLOCK [1] IS FIRST IDFT, BLOCK[2] IS SECOND PREFIX ETC
@@ -79,7 +79,6 @@ def render_2byte_greyscale(data_bytes, length, width, cmap = "gray"):
     arr = np.array(data_bytes[:2*(len(data_bytes)//2)], dtype=np.uint8)
     h = length // (width*2)
 
-    # Little-endian uint16 (standard for most TIFFs):
     data_bytes = arr.view(np.uint16).byteswap()[:width*h].reshape(h, width)
 
     plt.imshow(data_bytes, cmap=cmap)
@@ -89,10 +88,29 @@ def render_4byte_greyscale(data_bytes, length, width, cmap = "gray"):
     arr = np.array(data_bytes[:4*(len(data_bytes)//4)], dtype=np.uint8)
     h = length // (width*4)
 
-    # Little-endian uint16 (standard for most TIFFs):
     data_bytes = arr.view(np.uint32).byteswap()[:width*h].reshape(h, width)
 
     plt.imshow(data_bytes, cmap=cmap)
+    plt.show()
+
+def render_rgb(data_bytes, length, width, offset = 0):
+    data_bytes = data_bytes[offset:]
+    arr = np.array(data_bytes[:3*(len(data_bytes)//3)], dtype=np.uint8)
+    h = length // (width*3)
+
+    data_bytes = arr[:width*h*3].reshape(h, width, 3)
+
+    plt.imshow(data_bytes)
+    plt.show()
+
+def render_rgba(data_bytes, length, width, offset = 0):
+    data_bytes = data_bytes[offset:]
+    arr = np.array(data_bytes[:4*(len(data_bytes)//4)], dtype=np.uint8)
+    h = length // (width*4)
+
+    data_bytes = arr[:width*h*4].reshape(h, width, 4)
+
+    plt.imshow(data_bytes)
     plt.show()
 
 def channel_equalise(block, H):
@@ -178,3 +196,9 @@ print(f"filename: {filename} length: {length} data start index: {second_null+1} 
 # render_4byte_greyscale(data_bytes,length, width = 200, cmap="viridis") 
 # Image 11:
 # render_4byte_greyscale(data_bytes,length, width = 250) 
+# Image 12:
+# render_rgb(data_bytes,length, width = 330, offset=9) 
+# Image 13:
+# render_rgba(data_bytes,length, width = 300, offset=18) 
+# Audio 14:
+
