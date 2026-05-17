@@ -20,7 +20,7 @@ with open("WEEK_1_FILES/channel.csv", newline="", encoding="utf-8") as csvfile:
 channelFFT = np.fft.fft(channelResponse, 1024)
 
 # Open first WAV file
-fs, samples = wavfile.read("WEEK_1_FILES/file14.wav")
+fs, samples = wavfile.read("WEEK_1_FILES/file01.wav")
 
 # THIS FUNCTION RETURNS A LIST OF BLOCKS.
 # WHERE BLOCK[0] IS FIRST CYCLIC PREFIX, BLOCK [1] IS FIRST IDFT, BLOCK[2] IS SECOND PREFIX ETC
@@ -175,7 +175,18 @@ data_bytes = data_bytes[second_null+1:]
 
 print(f"filename: {filename} length: {length} data start index: {second_null+1} decoded byte length: {len(data_bytes)}")
 
+def save_Unicode_text(data_bytes, length, filename):
+    unicode_string = ''.join(chr(b) for b in data_bytes[:length])
+
+    f_name = filename.split('/')[-1]
+    print(f_name)
+    
+    with open('WEEK_1_files/' + f_name, 'w', encoding='utf-8') as f:
+        f.write(unicode_string)
+
 # Viewing files
+# File 1:
+save_Unicode_text(data_bytes, length, filename)
 # Image 2:
 # render_greyscale(data_bytes,length, width = 400)
 # Image 3: 
