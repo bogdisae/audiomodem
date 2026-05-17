@@ -20,7 +20,7 @@ with open("WEEK_1_FILES/channel.csv", newline="", encoding="utf-8") as csvfile:
 channelFFT = np.fft.fft(channelResponse, 1024)
 
 # Open first WAV file
-fs, samples = wavfile.read("WEEK_1_FILES/file02.wav")
+fs, samples = wavfile.read("WEEK_1_FILES/file03.wav")
 
 # THIS FUNCTION RETURNS A LIST OF BLOCKS.
 # WHERE BLOCK[0] IS FIRST CYCLIC PREFIX, BLOCK [1] IS FIRST IDFT, BLOCK[2] IS SECOND PREFIX ETC
@@ -75,6 +75,16 @@ def render_greyscale(data_bytes, length, width):
     plt.imshow(data_bytes, cmap="gray")
     plt.show()
 
+def render_4byte_greyscale(data_bytes, length, width):
+    arr = np.array(data_bytes[:4*(len(data_bytes)//4)], dtype=np.uint8)
+    h = length // (width*4)
+
+    # Little-endian uint16 (standard for most TIFFs):
+    data_bytes = arr.view(np.uint32).byteswap()[:width*h].reshape(h, width)
+
+    plt.imshow(data_bytes, cmap="gray")
+    plt.show()
+
 def channel_equalise(block, H):
     Y = np.fft.fft(block)
     X = Y / H # Zero-forcing
@@ -117,8 +127,8 @@ for i in range(0, len(blocks), 2):
     prefix = blocks[i]
     data_block = blocks[i+1]
     equalised_data = channel_equalise(data_block, channelFFT)
-    if i == 4:
-        plot_argand_complex(equalised_data)
+    # if i == 4:
+    #     plot_argand_complex(equalised_data)
     #Complete Gray's encoding
     block_bit_list = block_symbolise(equalised_data)
     master_bit_list.extend(block_bit_list)
@@ -137,4 +147,8 @@ data_bytes = data_bytes[second_null+1:]
 
 print(f"filename: {filename} length: {length} data start index: {second_null+1} decoded byte length: {len(data_bytes)}")
 
-render_greyscale(data_bytes,length, width = 250)
+# Viewing files
+# Image 2:
+# render_greyscale(data_bytes,length, width = 400)
+# Image 3: 
+render_4byte_greyscale(data_bytes, length, width = 122)
