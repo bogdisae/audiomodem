@@ -24,10 +24,10 @@ fs, samples = wavfile.read("WEEK_1_FILES/file14.wav")
 
 # THIS FUNCTION RETURNS A LIST OF BLOCKS.
 # WHERE BLOCK[0] IS FIRST CYCLIC PREFIX, BLOCK [1] IS FIRST IDFT, BLOCK[2] IS SECOND PREFIX ETC
-def split_pattern(x):
+def split_pattern(x, cp=32, db=1024):
     i = 0
     blocks = []
-    pattern = [32, 1024]
+    pattern = [cp, db] #cyclic prefix, data block
 
     p = 0
     n = len(x)
@@ -234,4 +234,13 @@ print(f"filename: {filename} length: {length} data start index: {second_null+1} 
 # Image 13:
 # render_rgba(data_bytes,length, width = 300, offset=18) 
 # Audio 14:
-# save_wav_file(data_bytes[:length], length, filename )
+#save_wav_file(data_bytes[:length], length, filename )
+
+
+
+
+
+rate, audio = wavfile.read("WEEK_1_files/file14_Output.wav")
+
+print(rate)
+print(audio.shape)
