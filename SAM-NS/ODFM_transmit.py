@@ -1,6 +1,8 @@
 import numpy as np
 import numpy as np
 from scipy.io.wavfile import write
+from scipy.signal import chirp
+
 
 with open('SAM-NS/BIGSHAQ.txt', "r", encoding="utf-8") as f:
     text = f.read()
@@ -37,9 +39,19 @@ X[513:] = np.conj(X[1:512][::-1])
 
 x = np.fft.ifft(X)
 
-# Repeat to form the real time domain signal
+# COMBINE WITH CHIRP
+
+fs = 48000
+T = 1
+t = np.linspace(0, T, int(fs*T), endpoint=False)
+chirp_signal = chirp(t, f0=100, f1=8000, t1=T, method='linear')
+chirp_signal = chirp_signal / np.max(np.abs(chirp_signal))
+
 x_repeated = np.tile(x.real, 500)
 x_repeated = x_repeated / np.max(np.abs(x_repeated))
-fs = 48000
-write("SAM-NS/test.wav", fs, x_repeated.astype(np.float32))
 
+combined = np.concatenate([chirp_signal, x_repeated])
+
+combined_int16 = np.int16(combined * 32767)
+
+write("SAM-NS/test.wav", fs, combined_int16)
