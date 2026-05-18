@@ -26,7 +26,7 @@ def main():
     # Plot
     plt.figure()
     plt.plot(x, np.abs(corr))
-    plt.title("Matched Filter Output (Correlation)")
+    plt.title("Matched Filter Output - Absolute value")
     plt.xlabel("Sample index")
     plt.ylabel("Correlation magnitude")
     plt.show()
@@ -38,9 +38,9 @@ def main():
     # Plot
     plt.figure()
     plt.plot(x, corr)
-    plt.title("Matched Filter Output (Correlation)")
+    plt.title("Matched Filter Output - Actual value (inc. negative)")
     plt.xlabel("Sample index")
-    plt.ylabel("Correlation magnitude")
+    plt.ylabel("Correlation value")
     plt.show()
 
 if __name__ == "__main__":
