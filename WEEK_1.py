@@ -234,13 +234,4 @@ print(f"filename: {filename} length: {length} data start index: {second_null+1} 
 # Image 13:
 # render_rgba(data_bytes,length, width = 300, offset=18) 
 # Audio 14:
-save_wav_file(data_bytes[:length], length, filename )
-
-
-
-
-
-rate, audio = wavfile.read("WEEK_1_files/file14_Output.wav")
-
-print(rate)
-print(audio.shape)
+# save_wav_file(data_bytes[:length], length, filename )
