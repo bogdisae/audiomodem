@@ -32,4 +32,5 @@ def iDFT_pipeline(symbols, b_len = 1024, cp_len = 32):
 
         iDFT_output.append(x_cp)
     tx_signal = np.concatenate(iDFT_output)
+    print(f'Type of tx_signal: {type(tx_signal)}, Length: {len(tx_signal)}, type of value 0: {type(tx_signal[0])}')
     return tx_signal

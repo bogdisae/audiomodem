@@ -32,18 +32,32 @@ operation = questionary.select('Select operation:', choices=['Generate key', 'Re
 
 if operation == 'Generate key':
     from Generator_key_only import main as generate_key_main
+
+    params = {
+        'key_type': 'chirp',
+        'repeat_key_count': 2,
+        'block_length': 1024,
+        'cyclic_prefix_length': 32,
+        'length': 50000,
+        'fs': 44100
+
+    }
+
+    generate_key_main(params)
+    
+
     generate_key_main()
 elif operation == 'Record signal':
     from Recieving_signal import record_audio
-    duration = 20 #Length of recording
+    duration = 10 #Length of recording
     fs = 44100 #Sampling frequency
     channel = 1
     audio = record_audio(duration, fs=fs, channels=channel)
     save_wav_file(audio, fs, "recording.wav")
 elif operation == 'Compare signals':
     base_dir = Path(__file__).parent
-    file_1 = pick_wav_file('Select received chirp wav file:', base_dir)
-    file_2 = pick_wav_file('Select transmitted chirp wav file:', base_dir)
+    r_file = pick_wav_file('Select received chirp wav file:', base_dir)
+    t_file = pick_wav_file('Select transmitted chirp wav file:', base_dir)
 
     #Direct import from this file crashes
     chirp_module = load_module_from_path(
@@ -54,7 +68,7 @@ elif operation == 'Compare signals':
     if receive_chirp_main is None:
         raise ImportError('Recieve_chirp_copy.py does not define main(wav_file_1, wav_file_2)')
 
-    receive_chirp_main(file_1, file_2)
+    receive_chirp_main(r_file, t_file)
 elif operation == 'Exit':
     print('Exiting...')
     raise SystemExit()
