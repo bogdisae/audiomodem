@@ -146,35 +146,6 @@ def block_symbolise(equilised_data, anticlockwise=True):
                 b_list.append('1')
     return b_list
 
-
-# Remove prefix and decode bits
-blocks = split_pattern(samples)
-master_bit_list = []
-
-for i in range(0, len(blocks), 2):
-    prefix = blocks[i]
-    data_block = blocks[i+1]
-    equalised_data = channel_equalise(data_block, channelFFT)
-    # if i == 4:
-    #     plot_argand_complex(equalised_data)
-    #Complete Gray's encoding
-    block_bit_list = block_symbolise(equalised_data)
-    master_bit_list.extend(block_bit_list)
-
-
-# Extract header information from file
-data_bytes = []
-for i in range (0,len(master_bit_list), 8):
-    data_bytes.append(int(''.join(master_bit_list[i: i+8]), 2))
-
-first_null = data_bytes.index(0)
-second_null = data_bytes.index(0, first_null+1)
-filename = ''.join(chr(b) for b in data_bytes[:first_null])
-length = int(''.join(chr(b) for b in data_bytes[first_null+1:second_null]))
-data_bytes = data_bytes[second_null+1:]
-
-print(f"filename: {filename} length: {length} data start index: {second_null+1} decoded byte length: {len(data_bytes)}")
-
 def save_Unicode_text(data_bytes, length, filename):
     unicode_string = ''.join(chr(b) for b in data_bytes[:length])
 
@@ -204,6 +175,35 @@ def save_wav_file(data_bytes, length, filename):
 
     print(f"Saved WAV file: {output_name}")
     print(f"Bytes written: {len(wav_bytes)}")
+
+
+# Remove prefix and decode bits
+blocks = split_pattern(samples)
+master_bit_list = []
+
+for i in range(0, len(blocks), 2):
+    prefix = blocks[i]
+    data_block = blocks[i+1]
+    equalised_data = channel_equalise(data_block, channelFFT)
+    # if i == 4:
+    #     plot_argand_complex(equalised_data)
+    #Complete Gray's encoding
+    block_bit_list = block_symbolise(equalised_data)
+    master_bit_list.extend(block_bit_list)
+
+
+# Extract header information from file
+data_bytes = []
+for i in range (0,len(master_bit_list), 8):
+    data_bytes.append(int(''.join(master_bit_list[i: i+8]), 2))
+
+first_null = data_bytes.index(0)
+second_null = data_bytes.index(0, first_null+1)
+filename = ''.join(chr(b) for b in data_bytes[:first_null])
+length = int(''.join(chr(b) for b in data_bytes[first_null+1:second_null]))
+data_bytes = data_bytes[second_null+1:]
+
+print(f"filename: {filename} length: {length} data start index: {second_null+1} decoded byte length: {len(data_bytes)}")
 
 
 # Viewing files
