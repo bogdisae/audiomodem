@@ -19,8 +19,8 @@ with open("WEEK_1_FILES/channel.csv", newline="", encoding="utf-8") as csvfile:
 # Calculate DFT of channel response (for later use)
 channelFFT = np.fft.fft(channelResponse, 1024)
 
-# Open first WAV file
-fs, samples = wavfile.read("WEEK_1_FILES/file02.wav")
+# Open WAV file
+fs, samples = wavfile.read("WEEK_1_FILES/file14.wav")
 
 # THIS FUNCTION RETURNS A LIST OF BLOCKS.
 # WHERE BLOCK[0] IS FIRST CYCLIC PREFIX, BLOCK [1] IS FIRST IDFT, BLOCK[2] IS SECOND PREFIX ETC
@@ -184,15 +184,37 @@ def save_Unicode_text(data_bytes, length, filename):
     with open('WEEK_1_files/' + f_name, 'w', encoding='utf-8') as f:
         f.write(unicode_string)
 
+def save_wav_file(data_bytes, length, filename):
+
+    # Keep only the actual transmitted payload
+    wav_bytes = bytes(data_bytes[:length])
+
+    # Clean filename
+    f_name = filename.split('/')[-1]
+
+    # Ensure extension
+    if not f_name.endswith('.wav'):
+        f_name += '.wav'
+
+    output_name = f_name.replace('.wav', '_Output.wav')
+
+    # Write raw WAV bytes directly
+    with open('WEEK_1_files/' + output_name, 'wb') as f:
+        f.write(wav_bytes)
+
+    print(f"Saved WAV file: {output_name}")
+    print(f"Bytes written: {len(wav_bytes)}")
+
+
 # Viewing files
 # File 1:
 # save_Unicode_text(data_bytes, length, filename)
 # Image 2:
-# render_greyscale(data_bytes,length, width = 400)
+# render_greyscale(data_bytes,length, width = 250)
 # Image 3: 
 # render_4byte_greyscale(data_bytes, length, width = 122)
 # Audio 4:
-
+# save_wav_file(data_bytes[:length], length, filename )
 # Image 5:
 # render_4byte_greyscale(data_bytes, length, width=150)
 # Image 6:
@@ -212,4 +234,13 @@ def save_Unicode_text(data_bytes, length, filename):
 # Image 13:
 # render_rgba(data_bytes,length, width = 300, offset=18) 
 # Audio 14:
+save_wav_file(data_bytes[:length], length, filename )
 
+
+
+
+
+rate, audio = wavfile.read("WEEK_1_files/file14_Output.wav")
+
+print(rate)
+print(audio.shape)
