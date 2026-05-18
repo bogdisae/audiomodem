@@ -26,6 +26,7 @@ def record_audio(duration_s: float, fs: int = 44100, channels: int = 1, dtype: s
 	- `channels`: 1 for mono, 2 for stereo
 	- return value: shape (N,) for mono or (N, channels) for multi-channel
 	"""
+	print("Recording audio...")
 	if sd is None:
 		raise ImportError("sounddevice is required for recording. Install with: pip install sounddevice")
 
@@ -48,7 +49,7 @@ if __name__ == "__main__":
 	import argparse
 
 	parser = argparse.ArgumentParser(description="Record audio to WAV")
-	parser.add_argument("-d", "--duration", type=float, default=5.0, help="seconds to record")
+	parser.add_argument("-d", "--duration", type=float, default=20.0, help="seconds to record")
 	parser.add_argument("-r", "--rate", type=int, default=44100, help="sample rate")
 	parser.add_argument("-c", "--channels", type=int, default=1, help="channels (1 mono, 2 stereo)")
 	parser.add_argument("-o", "--out", type=str, default="recording.wav", help="output filename")
