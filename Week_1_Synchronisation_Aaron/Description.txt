@@ -1,0 +1,32 @@
+- main  
+    > Contains a menu that calls functions from all other files:
+        + Generate Signal
+        + Record Signal
+        + Compare Signals
+
+- file_functions 
+    > Contains functions for file saving / conversion
+    > .wav, .csv, float to binary pcm
+
+- DFT_pipeline
+    > conatins functions for calculating DFT and iDFT
+
+- Generate_key_only
+    > contains functions for creating keys (chirps) with the intention of adding other types for investigation
+    > contains functions for repeating keys and zero padding for alternate techniques
+    > main currently handles concatenating the key with the concatenated OFDM blocks, this should be moved elsewhere
+    > gray_encode should also be moved elsewhere
+
+- Recieve_chirp_copy
+    > Copy of Recieve_chirp in a callable for from the folder Week_1_Synchornisation_Aaron
+    > Provides plots for Correlation
+
+- Recieving_signal
+    > File for recording from laptop for testing purposes, created using AI
+    > saves a .wav file in local folder
+
+- channel_estimation
+    > Contains functions to help with channel channel_estimation
+    > isolate_key_signal uses the sync_idx to find the location of the recorded audio key (start of transmission)
+    > estimate_channel_response calculates the channel frequency response, but also shows quality of SYNCHRONISATION
+    > Possible windowing functions need to be added here and investigation into how accurate the sync_idx is (potentially varies for different keys)
