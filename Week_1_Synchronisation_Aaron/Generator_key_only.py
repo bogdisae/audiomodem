@@ -91,8 +91,6 @@ def gray_encode(binary_string):
 
 def main(params = '', test_signal_wav = None, test_signal = None):
 
-   
-
     #user params
     if params == '':
         key_type = 'chirp'
@@ -132,8 +130,8 @@ def main(params = '', test_signal_wav = None, test_signal = None):
     plt.show()
 
     #save the signal as a wav file
-    print("saving....")
-    save_wav_file(test_signal, fs, key_type + '_' + str(repeat_key_count) + '_repeats.wav')
+    #print("saving....")
+    #save_wav_file(test_signal, fs, key_type + '_' + str(repeat_key_count) + '_repeats.wav')
     #save_csv_file(test_signal, len(test_signal), key_type + '_' + str(repeat_key_count) + '_repeats.csv')
     
     print('Mapping to Gray code...')
@@ -147,7 +145,7 @@ def main(params = '', test_signal_wav = None, test_signal = None):
     key_int16 = np.int16(key * 32767)
     tx_signal_int16 = np.int16(x_cp_signal * 32767)
     f_signal = np.concatenate((key_int16, tx_signal_int16))
-    save_wav_file(f_signal, fs, key_type + '_' + str(repeat_key_count) + '_mapped_repeats.wav')
+    save_wav_file(f_signal, fs, key_type + '_' + str(repeat_key_count) + '_transmitted_signal.wav')
 
     
 

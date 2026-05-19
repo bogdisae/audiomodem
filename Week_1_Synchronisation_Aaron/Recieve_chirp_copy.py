@@ -42,5 +42,7 @@ def main(wav_file_1, wav_file_2):
     plt.ylabel("Correlation magnitude")
     plt.show()
 
+    return sync_index
+
 if __name__ == "__main__":
     main()
