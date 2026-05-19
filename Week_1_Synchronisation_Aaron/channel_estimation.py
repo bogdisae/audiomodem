@@ -8,6 +8,31 @@ from file_functions import  save_wav_file
 from scipy.io import wavfile
 import numpy as np
 
+def quick_plot_key_comparison(data_1, data_1_name, data_2, data_2_name, x_label='Sample Index', y_label='Amplitude'):
+    import matplotlib.pyplot as plt
+
+    plt.figure(figsize=(12, 6))
+    plt.subplot(2, 1, 1)
+    plt.plot(data_1, color = 'blue')
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.title(data_1_name)
+    plt.legend()
+
+    plt.subplot(2, 1, 2)
+    plt.plot(data_2, color='orange')
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.title(data_2_name)
+    plt.legend()
+
+    plt.tight_layout()
+    plt.show()
+
+def window_with_hann(signal):
+    hann_window = np.hanning(len(signal))
+    return signal * hann_window
+
 def isolate_key_signal(recorded_signal_wav_path, sync_idx, params):
     
     start_idx = sync_idx
@@ -35,7 +60,21 @@ def estimate_channel_response(isolated_key, original_key, params):
     '''IF VALUES ARE NOT NEAR 0, THEN HANN WINDOWING IS NEEDED'''
     '''IF THE ENDS AND BEGINNING DO NOT MATCH FROM ORIGINAL TO ISOLATED, THEN SYNCHRONISATION IS POOR'''
 
-    Y = np.fft.fft(isolated_key, n=params['block_length'])
-    S = np.fft.fft(original_key, n=params['block_length'])
+    #Remove N?
+    #rfft assumes real input and returns only non redundant positive frequencies, saving memory
+    '''#ALIGN FFT bins with the BINS of the OFDM blocks'''
+    print(f'Length of isolated key: {len(isolated_key)}')
+    print(f'Length of original key: {len(original_key)}')
+    Y = np.fft.rfft(isolated_key)
+    S = np.fft.rfft(original_key)
     H = Y / S
+    quick_plot_key_comparison(isolated_key, 'Isolated Key', original_key, 'Original Key')
+
+    Y_hann = np.fft.rfft(window_with_hann(isolated_key))
+    S_hann = np.fft.rfft(window_with_hann(original_key))
+    H_hann = Y_hann / S_hann
+    quick_plot_key_comparison(window_with_hann(isolated_key), 'Hann Windowed Isolated Key', window_with_hann(original_key), 'Hann Windowed Original Key', x_label='frequency Bin', y_label='Magnitude')
+
+    quick_plot_key_comparison(H, 'Channel Response', H_hann, 'Hann Windowed Channel Response')
+    '''PLOT AXES NOT CORRECT'''
     return H

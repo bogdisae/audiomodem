@@ -17,7 +17,6 @@ def load_module_from_path(module_name: str, file_path: str | Path):
     spec.loader.exec_module(module)
     return module
 
-
 def pick_wav_file(prompt_text: str, folder: Path) -> str:
     wav_files = sorted(folder.glob('*.wav'))
     if not wav_files:
@@ -40,7 +39,8 @@ params = {
         'cyclic_prefix_length': 32,
         'length': 50000,
         'fs': 44100, #Generating signal
-        'fs_record': 44100 #Recording signal
+        'fs_record': 44100, #Recording signal
+        'silence_duration': 0.0
 
     }
 
@@ -75,7 +75,7 @@ elif operation == 'Compare signals':
 
     #Call here to recover channel params and orignal signal
     isolated_key = isolate_key_signal(r_file, sync_idx, params)
-    key = generate_key(params['length'], params['fs'], params['key_type'], repeat_count = params['repeat_key_count'], silence_duration = 0.1)
+    key = generate_key(params['length'], params['fs'], params['key_type'], params['repeat_key_count'], params['silence_duration'])
 
     channel_f_response = estimate_channel_response(isolated_key, key, params)
 
