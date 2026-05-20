@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter1d
 
 
-fs_rx, rxSig = wavfile.read("SAM-NS/big_shaq_received_3.wav")
+fs_rx, rxSig = wavfile.read("SAM-NS/big_shaq_received_2.wav")
 fs_tx, txChirp = wavfile.read("SAM-NS/chirp.wav")
 
 rxSig = rxSig.astype(np.float32)
@@ -35,30 +35,4 @@ received_first_block = rxSig[ofdm_start: ofdm_start + 1024]
 
 dft = np.fft.fft(received_first_block, 1024)
 dft = dft[1:512]
-
-x = np.asarray(dft.real)
-y = np.asarray(dft.imag)
-
-quadrants = np.where(
-    (x >= 0) & (y >= 0),
-    0,
-    np.where(
-        (x < 0) & (y >= 0),
-        1,
-        np.where((x < 0) & (y < 0), 2, 3)
-    )
-)
-
-quadrant_colors = np.array(["tab:blue", "tab:orange", "tab:green", "tab:red"])
-point_colors = quadrant_colors[quadrants]
-
-plt.figure(figsize=(8, 8))
-plt.scatter(x, y, c=point_colors, s=18, alpha=0.85, edgecolors="none")
-
-plt.xlabel("Real Part")
-plt.ylabel("Imaginary Part")
-plt.title("Argand Diagram of Equalised Data")
-plt.grid()
-plt.axis('equal')
-plt.show()
 
