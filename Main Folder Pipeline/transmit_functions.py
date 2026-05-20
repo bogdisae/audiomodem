@@ -84,10 +84,18 @@ def frame_symbols(symbols, frame_size):
     return [symbols[i:i+frame_size] for i in range(0, len(symbols), frame_size)]
 
 
-def generate_chirp(fs, T, f0=100, f1=8000):
-    t = np.linspace(0, T, int(fs*T), endpoint=False)
-    signal = chirp(t, f0=f0, f1=f1, t1=T, method='linear')
-    return signal / np.max(np.abs(signal))
+def generate_chirp(fs, T, f0, f1):
+    t = np.linspace(0, T, int(fs * T), endpoint=False)
+
+    chirp_signal = chirp(
+        t,
+        f0=f0,
+        t1=T,
+        f1=f1,
+        method='linear'
+    )
+
+    return chirp_signal / np.max(np.abs(chirp_signal))
 
 
 def ofdm_modulate(block, n_fft=1024):
@@ -148,6 +156,10 @@ def build_transmit_signal(ofdm_blocks,
     """
 
     tx = []
+
+    # Add small initial silence (just trust me its useful)
+    silence_len = 1000
+    tx.extend(np.zeros(silence_len))
 
     # Optional preamble
     if preamble is not None:

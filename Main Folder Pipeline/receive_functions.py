@@ -14,11 +14,19 @@ def normalise_signal(signal):
 
     return signal / max_val
 
+## THIS FUNCTION IS IDENTICAL TO THE ONE IN TRANSMIT_FUNCTIONS. BUT I AM LAZY AND IS NICER TO SPLIT THE FUNCTIONS
 def generate_chirp(fs, T, f0, f1):
     t = np.linspace(0, T, int(fs * T), endpoint=False)
-    chirp_signal = chirp(t, f0, f1, T, method='linear')
-    chirp_signal = chirp_signal / np.max(np.abs(chirp_signal))
-    return chirp_signal
+
+    chirp_signal = chirp(
+        t,
+        f0=f0,
+        t1=T,
+        f1=f1,
+        method='linear'
+    )
+
+    return chirp_signal / np.max(np.abs(chirp_signal))
 
 def chirp_matched_filter(signal, fs, T, f0, f1):
     signal = np.asarray(signal).squeeze()
