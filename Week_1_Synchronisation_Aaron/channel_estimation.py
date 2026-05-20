@@ -65,16 +65,16 @@ def estimate_channel_response(isolated_key, original_key, params):
     '''#ALIGN FFT bins with the BINS of the OFDM blocks'''
     print(f'Length of isolated key: {len(isolated_key)}')
     print(f'Length of original key: {len(original_key)}')
-    Y = np.fft.rfft(isolated_key)
-    S = np.fft.rfft(original_key)
-    H = Y / S
+    #Take the DFT but aling frequency bins with OFDM blocks
+    Y = np.fft.rfft(isolated_key, n=params['block_length'])
+    S = np.fft.rfft(original_key, n=params['block_length'])
+    '''Maybe TRY squared over squared'''
+    H = Y[:params['block_length']//2-1] / S[:params['block_length']//2-1]  # Take only the bins corresponding to the OFDM subcarriers (excluding DC and Nyquist)
+
+    #Corresponding frequencies of bins
+    #freqs = np.fft.rfftfreq(params['block_length'], d=1/params['fs'])
+
+
     quick_plot_key_comparison(isolated_key, 'Isolated Key', original_key, 'Original Key')
-
-    Y_hann = np.fft.rfft(window_with_hann(isolated_key))
-    S_hann = np.fft.rfft(window_with_hann(original_key))
-    H_hann = Y_hann / S_hann
-    quick_plot_key_comparison(window_with_hann(isolated_key), 'Hann Windowed Isolated Key', window_with_hann(original_key), 'Hann Windowed Original Key', x_label='frequency Bin', y_label='Magnitude')
-
-    quick_plot_key_comparison(H, 'Channel Response', H_hann, 'Hann Windowed Channel Response')
-    '''PLOT AXES NOT CORRECT'''
+    quick_plot_key_comparison(np.abs(H), 'Estimated Channel Magnitude Response', np.angle(H), 'Estimated Channel Phase Response', x_label='Subcarrier Index', y_label='Magnitude / Phase (radians)')
     return H
