@@ -17,7 +17,7 @@ def pick_wav_file(prompt_text: str, folder: Path) -> str:
     return str(folder / choice)
 
 
-operation = questionary.select('Select operation:', choices=['Generate signal', 'Record signal', 'Correlate signals', 'Channel estimation', 'Normal operation', 'Exit']).ask()
+operation = questionary.select('Select operation:', choices=['Generate signal', 'Receive signal', 'Correlate signals', 'Channel estimation', 'Normal operation', 'Exit']).ask()
 
 params = {
         'key_type': 'chirp',
@@ -41,15 +41,14 @@ if operation == 'Generate signal':
     from transmit import main as transmit_main
     transmit_main(params)
 
-elif operation == 'Record signal':
-    #File to run a recording function that records audio and saves as wav file 
-    
+elif operation == 'Receive signal':
+    #File to run a receive function that allows you to either record or pick an existing file
+    from receive import main as receive_main
+
     #Possible recording rates
     #Aaron's laptop: 48 000Hz
     #Sam's laptop:
     #Bogdan's laptop: 
-
-    from receive import main as receive_main
 
     receive_main(params)
 
