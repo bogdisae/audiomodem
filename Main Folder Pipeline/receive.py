@@ -2,7 +2,8 @@
 from pathlib import Path
 import questionary
 from scipy.io import wavfile
-from receive_functions import normalise_signal, chirp_matched_filter
+from receive_functions import normalise_signal, chirp_matched_filter, record_audio
+from transmit_functions import save_wav_file
 
 def pick_wav_file(prompt_text: str, folder: Path) -> str:
     wav_files = sorted(folder.glob('*.wav'))
@@ -30,16 +31,19 @@ def main(params):
     elif mode == "Record audio":
         print("Recording mode selected")
         # TO DO: CALL A RECORDING FUNCTION, OR SOMETHING 
-        selected_path = None
-
+        record_audio(params['record_duration'], params['fs_record'], filename=params['recording_name'])
+        selected_path = Path(__file__).parent / params['recording_name']
     # Load the audio file
     fs_rx, rxSig = wavfile.read(selected_path)
     rxSig = normalise_signal(rxSig)
 
     # Unsure what sampling rate to use here
-    sync_index = chirp_matched_filter(rxSig, params['fs_record'], 1, 100, 8000)
+    if params['key_type'] == 'chirp':
+        sync_index = chirp_matched_filter(rxSig, params['fs_record'], 1, 100, 8000)
+    else:
+        raise ValueError("Unsupported key type")
 
-    print("Chirp starts at sample:", sync_index)
+    print(f"{params['key_type']} starts at sample:", sync_index)
     
 if __name__ == "__main__":
     params = {
@@ -51,7 +55,7 @@ if __name__ == "__main__":
         'fs': 44100, #Generating signal
         'fs_record': 44100, #Recording signal
         'silence_duration': 0.0,
-        'record duration': 30, #Length of recording
+        'record_duration': 30, #Length of recording
         'signal_name': 'test_signal_01.wav',
         'recording_name': 'test_recording_01.wav'
 

@@ -2,7 +2,8 @@ import numpy as np
 from scipy.signal import correlate, chirp
 from scipy.io import wavfile
 import matplotlib.pyplot as plt
-
+from transmit_functions import save_wav_file
+import sounddevice as sd
 
 def normalise_signal(signal):
     signal = signal.astype(np.float32)
@@ -29,6 +30,7 @@ def generate_chirp(fs, T, f0, f1):
     return chirp_signal / np.max(np.abs(chirp_signal))
 
 def chirp_matched_filter(signal, fs, T, f0, f1):
+
     signal = np.asarray(signal).squeeze()
     chirp_sig = generate_chirp(fs, T, f0, f1).squeeze()
 
@@ -47,3 +49,38 @@ def chirp_matched_filter(signal, fs, T, f0, f1):
 
 
     return sync_index
+
+
+def record_audio(record_duration, fs, filename="recording.wav", channels=1):
+    """
+    Record audio from the default input device and save it using save_wav_file.
+
+    Parameters
+    ----------
+    record_duration : float
+        Recording length in seconds.
+    fs : int
+        Sampling frequency in Hz.
+    filename : str
+        Output filename passed to save_wav_file.
+    channels : int
+        Number of input channels to record.
+
+    Returns
+    -------
+    np.ndarray
+        Recorded audio as a float32 NumPy array.
+    """
+    print(f"Recording {record_duration} seconds at {fs} Hz...")
+    recording = sd.rec(
+        int(record_duration * fs),
+        samplerate=fs,
+        channels=channels,
+        dtype="float32",
+    )
+    sd.wait()
+
+    if channels == 1:
+        recording = recording.reshape(-1)
+
+    save_wav_file(recording, fs, filename)

@@ -18,10 +18,11 @@ def save_wav_file(data, fs, filename):
     if not f_name.endswith('.wav'):
         f_name += '.wav'
 
-    output_name = f_name.replace('.wav', '_Output.wav')
+    #REMOVED SINCE WAS CAUSING PROBLEMS WITH THE RECORDING FUNCTION - CAN JUST CALL THIS FUNCTION DIRECTLY IN THE RECORDING FUNCTION
+    #output_name = f_name.replace('.wav', '_Output.wav')
 
     # Determine output path: same folder as this script
-    out_path = Path(__file__).parent / output_name
+    out_path = Path(__file__).parent / filename# / output_name
 
     # Ensure parent exists
     out_path.parent.mkdir(parents=True, exist_ok=True)
