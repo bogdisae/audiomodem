@@ -40,7 +40,7 @@ def split_pattern(x, cp=32, db=1024):
 
     return blocks
 
-def plot_argand_complex(data):
+def plot_argand_complex(data, vlines=None, hlines=None):
 
     x = np.asarray(data.real)
     y = np.asarray(data.imag)
@@ -61,10 +61,25 @@ def plot_argand_complex(data):
     plt.figure(figsize=(8, 8))
     plt.scatter(x, y, c=point_colors, s=18, alpha=0.85, edgecolors="none")
 
+    # Optional vertical and horizontal reference lines
+    if vlines is not None:
+        try:
+            for xv in vlines:
+                plt.axvline(xv, color='r', linestyle='--', linewidth=1.5)
+        except Exception:
+            pass
+    if hlines is not None:
+        try:
+            for yh in hlines:
+                plt.axhline(yh, color='r', linestyle='--', linewidth=1.5)
+        except Exception:
+            pass
+
     plt.xlabel("Real Part")
     plt.ylabel("Imaginary Part")
     plt.title("Argand Diagram of Equalised Data")
     plt.grid()
+    
     plt.axis('equal')
     plt.show()
 
@@ -185,8 +200,8 @@ for i in range(0, len(blocks), 2):
     prefix = blocks[i]
     data_block = blocks[i+1]
     equalised_data = channel_equalise(data_block, channelFFT)
-    # if i == 4:
-    #     plot_argand_complex(equalised_data)
+    if i == 4:
+         plot_argand_complex(equalised_data, vlines=[0], hlines=[0]) # Plot constellation diagram for the first data block after 2 cyclic prefixes
     #Complete Gray's encoding
     block_bit_list = block_symbolise(equalised_data)
     master_bit_list.extend(block_bit_list)

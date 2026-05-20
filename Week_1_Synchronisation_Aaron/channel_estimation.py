@@ -6,14 +6,20 @@
 from Generator_key_only import load_wav_as_generator_format
 from file_functions import  save_wav_file
 from scipy.io import wavfile
+from scipy.signal import welch
 import numpy as np
 
-def quick_plot_key_comparison(data_1, data_1_name, data_2, data_2_name, x_label='Sample Index', y_label='Amplitude'):
+def quick_plot_key_comparison(data_1, data_1_name, data_2, data_2_name, x_label='Sample Index', y_label='Amplitude', scale = 'linear'):
     import matplotlib.pyplot as plt
+
+    if scale == 'log_y_and_phase':
+        data_1 = 10 * np.log10(np.abs(data_1) + 1e-12)  # Add small value to avoid log(0)
 
     plt.figure(figsize=(12, 6))
     plt.subplot(2, 1, 1)
     plt.plot(data_1, color = 'blue')
+    if scale == 'log_y_and_phase':
+        plt.yscale('log')
     plt.xlabel(x_label)
     plt.ylabel(y_label)
     plt.title(data_1_name)
@@ -72,9 +78,20 @@ def estimate_channel_response(isolated_key, original_key, params):
     H = Y[:params['block_length']//2-1] / S[:params['block_length']//2-1]  # Take only the bins corresponding to the OFDM subcarriers (excluding DC and Nyquist)
 
     #Corresponding frequencies of bins
-    #freqs = np.fft.rfftfreq(params['block_length'], d=1/params['fs'])
+    freqs = np.fft.rfftfreq(params['block_length'], d=1/params['fs'])
 
 
     quick_plot_key_comparison(isolated_key, 'Isolated Key', original_key, 'Original Key')
     quick_plot_key_comparison(np.abs(H), 'Estimated Channel Magnitude Response', np.angle(H), 'Estimated Channel Phase Response', x_label='Subcarrier Index', y_label='Magnitude / Phase (radians)')
+    
+    _, S_ss = welch(isolated_key, fs=params['fs'],
+                window='hann', nperseg=params['block_length'], nfft=params['block_length'],
+                return_onesided=True)
+    _, S_yy = welch(original_key, fs=params['fs'],
+                window='hann', nperseg=params['block_length'], nfft=params['block_length'],
+                return_onesided=True)
+    H_squared = S_ss / (S_yy + 1e-12)  # Add small value to avoid division by zero
+
+    quick_plot_key_comparison(H_squared, 'Estimated Channel Response (Squared)', np.angle(H_squared), 'Estimated Channel Phase Response (Squared)', x_label='Subcarrier Index', y_label='Magnitude / Phase (radians)', scale='log_y_and_phase')
+    print(f'Frequencies in bins: {freqs}')
     return H
