@@ -32,7 +32,7 @@ def main(params):
         print("Recording mode selected")
         # TO DO: CALL A RECORDING FUNCTION, OR SOMETHING 
         record_audio(params['record_duration'], params['fs_record'], filename=params['recording_name'])
-        selected_path = Path(__file__).parent / params['recording_name']
+        selected_path = Path(__file__).parent / 'Audio Files'/ params['recording_name']
     # Load the audio file
     fs_rx, rxSig = wavfile.read(selected_path)
     rxSig = normalise_signal(rxSig)

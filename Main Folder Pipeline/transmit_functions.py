@@ -22,7 +22,7 @@ def save_wav_file(data, fs, filename):
     #output_name = f_name.replace('.wav', '_Output.wav')
 
     # Determine output path: same folder as this script
-    out_path = Path(__file__).parent / filename# / output_name
+    out_path = Path(__file__).parent / 'Audio Files' /filename# / output_name
 
     # Ensure parent exists
     out_path.parent.mkdir(parents=True, exist_ok=True)

@@ -55,8 +55,8 @@ elif operation == 'Record signal':
 #All other are for post processing. Apart from normal operation which is end game program that runs all
 elif operation == 'Correlate signals':
     #For assessing synchronisation
-    r_file = pick_wav_file('Select received chirp wav file:', base_dir)
-    t_file = pick_wav_file('Select transmitted chirp wav file:', base_dir)
+    r_file = pick_wav_file('Select received chirp wav file:', base_dir + '/Audio Files')
+    t_file = pick_wav_file('Select transmitted chirp wav file:', base_dir + '/Audio Files')
 
 
 
