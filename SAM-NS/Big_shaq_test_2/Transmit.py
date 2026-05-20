@@ -12,7 +12,6 @@ bit_list = bytes_csv_to_bits(text)
 symbols = bits_to_qpsk(bit_list)
 framed_symbols = frame_symbols(symbols, 511)
 
-print(len(framed_symbols))
 
 # OFDM modulation
 ofdm_blocks = [
