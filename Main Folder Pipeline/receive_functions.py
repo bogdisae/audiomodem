@@ -1,6 +1,5 @@
 import numpy as np
 from scipy.signal import correlate, chirp
-from scipy.io import wavfile
 import matplotlib.pyplot as plt
 from transmit_functions import save_wav_file
 import sounddevice as sd
@@ -16,26 +15,36 @@ def normalise_signal(signal):
     return signal / max_val
 
 ## THIS FUNCTION IS IDENTICAL TO THE ONE IN TRANSMIT_FUNCTIONS. BUT I AM LAZY AND IS NICER TO SPLIT THE FUNCTIONS
-def generate_chirp(fs, T, f0, f1):
-    t = np.linspace(0, T, int(fs * T), endpoint=False)
+def generate_key(fs, T, f0, f1, type_key='chirp'):
+    if type_key == 'chirp' or type_key == 'up_down_chirp':
+        t = np.linspace(0, T, int(fs * T), endpoint=False)
 
-    chirp_signal = chirp(
-        t,
-        f0=f0,
-        t1=T,
-        f1=f1,
-        method='linear'
-    )
+        signal = chirp(
+            t,
+            f0=f0,
+            t1=T,
+            f1=f1,
+            method='linear'
+        )
 
-    return chirp_signal / np.max(np.abs(chirp_signal))
+        if type_key == 'up_down_chirp':
+            signal += chirp(
+                t,
+                f0=f1,
+                t1=T,
+                f1=f0,
+                method='linear'
+            )
 
-def chirp_matched_filter(signal, fs, T, f0, f1, plot = True):
+    return signal / np.max(np.abs(signal))
+
+def key_matched_filter(signal, fs, T, f0, f1, key_type='chirp', plot=True):
     #Signal input in form of numpy array
 
     signal = np.asarray(signal).squeeze()
-    chirp_sig = generate_chirp(fs, T, f0, f1).squeeze()
+    key_sig = generate_key(fs, T, f0, f1, type_key=key_type).squeeze()
 
-    corr = correlate(signal, chirp_sig, mode='valid')
+    corr = correlate(signal, key_sig, mode='valid')
     sync_index = np.argmax(np.abs(corr))
 
     # Sample indices for x-axis

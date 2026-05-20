@@ -2,8 +2,8 @@
 from pathlib import Path
 import questionary
 from scipy.io import wavfile
-from receive_functions import normalise_signal, chirp_matched_filter, record_audio
-from transmit_functions import save_wav_file
+from receive_functions import normalise_signal, key_matched_filter, record_audio
+#from transmit_functions import save_wav_file
 
 def pick_wav_file(prompt_text: str, folder: Path) -> str:
     wav_files = sorted(folder.glob('*.wav'))
@@ -38,10 +38,11 @@ def main(params):
     rxSig = normalise_signal(rxSig)
 
     # Unsure what sampling rate to use here
-    if params['key_type'] == 'chirp':
-        sync_index = chirp_matched_filter(rxSig, params['fs_record'], 1, 100, 8000)
-    else:
-        raise ValueError("Unsupported key type")
+    try:
+        sync_index = key_matched_filter(rxSig, params['fs_record'], params['length_of_key'] / params['fs_record'], params['f0'], params['f1'], params['key_type'])
+    except ValueError as e:
+        print("Error during matched filtering:", e)
+        raise
 
     print(f"{params['key_type']} starts at sample:", sync_index)
     

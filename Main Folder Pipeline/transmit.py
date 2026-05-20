@@ -2,7 +2,8 @@
 from scipy.io.wavfile import write
 from pathlib import Path
 import questionary
-from transmit_functions import bytes_csv_to_bits, bits_to_qpsk, frame_symbols, ofdm_modulate, generate_chirp, build_transmit_signal
+from transmit_functions import bytes_csv_to_bits, bits_to_qpsk, frame_symbols, ofdm_modulate, build_transmit_signal
+from receive_functions import generate_key
 import numpy as np
 
 def pick_text_file(prompt_text: str, folder: Path) -> str:
@@ -42,7 +43,7 @@ def main(params):
     # Make the key generation more general later
     key = None
     if (params['key_type'] == 'chirp' and params['repeat_key_count'] == 1):
-        key = generate_chirp(params['fs'], 1, 100, 8000)
+        key = generate_key(params['fs'], params['length_of_key']/params['fs'], params['f0'], params['f1'], params['key_type'])
 
     fullSignal = build_transmit_signal(ofdm_blocks, params['cyclic_prefix_length'], key)
     combined_int16 = np.int16(fullSignal * 32767) # Convert to wav amplitudes

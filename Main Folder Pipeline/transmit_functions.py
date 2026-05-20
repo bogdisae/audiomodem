@@ -1,7 +1,7 @@
 import numpy as np
-from scipy.signal import chirp
 from pathlib import Path
 from scipy.io.wavfile import write
+
 
 
 def save_wav_file(data, fs, filename):
@@ -83,21 +83,6 @@ def frame_symbols(symbols, frame_size):
     'Splits the symbols into the specified size'
 
     return [symbols[i:i+frame_size] for i in range(0, len(symbols), frame_size)]
-
-
-def generate_chirp(fs, T, f0, f1):
-    t = np.linspace(0, T, int(fs * T), endpoint=False)
-
-    chirp_signal = chirp(
-        t,
-        f0=f0,
-        t1=T,
-        f1=f1,
-        method='linear'
-    )
-
-    return chirp_signal / np.max(np.abs(chirp_signal))
-
 
 def ofdm_modulate(block, n_fft=1024):
     X = np.zeros(n_fft, dtype=complex)

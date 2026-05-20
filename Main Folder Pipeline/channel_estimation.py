@@ -19,7 +19,7 @@ def quick_plot_key_comparison(data_1, data_1_name, data_2, data_2_name, x_label=
     plt.ylabel(y_label)
     plt.grid()
     plt.title(data_1_name)
-    plt.legend()
+    #plt.legend()
 
     plt.subplot(2, 1, 2)
     plt.plot(data_2, color='orange')
@@ -27,7 +27,7 @@ def quick_plot_key_comparison(data_1, data_1_name, data_2, data_2_name, x_label=
     plt.ylabel(y_label)
     plt.grid()
     plt.title(data_2_name)
-    plt.legend()
+    #plt.legend()
 
     plt.tight_layout()
     plt.show()
