@@ -47,6 +47,12 @@ def ofdm_modulate(block, n_fft=1024):
 
     return np.fft.ifft(X)
 
+
+def add_cyclic_prefix(signal, cp_len):
+    'Adds cyclic prefix to one OFDM symbol'
+    prefix = signal[-cp_len:]
+    return np.concatenate([prefix, signal])
+
 def bytes_csv_to_bits(text):
 
     'Convert a comma-separated string of byte values into a flat list of bits.'
@@ -59,3 +65,45 @@ def bytes_csv_to_bits(text):
         bit_list.extend(int(b) for b in bits)
 
     return bit_list
+
+
+def build_transmit_signal(ofdm_blocks,
+                          cp_len=128,
+                          preamble=None):
+    """
+    Builds one long transmit waveform.
+
+    Parameters
+    ----------
+    ofdm_blocks : list of np.arrays
+        Time-domain OFDM symbols
+
+    cp_len : int
+        Cyclic prefix length
+
+    preamble : np.array or None
+        Optional chirp/preamble at start
+
+    gap_len : int
+        Number of zeros inserted between symbols
+
+    Returns
+    -------
+    tx_signal : np.array
+        Full transmit waveform
+    """
+
+    tx = []
+
+    # Optional preamble
+    if preamble is not None:
+        tx.extend(preamble)
+
+    for block in ofdm_blocks:
+
+        # Add CP
+        block_cp = add_cyclic_prefix(block, cp_len)
+        tx.extend(block_cp)
+
+
+    return np.array(tx)

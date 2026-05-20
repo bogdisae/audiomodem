@@ -25,4 +25,4 @@ silence = np.zeros(2 * 48000)
 combined = np.concatenate([chirp, silence, first_signal_repeated])
 
 combined_int16 = np.int16(combined * 32767)
-write("SAM-NS/test.wav", 48000, combined_int16)
+write("SAM-NS/Big_shaq_test_1/test.wav", 48000, combined_int16)
