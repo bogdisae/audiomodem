@@ -8,6 +8,7 @@ WRITTEN USING COPILOT - adjusted for testing purposes.
 
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path
 import numpy as np
 from scipy.io.wavfile import write
@@ -26,6 +27,8 @@ def record_audio(duration_s: float, fs: int = 44100, channels: int = 1, dtype: s
 	- `channels`: 1 for mono, 2 for stereo
 	- return value: shape (N,) for mono or (N, channels) for multi-channel
 	"""
+	start_time = datetime.now()
+	print(f'Recording began at time: {start_time}')
 	print("Recording audio...")
 	if sd is None:
 		raise ImportError("sounddevice is required for recording. Install with: pip install sounddevice")
@@ -40,7 +43,6 @@ def record_audio(duration_s: float, fs: int = 44100, channels: int = 1, dtype: s
 	if arr.ndim == 2 and arr.shape[1] == 1:
 		return arr[:, 0]
 	return arr
-
 
 # Use `save_wav_file` from `Generator_key_only` instead of a local implementation.
 
