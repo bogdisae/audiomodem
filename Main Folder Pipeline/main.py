@@ -1,5 +1,5 @@
 import questionary
-
+import functions
 
 def pick_wav_file(prompt_text: str, folder: Path) -> str:
     wav_files = sorted(folder.glob('*.wav'))
@@ -21,10 +21,13 @@ params = {
         'repeat_key_count': 1,
         'block_length': 1024,
         'cyclic_prefix_length': 32,
-        'length': 50000,
+        'length_of_key': 50000, # length of key 
         'fs': 44100, #Generating signal
         'fs_record': 44100, #Recording signal
-        'silence_duration': 0.0
+        'silence_duration': 0.0,
+        'record duration': 30, #Length of recording
+        'signal_name': 'test_signal_01.wav',
+        'recording_name': 'test_recording_01.wav'
 
     }
 
@@ -33,10 +36,14 @@ if operation == 'Generate signal':
     from transmit import main as transmit_main
 
     transmit_main(params)
-    
+
 elif operation == 'Record signal':
     #File to run a recording function that records audio and saves as wav file 
+    from recieve import main as receive_main
 
+    receive_main(params)
+
+#All other are for post processing. Apart from normal operation which is end game program that runs all
 elif operation == 'Correlate signals':
     
     #Pick the received and transmitted chirp wav files, 
