@@ -2,19 +2,6 @@ import questionary
 import functions
 from pathlib import Path
 
-def pick_wav_file(prompt_text: str, folder: Path) -> str:
-    wav_files = sorted(folder.glob('*.wav'))
-    if not wav_files:
-        raise FileNotFoundError(f'No .wav files found in {folder}')
-
-    choice = questionary.select(
-        prompt_text,
-        choices=[path.name for path in wav_files],
-    ).ask()
-    if choice is None:
-        raise SystemExit('No file selected')
-    return str(folder / choice)
-
 operation = questionary.select('Select operation:', choices=['Generate signal', 'Record signal', 'Correlate signals', 'Channel estimation', 'Normal operation', 'Exit']).ask()
 
 params = {

@@ -2,7 +2,7 @@
 from scipy.io.wavfile import write
 from pathlib import Path
 import questionary
-from functions import bytes_csv_to_bits, bits_to_qpsk, frame_symbols, ofdm_modulate, generate_chirp, build_transmit_signal
+from transmit_functions import bytes_csv_to_bits, bits_to_qpsk, frame_symbols, ofdm_modulate, generate_chirp, build_transmit_signal
 import numpy as np
 
 def pick_text_file(prompt_text: str, folder: Path) -> str:
@@ -36,6 +36,8 @@ def main(params):
     # OFDM modulation
     ofdm_blocks = [ofdm_modulate(frame, n_fft=params['block_length']) for frame in framed_symbols]
     print("Length of OFDM blocks:", len(ofdm_blocks[0]))
+    assert all(np.max(np.abs(np.imag(block))) == 0 for block in ofdm_blocks), \
+    "Complex values detected in OFDM blocks"
 
     # Make the key generation more general later
     key = None
@@ -50,9 +52,6 @@ def main(params):
         raise SystemExit("No filename provided")
     write(f"Main Folder Pipeline/Audio Files/{filename}.wav", params['fs'], combined_int16)
 
-    #Create signal
-    #save signal in relevant folder
-    #Play signal
 
 if __name__ == "__main__":
     params = {
