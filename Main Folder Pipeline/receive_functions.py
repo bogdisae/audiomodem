@@ -29,7 +29,8 @@ def generate_chirp(fs, T, f0, f1):
 
     return chirp_signal / np.max(np.abs(chirp_signal))
 
-def chirp_matched_filter(signal, fs, T, f0, f1):
+def chirp_matched_filter(signal, fs, T, f0, f1, plot = True):
+    #Signal input in form of numpy array
 
     signal = np.asarray(signal).squeeze()
     chirp_sig = generate_chirp(fs, T, f0, f1).squeeze()
@@ -40,12 +41,13 @@ def chirp_matched_filter(signal, fs, T, f0, f1):
     # Sample indices for x-axis
     x = np.arange(len(corr))
     # Plot
-    plt.figure()
-    plt.plot(x, np.abs(corr))
-    plt.title("Matched Filter Output - Absolute value")
-    plt.xlabel("Sample index")
-    plt.ylabel("Correlation magnitude")
-    plt.show()
+    if plot == True:
+        plt.figure()
+        plt.plot(x, np.abs(corr))
+        plt.title("Matched Filter Output - Absolute value")
+        plt.xlabel("Sample index")
+        plt.ylabel("Correlation magnitude")
+        plt.show()
 
 
     return sync_index

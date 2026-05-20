@@ -1,7 +1,6 @@
 import questionary
-
-
 from pathlib import Path
+
 base_dir = Path(__file__).parent
 
 def pick_wav_file(prompt_text: str, folder: Path) -> str:
@@ -23,6 +22,8 @@ operation = questionary.select('Select operation:', choices=['Generate signal', 
 params = {
         'key_type': 'chirp',
         'repeat_key_count': 1,
+        'f0': 100, #Start frequency of chirp
+        'f1': 8000, #End frequency of chirp
         'block_length': 1024,
         'cyclic_prefix_length': 32,
         'length_of_key': 50000, # length of key 
@@ -53,22 +54,50 @@ elif operation == 'Record signal':
     receive_main(params)
 
 #All other are for post processing. Apart from normal operation which is end game program that runs all
-elif operation == 'Correlate signals':
+elif operation == 'Correlate signals' or operation == 'Channel estimation':
+    from transmit_functions import generate_chirp
+    from receive_functions import chirp_matched_filter, normalise_signal, save_wav_file
+    from scipy.io import wavfile
+    from channel_estimation import isolate_key_signal, estimate_channel_response
     #For assessing synchronisation
-    r_file = pick_wav_file('Select received chirp wav file:', base_dir + '/Audio Files')
-    t_file = pick_wav_file('Select transmitted chirp wav file:', base_dir + '/Audio Files')
+    Audio_path = base_dir / 'Audio Files'
+    rx_file_path = pick_wav_file('Select received wav file:', Audio_path)
+    
+    #Checks if the key/preamble wav file already exists, if not runs the function to create it
+    key_wav_exist = questionary.confirm('Do you already have the correct digital key wav file?').ask()
+    key_length_seconds = params['length_of_key'] / params['fs']
 
+    if key_wav_exist:
+        tx_file_path = pick_wav_file('Select transmitted key only wav file:', Audio_path)
+    else:
+        #Create digital key wav file using the same parameters as the transmitted signal
+        if params['key_type'] == 'chirp':
+            key = generate_chirp(params['fs'], key_length_seconds, params['f0'], params['f1'])
+            file_name = 'generated_chirp_' + str(params['f0']) + '_' + str(params['f1']) + '_' + str(params['fs']) + '_' + str(round(key_length_seconds,2)) + '.wav'
+        
+        save_wav_file(key, params['fs'], Audio_path / file_name)
+        tx_file_path = Audio_path / file_name
 
+    #Find sync index    
+    if params['key_type'] == 'chirp':
+        
+        sync_index = chirp_matched_filter(normalise_signal(wavfile.read(rx_file_path)[1]), params['fs_record'], key_length_seconds, params['f0'], params['f1'])
+    else:
+        raise ValueError("Unsupported key type")
+    
+    if operation == 'Channel estimation':
+        #Pick the received and transmitted chirp wav files, 
+        #Analyse using plots to determine the synchronization index
+        #Call Channel estimation file
+        isolated_key_path = isolate_key_signal(rx_file_path, sync_index, params)
+
+        #undecided what type of response is returned here
+        #Cutting off silence at the end of the digital key/preamble
+        channel_response = estimate_channel_response(wavfile.read(isolated_key_path)[1], normalise_signal(wavfile.read(tx_file_path)[1][:params['length_of_key']]), params)
 
     pass
     #Pick the received and transmitted chirp wav files, 
     #Analyse using plots to determine the synchronization index
-
-elif operation == 'Channel estimation':
-    pass
-    #Pick the received and transmitted chirp wav files, 
-    #Analyse using plots to determine the synchronization index
-    #Call Channel estimation file
 
 elif operation == 'Normal operation':
     pass
