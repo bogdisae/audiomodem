@@ -59,6 +59,7 @@ def main(params):
 if __name__ == "__main__":
     params = {
         'key_type': 'chirp',
+        'key_length': 0.1,
         'repeat_key_count': 1,
         'block_length': 1024,
         'cyclic_prefix_length': 32,

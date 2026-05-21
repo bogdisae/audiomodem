@@ -20,14 +20,16 @@ def pick_wav_file(prompt_text: str, folder: Path) -> str:
 operation = questionary.select('Select operation:', choices=['Generate signal', 'Receive signal', 'Correlate signals', 'Channel estimation', 'Normal operation', 'Exit']).ask()
 
 params = {
-        'key_type': 'chirp', #up_down_chirp, 
+        # MAYBE ADD CHIRP PARAMATERS E.G CHIRP LENGTH, START AND END FREQUENCIES - SAM
+        'key_type': 'chirp', #up_down_chirp
+        'key_length': 0.1,
         'repeat_key_count': 1,
         'f0': 100, #Start frequency of chirp
         'f1': 22000, #End frequency of chirp
         'block_length': 1024,
         'cyclic_prefix_length': 32,
         'read_prefix_early_samples': 5, #Deliberately read some samples before the detected sync index 
-        'length_of_key': 50000, # length of key 
+        'length_of_key': params['key_length'] * params['fs'], # length of key 
         'fs': 44100, #Generating signal
         'fs_record': 44100, #Recording signal
         'silence_duration': 0.0,
@@ -49,7 +51,7 @@ elif operation == 'Receive signal':
 
     #Possible recording rates
     #Aaron's laptop: 48 000Hz
-    #Sam's laptop:
+    #Sam's laptop: 44100 or 48000
     #Bogdan's laptop: 
 
     receive_main(params)
