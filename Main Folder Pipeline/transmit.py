@@ -42,7 +42,7 @@ def main(params):
     # Make the key generation more general later
     key = None
     if (params['key_type'] == 'chirp' and params['repeat_key_count'] == 1):
-        key = generate_chirp(params['fs'], 1, 100, 8000)
+        key = generate_chirp(params['fs'], params['key_length'], 100, 8000)
 
     fullSignal = build_transmit_signal(ofdm_blocks, params['cyclic_prefix_length'], key)
     combined_int16 = np.int16(fullSignal * 32767) # Convert to wav amplitudes
@@ -56,6 +56,7 @@ def main(params):
 if __name__ == "__main__":
     params = {
         'key_type': 'chirp',
+        'key_length': 0.1,
         'repeat_key_count': 1,
         'block_length': 1024,
         'cyclic_prefix_length': 32,

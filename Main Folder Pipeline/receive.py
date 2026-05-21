@@ -2,8 +2,10 @@
 from pathlib import Path
 import questionary
 from scipy.io import wavfile
-from receive_functions import normalise_signal, chirp_matched_filter, record_audio
+from receive_functions import normalise_signal, chirp_matched_filter, record_audio, generate_chirp
 from transmit_functions import save_wav_file
+import numpy as np
+import matplotlib.pyplot as plt
 
 def pick_wav_file(prompt_text: str, folder: Path) -> str:
     wav_files = sorted(folder.glob('*.wav'))
@@ -37,17 +39,56 @@ def main(params):
     fs_rx, rxSig = wavfile.read(selected_path)
     rxSig = normalise_signal(rxSig)
 
-    # Unsure what sampling rate to use here
-    if params['key_type'] == 'chirp':
-        sync_index = chirp_matched_filter(rxSig, params['fs_record'], 1, 100, 8000)
+    # UNSURE WHAT THE DIFFERENCE BETWEEN FS AND FS_RECORD IS IN THE PARAMS - SAM
+    if params['key_type'] == 'chirp' and params['repeat_key_count'] == 1:
+        sync_index = chirp_matched_filter(rxSig, params['fs_record'], params['key_length'], 100, 8000, True)
     else:
         raise ValueError("Unsupported key type")
 
     print(f"{params['key_type']} starts at sample:", sync_index)
+
+    # AT THIS POINT (HOPEFULLY) WE ARE SYNCHRONISED
+    # NOW LETS FIND THE CHANNEL RESPONSE
+
+    end_idx = sync_index + params['length_of_key'] * params['fs_record'] #Length of Chirp
+    isolated_key = rxSig[sync_index:end_idx]
+    Y = np.fft.rfft(isolated_key, n=params['block_length']) # Why do we use the block length as the DFT length? - Sam
+    
+    # Code below is messy - will need to generalise for repeated chirps / other keys
+    if params['key_type'] == 'chirp' and params['repeat_key_count'] == 1:
+        chirp = generate_chirp(params['fs_record'], params['key_length'], 100, 8000) 
+        S = np.fft.rfft(chirp, n=params['block_length'])
+
+    eps = 1e-12  # Prevent divide-by-zero instability
+    H = Y[1:-1] / (S[1:-1] + eps) # Remove DC and nyquist bins
+    print(H.shape)
+
+
+    freqs = np.fft.rfftfreq(params['block_length'], d=1 / params['fs_record'])[1:-1]
+
+    plt.figure(figsize=(10,4))
+
+    plt.plot(
+        freqs,
+        20 * np.log10(np.abs(H) + 1e-12)
+    )
+
+    plt.xlabel('Frequency (Hz)')
+    plt.ylabel('Magnitude (dB)')
+    plt.title('Estimated Channel Frequency Response')
+    plt.grid(True)
+
+    plt.show()
+
+
+     # Next line simply assumes that the ODFM begins as soon as the key finishes
+    start_index = sync_index + params['fs_record'] * params['key_length']
+    
     
 if __name__ == "__main__":
     params = {
         'key_type': 'chirp',
+        'key_length': 0.1,
         'repeat_key_count': 1,
         'block_length': 1024,
         'cyclic_prefix_length': 32,
