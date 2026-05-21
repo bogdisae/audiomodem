@@ -47,44 +47,40 @@ def main(params):
     # NOW WE SYNCHRONISE!
 
     try:
-        rxSig.estimationIdxStart = key_synchronise(rxSig, params['fs'], params['length_of_key'] / params['fs'], params['f0'], params['f1'], params['key_type'])
+        rxSig.keyIdxStart = key_synchronise(rxSig, params['fs'], params['length_of_key'] / params['fs'], params['f0'], params['f1'], params['key_type'])
     except ValueError as e:
         print("Error during matched filtering:", e)
         raise
 
-    print(f"{params['key_type']} starts at sample:", rxSig.estimationIdxStart)
+    print(f"{params['key_type']} starts at sample:", rxSig.keyIdxStart)
 
-    rxSig.estimationIdxEnd = rxSig.estimationIdxStart + params['length_of_key'] 
-    isolated_key = rxSig[rxSig.estimationIdxStart : rxSig.estimationIdxEnd]
-    Y = np.fft.rfft(isolated_key, n=params['block_length'])
+    rxSig.keyIdxEnd = rxSig.keyIdxStart + params['length_of_key'] 
+    isolated_key = rxSig.sigArray[rxSig.keyIdxStart : rxSig.keyIdxEnd]
 
-    key = generate_key(params['fs_record'], params['length_of_key'] / params['fs_record'], params['f0'], params['f1'], params['key_type'])
-    S = np.fft.rfft(key, n=params['block_length'])
+    DFT_LENGTH = 12000  # THIS IS IMPORTANT! THINK ABOUT HOW MANY DFT POINTS YOU ACTUALLY NEED (E.G NUMBER OF SAMPLES IN CHIRP)
+    # THIS WILL NOT WORK IN THE DFT PIPELINE UNTIL WE HAVE 1024 COEFFICIENTS
+
+    Y = np.fft.rfft(isolated_key, n = DFT_LENGTH)
+
+    key = generate_key(params['fs'], params['length_of_key'] / params['fs'], params['f0'], params['f1'], params['key_type'])
+    S = np.fft.rfft(key, n = DFT_LENGTH)
 
     eps = 1e-12  # Prevent divide-by-zero instability
     H = Y[1:-1] / (S[1:-1] + eps) # Remove DC and nyquist bins
     print(H.shape)
 
-
-    freqs = np.fft.rfftfreq(params['block_length'], d=1 / params['fs_record'])[1:-1]
-
+    freqs = np.fft.rfftfreq(DFT_LENGTH, d=1 / params['fs'])[1:-1]
     plt.figure(figsize=(10,4))
-
-    plt.plot(
-        freqs,
-        20 * np.log10(np.abs(H) + 1e-12)
-    )
-
+    plt.plot(freqs, 20 * np.log10(np.abs(H) + 1e-12))
     plt.xlabel('Frequency (Hz)')
     plt.ylabel('Magnitude (dB)')
     plt.title('Estimated Channel Frequency Response')
     plt.grid(True)
-
     plt.show()
 
 
      # Next line simply assumes that the ODFM begins as soon as the key finishes
-    start_index = sync_index + params['fs_record'] * params['key_length']
+    rxSig.dataIdx = rxSig.keyIdxStart + params['fs_record'] * params['key_length']
     
     
 if __name__ == "__main__":
