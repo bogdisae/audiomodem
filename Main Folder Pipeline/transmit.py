@@ -2,7 +2,8 @@
 from scipy.io.wavfile import write
 from pathlib import Path
 import questionary
-from transmit_functions import bytes_csv_to_bits, bits_to_qpsk, frame_symbols, ofdm_modulate, generate_chirp, build_transmit_signal
+from transmit_functions import bytes_csv_to_bits, bits_to_qpsk, frame_symbols, ofdm_modulate, build_transmit_signal
+from receive_functions import generate_key
 import numpy as np
 
 def pick_text_file(prompt_text: str, folder: Path) -> str:
@@ -38,11 +39,8 @@ def main(params):
     print("Length of OFDM blocks:", len(ofdm_blocks[0]))
     assert all(np.max(np.abs(np.imag(block))) == 0 for block in ofdm_blocks), \
     "Complex values detected in OFDM blocks"
-
-    # Make the key generation more general later
-    key = None
-    if (params['key_type'] == 'chirp' and params['repeat_key_count'] == 1):
-        key = generate_chirp(params['fs'], 1, 100, 8000)
+    
+    key = generate_key(params['fs'], params['length_of_key']/params['fs'], params['f0'], params['f1'], params['key_type'])
 
     fullSignal = build_transmit_signal(ofdm_blocks, params['cyclic_prefix_length'], key)
     combined_int16 = np.int16(fullSignal * 32767) # Convert to wav amplitudes
@@ -55,18 +53,14 @@ def main(params):
 
 if __name__ == "__main__":
     params = {
-        'key_type': 'chirp',
-        'repeat_key_count': 1,
-        'block_length': 1024,
-        'cyclic_prefix_length': 32,
-        'length_of_key': 50000, # length of key 
-        'fs': 44100, #Generating signal
-        'fs_record': 44100, #Recording signal
-        'silence_duration': 0.0,
-        'record_duration': 30, #Length of recording
-        'signal_name': 'test_signal_01.wav',
-        'recording_name': 'test_recording_01.wav'
-
-    }
-
+            # MAYBE ADD CHIRP PARAMATERS E.G CHIRP LENGTH, START AND END FREQUENCIES - SAM
+            'key_type': 'chirp', #up_down_chirp
+            'length_of_key': 12000, # length of key 
+            'f0': 100, #Start frequency of chirp
+            'f1': 4000, #End frequency of chirp
+            'block_length': 1024,
+            'cyclic_prefix_length': 128,
+            'read_prefix_early_samples': 30, # Deliberately read some samples before the detected sync index 
+            'fs': 48000, # GLOBAL sample rate
+        }
     main(params)
