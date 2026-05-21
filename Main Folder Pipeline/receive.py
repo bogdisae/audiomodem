@@ -3,7 +3,7 @@ from pathlib import Path
 import questionary
 from scipy.io import wavfile
 from receive_functions import normalise_signal, key_matched_filter, record_audio, generate_key
-import Rxsignal # OUR OWN CLASS
+from rx_signal import RxSignal # OUR OWN CLASS
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -21,6 +21,9 @@ def pick_wav_file(prompt_text: str, folder: Path) -> str:
         raise SystemExit('No file selected')
     return str(folder / choice)
 
+#-----------------------------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------------------------
+
 def main(params):
 
     # Choose how to access the audio file
@@ -29,19 +32,19 @@ def main(params):
         choices=["Record audio", "Select file"]
     ).ask()
     if mode is None: raise SystemExit("No option selected")
+
     if mode == "Select file":
         selected_path = pick_wav_file("Select a WAV file:", Path("./Main Folder Pipeline/Audio Files"))
+        # Load the audio file INTO OUR OWN CLASS
+        fs_rx, sig = wavfile.read(selected_path)
+        rxSig = RxSignal(normalise_signal(sig))
+
     elif mode == "Record audio":
         print("Recording mode selected")
-        # TO DO: CALL A RECORDING FUNCTION, OR SOMETHING 
-        record_audio(params['record_duration'], params['fs_record'], filename=params['recording_name'])
-        selected_path = Path(__file__).parent / 'Audio Files'/ params['recording_name']
-    # Load the audio file
-    fs_rx, rxSig = wavfile.read(selected_path)
-    rxSig = normalise_signal(rxSig)
-
+        sig = record_audio(params['fs'])
+        rxSig = RxSignal(normalise_signal(sig))
     
-
+    # NOW WE SYNCHRONISE!
 
     try:
         sync_index = key_matched_filter(rxSig, params['fs_record'], params['length_of_key'] / params['fs_record'], params['f0'], params['f1'], params['key_type'])
@@ -87,15 +90,14 @@ def main(params):
 if __name__ == "__main__":
 
     params = {
-        # MAYBE ADD CHIRP PARAMATERS E.G CHIRP LENGTH, START AND END FREQUENCIES - SAM
-        'key_type': 'chirp', #up_down_chirp
-        'f0': 100, #Start frequency of chirp
-        'f1': 8000, #End frequency of chirp
-        'block_length': 1024,
-        'cyclic_prefix_length': 32,
-        'read_prefix_early_samples': 5, # Deliberately read some samples before the detected sync index 
-        'length_of_key': 4800, # length of key 
-        'fs': 48000, # GLOBAL sample rate
-        'record_duration': 10, #Length of recording
-    }
+            # MAYBE ADD CHIRP PARAMATERS E.G CHIRP LENGTH, START AND END FREQUENCIES - SAM
+            'key_type': 'chirp', #up_down_chirp
+            'length_of_key': 12000, # length of key 
+            'f0': 100, #Start frequency of chirp
+            'f1': 4000, #End frequency of chirp
+            'block_length': 1024,
+            'cyclic_prefix_length': 128,
+            'read_prefix_early_samples': 30, # Deliberately read some samples before the detected sync index 
+            'fs': 48000, # GLOBAL sample rate
+        }
     main(params)

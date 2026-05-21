@@ -55,13 +55,12 @@ if __name__ == "__main__":
     params = {
             # MAYBE ADD CHIRP PARAMATERS E.G CHIRP LENGTH, START AND END FREQUENCIES - SAM
             'key_type': 'chirp', #up_down_chirp
+            'length_of_key': 12000, # length of key 
             'f0': 100, #Start frequency of chirp
-            'f1': 8000, #End frequency of chirp
+            'f1': 4000, #End frequency of chirp
             'block_length': 1024,
-            'cyclic_prefix_length': 32,
-            'read_prefix_early_samples': 5, # Deliberately read some samples before the detected sync index 
-            'length_of_key': 4800, # length of key 
+            'cyclic_prefix_length': 128,
+            'read_prefix_early_samples': 30, # Deliberately read some samples before the detected sync index 
             'fs': 48000, # GLOBAL sample rate
-            'record_duration': 10, #Length of recording
         }
     main(params)
