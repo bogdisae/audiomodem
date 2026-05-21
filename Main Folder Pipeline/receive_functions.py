@@ -28,23 +28,28 @@ def generate_key(fs, T, f0, f1, type_key='chirp'):
 
     return signal / np.max(np.abs(signal))
 
-def key_matched_filter(rxSig, fs, T, f0, f1, key_type='chirp', plot=True):
-    # SIGNAL INPUT TYPE IS RxSignal!
-    signal = np.asarray(rxSig.sigArray).squeeze()
-    key_sig = generate_key(fs, T, f0, f1, type_key=key_type).squeeze()
+def key_synchronise(rxSig, fs, T, f0, f1, key_type='chirp', plot=True):
 
-    corr = correlate(signal, key_sig, mode='valid')
-    sync_index = np.argmax(np.abs(corr))
-    # Plot
-    if plot == True:
-        # Sample indices for x-axis
-        x = np.arange(len(corr))
-        plt.figure()
-        plt.plot(x, np.abs(corr))
-        plt.title("Matched Filter Output - Absolute value")
-        plt.xlabel("Sample index")
-        plt.ylabel("Correlation magnitude")
-        plt.show()
+    # SIGNAL INPUT TYPE IS RxSignal (our own class)
+
+    if key_type == 'chirp' or key_type == 'up_down_chirp':
+        # IN THIS CASE DO A MATCHED FILTER
+        
+        signal = np.asarray(rxSig.sigArray).squeeze()
+        key_sig = generate_key(fs, T, f0, f1, type_key=key_type).squeeze()
+
+        corr = correlate(signal, key_sig, mode='valid')
+        sync_index = np.argmax(np.abs(corr))
+        # Plot
+        if plot == True:
+            # Sample indices for x-axis
+            x = np.arange(len(corr))
+            plt.figure()
+            plt.plot(x, np.abs(corr))
+            plt.title("Matched Filter Output - Absolute value")
+            plt.xlabel("Sample index")
+            plt.ylabel("Correlation magnitude")
+            plt.show()
 
     return sync_index
 

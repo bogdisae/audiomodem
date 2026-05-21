@@ -2,7 +2,7 @@
 from pathlib import Path
 import questionary
 from scipy.io import wavfile
-from receive_functions import normalise_signal, key_matched_filter, record_audio, generate_key
+from receive_functions import normalise_signal, key_synchronise, record_audio, generate_key
 from rx_signal import RxSignal # OUR OWN CLASS
 
 import numpy as np
@@ -47,16 +47,16 @@ def main(params):
     # NOW WE SYNCHRONISE!
 
     try:
-        sync_index = key_matched_filter(rxSig, params['fs_record'], params['length_of_key'] / params['fs_record'], params['f0'], params['f1'], params['key_type'])
+        rxSig.estimationIdxStart = key_synchronise(rxSig, params['fs'], params['length_of_key'] / params['fs'], params['f0'], params['f1'], params['key_type'])
     except ValueError as e:
         print("Error during matched filtering:", e)
         raise
 
-    print(f"{params['key_type']} starts at sample:", sync_index)
+    print(f"{params['key_type']} starts at sample:", rxSig.estimationIdxStart)
 
-    end_idx = sync_index + params['length_of_key'] #Length of Chirp
-    isolated_key = rxSig[sync_index:end_idx]
-    Y = np.fft.rfft(isolated_key, n=params['block_length']) # Why do we use the block length as the DFT length? - Sam
+    rxSig.estimationIdxEnd = rxSig.estimationIdxStart + params['length_of_key'] 
+    isolated_key = rxSig[rxSig.estimationIdxStart : rxSig.estimationIdxEnd]
+    Y = np.fft.rfft(isolated_key, n=params['block_length'])
 
     key = generate_key(params['fs_record'], params['length_of_key'] / params['fs_record'], params['f0'], params['f1'], params['key_type'])
     S = np.fft.rfft(key, n=params['block_length'])
