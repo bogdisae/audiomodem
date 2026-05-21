@@ -60,9 +60,8 @@ if __name__ == "__main__":
             'block_length': 1024,
             'cyclic_prefix_length': 32,
             'read_prefix_early_samples': 5, # Deliberately read some samples before the detected sync index 
-            'length_of_key': 4410, # length of key 
-            'fs': 44100, #Generating signal
-            'fs_record': 44100, #Recording signal
+            'length_of_key': 4800, # length of key 
+            'fs': 48000, # GLOBAL sample rate
             'record_duration': 10, #Length of recording
         }
     main(params)

@@ -3,11 +3,8 @@ from pathlib import Path
 import questionary
 from scipy.io import wavfile
 from receive_functions import normalise_signal, key_matched_filter, record_audio, generate_key
-#from transmit_functions import save_wav_file
-'''
-MERGE CONFLICT REDUNDANT
-from receive_functions import normalise_signal, chirp_matched_filter, record_audio, generate_chirp'''
-#from transmit_functions import save_wav_file
+import Rxsignal # OUR OWN CLASS
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -43,8 +40,8 @@ def main(params):
     fs_rx, rxSig = wavfile.read(selected_path)
     rxSig = normalise_signal(rxSig)
 
-    # AT THIS POINT (HOPEFULLY) WE ARE SYNCHRONISED
-    # NOW LETS FIND THE CHANNEL RESPONSE
+    
+
 
     try:
         sync_index = key_matched_filter(rxSig, params['fs_record'], params['length_of_key'] / params['fs_record'], params['f0'], params['f1'], params['key_type'])
@@ -97,9 +94,8 @@ if __name__ == "__main__":
         'block_length': 1024,
         'cyclic_prefix_length': 32,
         'read_prefix_early_samples': 5, # Deliberately read some samples before the detected sync index 
-        'length_of_key': 4410, # length of key 
-        'fs': 44100, #Generating signal
-        'fs_record': 44100, #Recording signal
+        'length_of_key': 4800, # length of key 
+        'fs': 48000, # GLOBAL sample rate
         'record_duration': 10, #Length of recording
     }
     main(params)
