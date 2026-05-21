@@ -41,9 +41,11 @@ def main(params):
     "Complex values detected in OFDM blocks"
 
     # Make the key generation more general later
-    key = None
-    if (params['key_type'] == 'chirp' and params['repeat_key_count'] == 1):
-        key = generate_key(params['fs'], params['length_of_key']/params['fs'], params['f0'], params['f1'], params['key_type'])
+    '''CODE REDUNDANT'''
+    #key = None
+    #if (params['key_type'] == 'chirp' and params['repeat_key_count'] == 1):
+    
+    key = generate_key(params['fs'], params['length_of_key']/params['fs'], params['f0'], params['f1'], params['key_type'])
 
     fullSignal = build_transmit_signal(ofdm_blocks, params['cyclic_prefix_length'], key)
     combined_int16 = np.int16(fullSignal * 32767) # Convert to wav amplitudes

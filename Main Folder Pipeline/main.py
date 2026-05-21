@@ -20,19 +20,21 @@ def pick_wav_file(prompt_text: str, folder: Path) -> str:
 operation = questionary.select('Select operation:', choices=['Generate signal', 'Receive signal', 'Correlate signals', 'Channel estimation', 'Normal operation', 'Exit']).ask()
 
 params = {
-        'key_type': 'up_down_chirp', #up_down_chirp, 
+        'key_type': 'chirp', #up_down_chirp, 
         'repeat_key_count': 1,
         'f0': 100, #Start frequency of chirp
         'f1': 22000, #End frequency of chirp
         'block_length': 1024,
         'cyclic_prefix_length': 32,
+        'read_prefix_early_samples': 5, #Deliberately read some samples before the detected sync index 
         'length_of_key': 50000, # length of key 
         'fs': 44100, #Generating signal
         'fs_record': 44100, #Recording signal
         'silence_duration': 0.0,
         'record_duration': 10, #Length of recording
-        'signal_name': 'test_signal_04_AM_room.wav',
-        'recording_name': 'test_recording_04_AM_room.wav'
+        'signal_name': 'test_signal_XX.wav',
+        'recording_name': 'test_recording_XX.wav'
+
 
     }
 

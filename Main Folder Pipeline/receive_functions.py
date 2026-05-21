@@ -95,3 +95,23 @@ def record_audio(record_duration, fs, filename="recording.wav", channels=1):
         recording = recording.reshape(-1)
 
     save_wav_file(recording, fs, filename)
+
+def demodulate_ofdm_signal(params, received_signal, sync_idx):
+
+    #start of OFDM symbol 1
+    #Assumes correlation max is at the end of the key, so the first OFDM symbol starts immediately after the key
+    #Therefore sync_idx is the start of the ofdm symbol, and the key is immediately before it
+
+    early_idx = sync_idx - params['read_prefix_early_samples']
+
+    #No. Blocks = OFDM signal length / (block length + cyclic prefix length)
+
+    #for in range blocks:
+    #Read in block length + cyclic prefix length samples, starting from sync_idx
+    '''How does reading early effect the demodulation?'''
+
+    #Call FFT function
+
+    #Assemble all demodulated blocks into one stream of symbols
+
+    #FOR 
