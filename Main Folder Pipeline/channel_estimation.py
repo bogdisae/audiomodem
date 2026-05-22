@@ -1,4 +1,4 @@
-from transmit_functions import  save_wav_file
+from receive_functions import  save_wav_file
 from scipy.io import wavfile
 from scipy.signal import welch
 from pathlib import Path

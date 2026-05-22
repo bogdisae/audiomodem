@@ -2,7 +2,7 @@
 from pathlib import Path
 import questionary
 from scipy.io import wavfile
-from receive_functions import normalise_signal, key_synchronise, record_audio, generate_key
+from receive_functions import normalise_signal, key_synchronise, record_audio, generate_key, wiener_filter_coeffs
 from rx_signal import RxSignal # OUR OWN CLASS
 
 import numpy as np
@@ -69,6 +69,8 @@ def main(params):
     H = Y[1:-1] / (S[1:-1] + eps) # Remove DC and nyquist bins
     print(H.shape)
 
+    wiener_filter_coeffs(isolated_key, key, filter_N=1024, fs = params['fs'], plotting=True)
+
     freqs = np.fft.rfftfreq(DFT_LENGTH, d=1 / params['fs'])[1:-1]
     plt.figure(figsize=(10,4))
     plt.plot(freqs, 20 * np.log10(np.abs(H) + 1e-12))
@@ -80,7 +82,7 @@ def main(params):
 
 
      # Next line simply assumes that the ODFM begins as soon as the key finishes
-    rxSig.dataIdx = rxSig.keyIdxStart + params['fs_record'] * params['key_length']
+    rxSig.dataIdx = rxSig.keyIdxStart + params['length_of_key']
     
     
 if __name__ == "__main__":
