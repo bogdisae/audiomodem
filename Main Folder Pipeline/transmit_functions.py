@@ -18,17 +18,17 @@ class Constellation:
         pass
 
 
-def bits_to_qpsk(bit_list, constellation:Constellation):
+# def bits_to_qpsk(bit_list, constellation:Constellation): Replaced by Constellation class
 
-    'Converts a binary bitstring into QPSK symbols'
+#     'Converts a binary bitstring into QPSK symbols'
 
-    bit_list = np.array(bit_list)
+#     bit_list = np.array(bit_list)
 
-    symbols = constellation.bits_to_symbols(bit_list)
+#     symbols = constellation.bits_to_symbols(bit_list)
 
-    # THIS USES THE GRAY ENCODING
+#     # THIS USES THE GRAY ENCODING
 
-    return symbols / np.sqrt(2)
+#     return symbols / np.sqrt(2)
 
 def frame_symbols(symbols, frame_size):
 
@@ -40,12 +40,13 @@ def ofdm_modulate(block, n_fft=1024):
     X = np.zeros(n_fft, dtype=complex)
 
     half = len(block)
-    X[1:half+1] = block[:half]
-
+    X[1:half+1] = block
     # Hermitian symmetry for real signal
-    X[-half:] = np.conj(X[1:half+1][::-1])
+    X[-half:] = np.conj(block[::-1])
+    assert np.max(np.abs(np.imag(block))) < pow(1.0, -15), \
+    "Complex values detected in OFDM blocks"
 
-    return np.fft.ifft(X)
+    return np.fft.ifft(X).real # floating point imginary compoentn
 
 
 def add_cyclic_prefix(signal, cp_len):
