@@ -113,7 +113,7 @@ def demodulate_ofdm_signal(params, received_signal, equalizer_coeffs, data_start
     block_length = params['block_length']
     cp_length = params['cyclic_prefix_length']
 
-    early_idx = data_start_idx #- params['read_prefix_early_samples']
+    early_idx = data_start_idx - params['read_prefix_early_samples']
     symbol_len = block_length + cp_length
 
     remaining = len(received_signal) - early_idx
