@@ -93,9 +93,7 @@ def main(params):
      # Next line simply assumes that the ODFM begins as soon as the key finishes
     rxSig.dataIdx = rxSig.keyIdxStart + params['length_of_key']
 
-
-
-    #demodulate_ofdm_signal(equalised_signal)
+    demodulate_ofdm_signal(params, rxSig.sigArray, H_1024, rxSig.dataIdx)
     
     
 if __name__ == "__main__":

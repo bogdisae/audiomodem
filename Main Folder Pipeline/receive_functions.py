@@ -104,14 +104,100 @@ def record_audio(fs, channels=1):
 
     return audio
 
-def demodulate_ofdm_signal(params, equalised_signal, data_start_idx):
+def demodulate_ofdm_signal(params, received_signal, equalizer_coeffs, data_start_idx):
+    # Equalizer coeffs is an array of the estimation coefficients (should be same length as block length)
 
     # Start of OFDM symbol 1
     # Data_start_idx is the start of the ofdm symbol, and the key is immediately before it
 
-    early_idx = data_start_idx - params['read_prefix_early_samples']
+    block_length = params['block_length']
+    cp_length = params['cyclic_prefix_length']
 
-    #No. Blocks = OFDM signal length / (block length + cyclic prefix length)
+    early_idx = data_start_idx #- params['read_prefix_early_samples']
+    symbol_len = block_length + cp_length
+
+    remaining = len(received_signal) - early_idx
+    n_blocks = remaining // symbol_len
+
+    recovered_blocks = []
+
+    for block_idx in range(n_blocks):
+
+        # Symbol boundaries
+        symbol_start = early_idx + block_idx * symbol_len
+        symbol_end = symbol_start + symbol_len
+
+        if symbol_end > len(received_signal):
+            break
+
+        symbol_cp = received_signal[symbol_start:symbol_end]
+
+        # Remove cyclic prefix
+        symbol = symbol_cp[cp_length:]
+
+        # FFT to frequency domain
+        Y = np.fft.fft(symbol, n = block_length )
+
+        # Extract positive-frequency carriers
+        num_subcarriers = (block_length // 2) - 1
+        data_carriers = Y[1 : num_subcarriers + 1]
+
+        # Equalisation
+        H = equalizer_coeffs[:num_subcarriers]
+
+        # Avoid divide-by-zero
+        eps = 1e-12
+
+        data_carriers = data_carriers / (H + eps)
+
+        recovered_blocks.append(data_carriers)
+
+    if len(recovered_blocks) == 0:
+        return np.array([]), []
+
+    recovered_symbols = np.concatenate(recovered_blocks)
+
+    plt.figure(figsize=(6,6))
+
+    plt.scatter(
+        np.real(recovered_symbols),
+        np.imag(recovered_symbols),
+        s=10
+    )
+
+    plt.axhline(0)
+    plt.axvline(0)
+
+    plt.xlabel("In-Phase (Real)")
+    plt.ylabel("Quadrature (Imaginary)")
+
+    plt.grid(True)
+    plt.axis('equal')
+
+    plt.show()
+
+    b_list = []
+
+    # THIS IS TEMPORARY QPSK DEMODULATION FOR TESTING. NOT GENERAL!!!!!!!!!!!!
+    for symbol in recovered_symbols:
+        if symbol.real > 0 and symbol.imag > 0:
+            b_list.append('0')
+            b_list.append('0')
+        elif symbol.real < 0 and symbol.imag > 0:
+            b_list.append('0')
+            b_list.append('1') 
+        elif symbol.real < 0 and symbol.imag < 0:
+            b_list.append('1')
+            b_list.append('1')
+        else:
+            b_list.append('1')
+            b_list.append('0')
+
+    print(b_list[:100])
+
+    return b_list
+
+    
 
     #for in range blocks:
     #Read in block length + cyclic prefix length samples, starting from sync_idx
