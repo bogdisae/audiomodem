@@ -2,7 +2,7 @@
 from scipy.io.wavfile import write
 from pathlib import Path
 import questionary
-from transmit_functions import bytes_csv_to_bits, bits_to_qpsk, frame_symbols, ofdm_modulate, build_transmit_signal
+from transmit_functions import bytes_csv_to_bits, bits_to_qpsk, frame_symbols, ofdm_modulate, build_transmit_signal, Constellation
 from receive_functions import generate_key
 import numpy as np
 
@@ -28,9 +28,16 @@ def main(params):
     with open(text_file, "r", encoding="utf-8") as f:
         text = f.read()
 
+    constellation = Constellation(2, {
+        (0, 0): (1+1j),
+        (0, 1): (-1+1j),
+        (1, 0): (1-1j),
+        (1, 1): (-1-1j)
+    })
+
     # Convert data to blocks (frames) of bits
     bit_list = bytes_csv_to_bits(text)
-    symbols = bits_to_qpsk(bit_list)            # This is assuming qpsk modulation! Maybe add a paramater for the modulation type
+    symbols = bits_to_qpsk(bit_list, constellation)            # This is assuming qpsk modulation! Maybe add a paramater for the modulation type
     num_Info_Symbols = (params['block_length'] // 2) - 1    # E.g only 511 symbols for a 1024 length block
     framed_symbols = frame_symbols(symbols, num_Info_Symbols)    
 
