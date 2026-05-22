@@ -2,7 +2,7 @@
 from pathlib import Path
 import questionary
 from scipy.io import wavfile
-from receive_functions import normalise_signal, key_synchronise, record_audio, generate_key, wiener_filter_coeffs
+from receive_functions import normalise_signal, key_synchronise, record_audio, generate_key, wiener_filter_coeffs, demodulate_ofdm_signal
 from rx_signal import RxSignal # OUR OWN CLASS
 
 import numpy as np
@@ -61,13 +61,14 @@ def main(params):
     # THIS WILL NOT WORK IN THE DFT PIPELINE UNTIL WE HAVE 1024 COEFFICIENTS
 
     Y = np.fft.rfft(isolated_key, n = DFT_LENGTH)
-
     key = generate_key(params['fs'], params['length_of_key'] / params['fs'], params['f0'], params['f1'], params['key_type'])
     S = np.fft.rfft(key, n = DFT_LENGTH)
 
     eps = 1e-12  # Prevent divide-by-zero instability
     H = Y[1:-1] / (S[1:-1] + eps) # Remove DC and nyquist bins
-    print(H.shape)
+
+    # TEMPORARY TEST CODE
+    H_1024 = np.interp(np.linspace(0, len(H)-1, 1024), np.arange(len(H)), H)
 
     wiener_filter_coeffs(isolated_key, key, filter_N=1024, fs = params['fs'], plotting=True)
 
@@ -80,9 +81,21 @@ def main(params):
     plt.grid(True)
     plt.show()
 
+    plt.figure(figsize=(10,4))
+    plt.plot(np.arange(1024), 20*np.log10(np.abs(H_1024) + 1e-12))
+    plt.xlabel("Subcarrier index")
+    plt.ylabel("Magnitude (dB)")
+    plt.title("OFDM Channel Response (1024 subcarriers)")
+    plt.grid(True)
+    plt.show()
+
 
      # Next line simply assumes that the ODFM begins as soon as the key finishes
     rxSig.dataIdx = rxSig.keyIdxStart + params['length_of_key']
+
+
+
+    #demodulate_ofdm_signal(equalised_signal)
     
     
 if __name__ == "__main__":
@@ -90,12 +103,13 @@ if __name__ == "__main__":
     params = {
             # MAYBE ADD CHIRP PARAMATERS E.G CHIRP LENGTH, START AND END FREQUENCIES - SAM
             'key_type': 'chirp', #up_down_chirp
-            'length_of_key': 12000, # length of key 
-            'f0': 100, #Start frequency of chirp
-            'f1': 4000, #End frequency of chirp
+            'length_of_key': 48000, # length of key 
+            'f0': 0, #Start frequency of chirp
+            'f1': 20000, #End frequency of chirp
             'block_length': 1024,
             'cyclic_prefix_length': 128,
             'read_prefix_early_samples': 30, # Deliberately read some samples before the detected sync index 
             'fs': 48000, # GLOBAL sample rate
+            'modulation_scheme': 'QPSK'
         }
     main(params)

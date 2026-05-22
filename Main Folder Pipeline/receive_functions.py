@@ -104,13 +104,12 @@ def record_audio(fs, channels=1):
 
     return audio
 
-def demodulate_ofdm_signal(params, received_signal, sync_idx):
+def demodulate_ofdm_signal(params, equalised_signal, data_start_idx):
 
-    #start of OFDM symbol 1
-    #Assumes correlation max is at the end of the key, so the first OFDM symbol starts immediately after the key
-    #Therefore sync_idx is the start of the ofdm symbol, and the key is immediately before it
+    # Start of OFDM symbol 1
+    # Data_start_idx is the start of the ofdm symbol, and the key is immediately before it
 
-    early_idx = sync_idx - params['read_prefix_early_samples']
+    early_idx = data_start_idx - params['read_prefix_early_samples']
 
     #No. Blocks = OFDM signal length / (block length + cyclic prefix length)
 
