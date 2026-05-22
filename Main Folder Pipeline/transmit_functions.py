@@ -108,6 +108,3 @@ def build_transmit_signal(ofdm_blocks,
 
 
     return np.array(tx)
-
-
-print(const.bits_to_symbols([0, 0, 1, 1, 0, 1, 1, 0]))
