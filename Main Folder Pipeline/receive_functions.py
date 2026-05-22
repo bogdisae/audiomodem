@@ -155,7 +155,7 @@ def wiener_filter_coeffs(recieved_signal, original_signal, filter_N, fs, plottin
         #quick_plot_key_comparison(np.abs(H_wiener), 'Wiener Filter Magnitude Response', np.angle(H_wiener), 'Wiener Filter Phase Response', x_label='Frequency', y_label='Magnitude / Phase (radians)')
         #quick_plot_key_comparison(log_H_wiener, 'Wiener Filter Magnitude Response (dB)', np.angle(H_wiener), 'Wiener Filter Phase Response (dB)', x_label='Frequency', y_label='Magnitude (dB)')
 
-        freqs = np.fft.fftfreq(L, d=1/fs)
+        freqs = np.fft.rfftfreq(L, d=1/fs)
     # Now calculate the FIR Wiener filter coefficients using the autocorrelation method
     r_xx = np.correlate(recieved_signal, recieved_signal, mode='full')
     M = len(recieved_signal)
@@ -171,7 +171,7 @@ def wiener_filter_coeffs(recieved_signal, original_signal, filter_N, fs, plottin
     h_wiener = R_x_inv @ r_xd
     freqs_h_wiener = np.linspace(0,fs/2, filter_N//2 + 1)
 
-    H_h = np.fft.fft(h_wiener)
+    H_h = np.fft.rfft(h_wiener)
     #quick_plot_key_comparison(np.abs(h_wiener), 'Wiener Filter Coefficients', np.angle(h_wiener), 'Phase Response', x_label='Coefficient Index', y_label='Coefficient Value')
 
     #plot FIR and IIR response together for comparison
