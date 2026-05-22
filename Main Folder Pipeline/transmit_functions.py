@@ -1,21 +1,30 @@
 import numpy as np
 
-def bits_to_qpsk(bit_list):
+class Constellation:
+    bits_per_symbol: int
+    constellation: dict
+    def __init__(self, bits_per_symbol, constellation):
+        self.bits_per_symbol = bits_per_symbol
+        self.constellation = constellation
+    
+    def bits_to_symbols(self, bits):
+        if len(bits)%self.bits_per_symbol!=0:
+            raise Exception(f"Bit string not divisible by {self.bits_per_symbol}")
+            # Pad bits instead?
+        group_bits = [tuple(bits[i:i+self.bits_per_symbol]) for i in range(0, len(bits), self.bits_per_symbol)]
+        return np.array([self.constellation[b] for b in group_bits], dtype=complex) # could be made faster with numpy
+    
+    def symbols_to_bits(self, symbols):
+        pass
+
+
+def bits_to_qpsk(bit_list, constellation:Constellation):
 
     'Converts a binary bitstring into QPSK symbols'
 
     bit_list = np.array(bit_list)
 
-    # Make sure even length
-    bit_list = bit_list[:len(bit_list) - (len(bit_list) % 2)]
-
-    symbols = np.array([
-        (1 + 1j) if (bit_list[i], bit_list[i+1]) == (0, 0) else
-        (-1 + 1j) if (bit_list[i], bit_list[i+1]) == (0, 1) else
-        (-1 - 1j) if (bit_list[i], bit_list[i+1]) == (1, 1) else
-        (1 - 1j)
-        for i in range(0, len(bit_list), 2)
-    ], dtype=complex)
+    symbols = constellation.bits_to_symbols(bit_list)
 
     # THIS USES THE GRAY ENCODING
 
@@ -99,3 +108,6 @@ def build_transmit_signal(ofdm_blocks,
 
 
     return np.array(tx)
+
+
+print(const.bits_to_symbols([0, 0, 1, 1, 0, 1, 1, 0]))
