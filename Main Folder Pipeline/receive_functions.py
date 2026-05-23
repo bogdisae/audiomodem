@@ -10,7 +10,7 @@ import questionary
 import plotly.graph_objects as go
 
 
-
+'''CRITICAL OPERATION FUNCTIONS'''
 
 def normalise_signal(signal):
     signal = signal.astype(np.float32)
@@ -56,7 +56,6 @@ def key_synchronise(rxSig, fs, T, f0, f1, key_type='chirp', plot=True):
             plt.show()
 
     return sync_index
-
 
 def save_wav_file(signal, fs):
     # Also save the wav file for future use
@@ -287,29 +286,8 @@ def wiener_filter_coeffs(recieved_signal, original_signal, filter_N, fs, plottin
     print(f'R_x shape: {R_x.shape}, r_xd shape: {r_xd.shape}')
 
     return h_wiener
-'''
-def compare_wiener_length(recieved_signal, original_signal, fs):
 
-    filter_lengths = [100, 300, 500, 800, 1024]
-    filter_list = []
-    freqs_list = []
-    for i,filter_N in enumerate(filter_lengths):
-        print(f'Calculating Wiener filter coefficients for filter length: {filter_N}')
-        filter_list[i] = wiener_filter_coeffs(recieved_signal, original_signal, filter_N, fs, plotting=True)
-        freqs_list[i] = np.linspace(0, fs/2, filter_N//2 + 1)
-
-
-    plt.figure(figsize=(10,4))
-    for i, filter_N in enumerate(filter_lengths):
-        H_h = np.fft.rfft(filter_list[i])
-        plt.plot(freqs_list[i], np.abs(H_h), label=f'FIR Wiener Filter Response (N={filter_N})')
-    plt.xlabel('Frequency (Hz)')
-    plt.ylabel('Magnitude')
-    plt.title('Wiener Filter Magnitude Response Comparison')
-    plt.legend()
-    plt.grid()
-    plt.show()
-'''
+'''TESTING FUNCTIONS BELOW'''
 
 def compare_wiener_length(
     recieved_signal,

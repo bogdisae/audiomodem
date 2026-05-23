@@ -72,8 +72,6 @@ def main(params):
     # TEMPORARY TEST CODE
     H_1024 = np.interp(np.linspace(0, len(H)-1, 1024), np.arange(len(H)), H)
 
-    h_coeffs = wiener_filter_coeffs(isolated_key, key, filter_N=800, fs = params['fs'], plotting=True)
-
 
     freqs = np.fft.rfftfreq(DFT_LENGTH, d=1 / params['fs'])[1:-1]
     plt.figure(figsize=(10,4))
@@ -92,6 +90,9 @@ def main(params):
     plt.grid(True)
     plt.show()
 
+
+    h_coeffs = wiener_filter_coeffs(isolated_key, key, filter_N=800, fs = params['fs'], plotting=True)
+    
     '''
     #AARON WILL FIX SATURDAY
     run_comparison = True
