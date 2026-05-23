@@ -28,6 +28,7 @@ params = {
         'cyclic_prefix_length': 128,
         'read_prefix_early_samples': 30, # Deliberately read some samples before the detected sync index 
         'fs': 48000, # GLOBAL sample rate
+        'modulation_scheme': 'QPSK'
 }
 
 if operation == 'Generate signal':
