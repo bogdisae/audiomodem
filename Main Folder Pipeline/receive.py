@@ -2,7 +2,7 @@
 from pathlib import Path
 import questionary
 from scipy.io import wavfile
-from receive_functions import normalise_signal, key_synchronise, record_audio, generate_key, wiener_filter_coeffs, demodulate_ofdm_signal
+from receive_functions import compare_wiener_length, normalise_signal, key_synchronise, record_audio, generate_key, wiener_filter_coeffs, demodulate_ofdm_signal
 from rx_signal import RxSignal # OUR OWN CLASS
 
 import numpy as np
@@ -59,9 +59,11 @@ def main(params):
 
     DFT_LENGTH = 12000  # THIS IS IMPORTANT! THINK ABOUT HOW MANY DFT POINTS YOU ACTUALLY NEED (E.G NUMBER OF SAMPLES IN CHIRP)
     # THIS WILL NOT WORK IN THE DFT PIPELINE UNTIL WE HAVE 1024 COEFFICIENTS
-
+    
     Y = np.fft.rfft(isolated_key, n = DFT_LENGTH)
+    
     key = generate_key(params['fs'], params['length_of_key'] / params['fs'], params['f0'], params['f1'], params['key_type'])
+    
     S = np.fft.rfft(key, n = DFT_LENGTH)
 
     eps = 1e-12  # Prevent divide-by-zero instability
@@ -70,7 +72,6 @@ def main(params):
     # TEMPORARY TEST CODE
     H_1024 = np.interp(np.linspace(0, len(H)-1, 1024), np.arange(len(H)), H)
 
-    wiener_filter_coeffs(isolated_key, key, filter_N=1024, fs = params['fs'], plotting=True)
 
     freqs = np.fft.rfftfreq(DFT_LENGTH, d=1 / params['fs'])[1:-1]
     plt.figure(figsize=(10,4))
@@ -88,6 +89,25 @@ def main(params):
     plt.title("OFDM Channel Response (1024 subcarriers)")
     plt.grid(True)
     plt.show()
+
+
+    h_coeffs = wiener_filter_coeffs(isolated_key, key, filter_N=500, fs = params['fs'], plotting=True)
+
+    
+    #AARON WILL FIX SATURDAY
+    run_comparison = True
+    if run_comparison:
+        #compare_wiener_length(isolated_key, key, params['fs'])
+        compare_wiener_length(
+            isolated_key,
+            key,
+            params['fs'],
+            plot_options={
+            "compare_all_filters": True,
+            "show_db": True
+            }
+        )
+    
 
 
      # Next line simply assumes that the ODFM begins as soon as the key finishes
