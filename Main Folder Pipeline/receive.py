@@ -91,9 +91,9 @@ def main(params):
     plt.show()
 
 
-    h_coeffs = wiener_filter_coeffs(isolated_key, key, filter_N=800, fs = params['fs'], plotting=True)
+    h_coeffs = wiener_filter_coeffs(isolated_key, key, filter_N=500, fs = params['fs'], plotting=True)
+
     
-    '''
     #AARON WILL FIX SATURDAY
     run_comparison = True
     if run_comparison:
@@ -107,7 +107,7 @@ def main(params):
             "show_db": True
             }
         )
-    '''
+    
 
 
      # Next line simply assumes that the ODFM begins as soon as the key finishes

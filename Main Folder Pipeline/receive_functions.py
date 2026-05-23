@@ -222,11 +222,16 @@ def wiener_filter_coeffs(recieved_signal, original_signal, filter_N, fs, plottin
 
     #Build topelitz matrix from r_xx
     R_x = toeplitz(r_xx)
+    print(f'Condition number of R_x: {np.linalg.cond(R_x)}')
 
     r_xd = np.correlate(recieved_signal, original_signal, mode='full')
     r_xd = r_xd[len(r_xd) // 2:len(r_xd) // 2 + filter_N]  # Keep only lags up to filter_N
 
-    R_x_inv = np.linalg.inv(R_x + 1e-12 * np.eye(filter_N))  # Add small value to diagonal for numerical stability
+    eps_h_reg = 1e-2 * r_xx[0]  # Regularisation term to prevent instability
+    R_x_reg = R_x + eps_h_reg * np.eye(filter_N) # Add small value to diagonal for numerical stability
+    print(f'Condition number of regularised R_x: {np.linalg.cond(R_x_reg)}, Regularisation term: {eps_h_reg}, corresponding to {20 * np.log10(eps_h_reg / r_xx[0])} dB relative to signal power')
+
+    R_x_inv = np.linalg.inv(R_x_reg)  
     h_wiener = R_x_inv @ r_xd
     freqs_h_wiener = np.linspace(0,fs/2, filter_N//2 + 1)
 
@@ -243,14 +248,14 @@ def wiener_filter_coeffs(recieved_signal, original_signal, filter_N, fs, plottin
 
         S_xx = X_w * np.conj(X_w)
 
-        eps = 1e-12  # Prevent divide-by-zero instability
-        H_wiener = S_xd / (S_xx + eps)
+        eps_H_reg = 1e-2 * np.mean(S_xx)  # Prevent divide-by-zero instability - Regularised Wiener filter
+        H_wiener = S_xd / (S_xx + eps_H_reg)
 
         L = len(H_wiener)
         #Take only the positive frequencies (non-redundant part of the spectrum)
         H_wiener = H_wiener[:L//2 + 1]
 
-        log_H_wiener = 20 * np.log10(np.abs(H_wiener) + 1e-12)
+        log_H_wiener = 20 * np.log10(np.abs(H_wiener))
 
         #12000 samples in the key, with fs = 44100 => 6000 corresponds to 22050 Hz.
         #quick_plot_key_comparison(np.abs(H_wiener), 'Wiener Filter Magnitude Response', np.angle(H_wiener), 'Wiener Filter Phase Response', x_label='Frequency', y_label='Magnitude / Phase (radians)')
@@ -275,7 +280,7 @@ def wiener_filter_coeffs(recieved_signal, original_signal, filter_N, fs, plottin
         #log_plot
         plt.figure(figsize=(10,4))
         plt.plot(freqs, log_H_wiener, label='IIR Wiener Filter Response (dB)')
-        plt.plot(freqs_h_wiener, 20 * np.log10(np.abs(H_h) + 1e-12), label='FIR Wiener Filter Response (dB)')
+        plt.plot(freqs_h_wiener, 20 * np.log10(np.abs(H_h)), label='FIR Wiener Filter Response (dB)')
         plt.xlabel('Frequency (Hz)')
         plt.ylabel('Magnitude (dB)')
         plt.title('Wiener Filter Magnitude Response Comparison (dB)')
@@ -332,10 +337,11 @@ def compare_wiener_length(
                 filter_list.append(H_wiener)
             freqs_list.append(freqs)
         else:
+            filter_i = wiener_filter_coeffs(recieved_signal, original_signal, filter_N, fs, plotting=False)
             if plot_options.get("show_db", True):
-                filter_list.append(20 * np.log10(np.abs(filter_list[i])) + 1e-12)
+                filter_list.append(20 * np.log10(np.abs(filter_i)) + 1e-12)
             else:
-                filter_list.append(wiener_filter_coeffs(recieved_signal, original_signal, filter_N, fs, plotting=False))
+                filter_list.append(filter_i)
             
             print(f'Calculating Wiener filter coefficients for filter length: {filter_N}')
             freqs_list.append(np.linspace(0, fs / 2, filter_N // 2 + 1))
