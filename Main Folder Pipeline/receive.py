@@ -2,7 +2,7 @@
 from pathlib import Path
 import questionary
 from scipy.io import wavfile
-from receive_functions import normalise_signal, key_synchronise, record_audio, generate_key, wiener_filter_coeffs
+from receive_functions import compare_wiener_length, normalise_signal, key_synchronise, record_audio, generate_key, wiener_filter_coeffs
 from rx_signal import RxSignal # OUR OWN CLASS
 
 import numpy as np
@@ -59,19 +59,22 @@ def main(params):
 
     DFT_LENGTH = 12000  # THIS IS IMPORTANT! THINK ABOUT HOW MANY DFT POINTS YOU ACTUALLY NEED (E.G NUMBER OF SAMPLES IN CHIRP)
     # THIS WILL NOT WORK IN THE DFT PIPELINE UNTIL WE HAVE 1024 COEFFICIENTS
-
+    '''
     Y = np.fft.rfft(isolated_key, n = DFT_LENGTH)
 
+    '''
     key = generate_key(params['fs'], params['length_of_key'] / params['fs'], params['f0'], params['f1'], params['key_type'])
+    '''
     S = np.fft.rfft(key, n = DFT_LENGTH)
 
     eps = 1e-12  # Prevent divide-by-zero instability
     H = Y[1:-1] / (S[1:-1] + eps) # Remove DC and nyquist bins
-    print(H.shape)
+    print(H.shape)'''
 
-    wiener_filter_coeffs(isolated_key, key, filter_N=1024, fs = params['fs'], plotting=True)
+    h_coeffs = wiener_filter_coeffs(isolated_key, key, filter_N=800, fs = params['fs'], plotting=True)
 
-    freqs = np.fft.rfftfreq(DFT_LENGTH, d=1 / params['fs'])[1:-1]
+
+    '''freqs = np.fft.rfftfreq(DFT_LENGTH, d=1 / params['fs'])[1:-1]
     plt.figure(figsize=(10,4))
     plt.plot(freqs, 20 * np.log10(np.abs(H) + 1e-12))
     plt.xlabel('Frequency (Hz)')
@@ -79,8 +82,24 @@ def main(params):
     plt.title('Estimated Channel Frequency Response')
     plt.grid(True)
     plt.show()
+    '''
 
-
+    #CODE INVESTIGATING THE EFFECT OF THE NUMBER OF WIENER COEFF ON Estimation quality
+    '''
+    #AARON WILL FIX SATURDAY
+    run_comparison = True
+    if run_comparison:
+        #compare_wiener_length(isolated_key, key, params['fs'])
+        compare_wiener_length(
+            isolated_key,
+            key,
+            params['fs'],
+            plot_options={
+            "compare_all_filters": True,
+            "show_db": True
+            }
+        )
+    '''
      # Next line simply assumes that the ODFM begins as soon as the key finishes
     rxSig.dataIdx = rxSig.keyIdxStart + params['length_of_key']
     
