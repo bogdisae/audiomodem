@@ -116,7 +116,7 @@ def synchronisation_test_response():
     reference_noise = np.load("bogdan/recordings/synchronisation_test_noise", allow_pickle=True)
     correlation_dist = 14530
 
-    receiver = Rx(recording, correlation_dist, 1300, reference_noise)
+    receiver = Rx(None, recording, correlation_dist, 1300, reference_noise, 0, 0)
     receiver.synchronise_noise_key()
     receiver.channel_estimate()
 
