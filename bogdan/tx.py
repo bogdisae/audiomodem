@@ -15,10 +15,11 @@ class Tx:
     data_bits: np.ndarray
     data_symbols: np.ndarray
     ofdm_symbol_blocks: np.ndarray
+    transmitted_signl: np.ndarray
 
     def __init__(self, constellation: Constellation, data_bytes: np.ndarray, noise_preamble: np.ndarray, cp_length: int, block_length: int):
         self.constellation = constellation
-        data_bytes = data_bytes
+        self.data_bytes = data_bytes
         self.noise_preamble = noise_preamble
         self.cp_length = cp_length
         self.block_length = block_length
@@ -53,17 +54,21 @@ class Tx:
         X[1:half+1] = block
         # Hermitian symmetry for real signal
         X[-half:] = np.conj(block[::-1])
-
-        return np.fft.irfft(X)
+        ofdm_block = np.fft.ifft(X).real
+        
+        return np.concatenate([ofdm_block[-self.cp_length:], ofdm_block])
 
     def prep_ofdm_blocks(self):
-        pad = self.block_length - len(self.data_symbols) % self.block_length
-        padded = np.pad(self.data_symbols, (0, pad % self.block_length))  # % n avoids padding when already divisible
-        blocks = padded.reshape(-1, self.block_length)
+        half_block_length = self.block_length // 2 -1
+        pad = half_block_length - len(self.data_symbols) % half_block_length
+        padded = np.pad(self.data_symbols, (0, pad % half_block_length))  # % n avoids padding when already divisible
+        blocks = padded.reshape(-1, half_block_length)
         self.ofdm_symbol_blocks = [self.prep_ofdm_block(block) for block in blocks]
     
     def assemble_signal(self):
-        pass
+        ofdm_blocks = np.copy(self.ofdm_symbol_blocks)
+        ofdm_blocks = ofdm_blocks / abs(max(ofdm_blocks))
+        self.transmitted_signl = np.concatenate([self.noise_preamble, np.zeros(self.cp_length), np.concatenate(ofdm_blocks)])
 
     def encode(self):
         self.encode_symbols()
