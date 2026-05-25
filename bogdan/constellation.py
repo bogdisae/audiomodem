@@ -3,9 +3,12 @@ import numpy as np
 class Constellation:
     bits_per_symbol: int
     constellation: dict
-    def __init__(self, bits_per_symbol, constellation):
+    constellation_inequalities: dict 
+
+    def __init__(self, bits_per_symbol, constellation, constellation_inequalities):
         self.bits_per_symbol = bits_per_symbol
         self.constellation = constellation
+        self.constellation_inequalities = constellation_inequalities
     
     def bits_to_symbols(self, bits):
         if len(bits)%self.bits_per_symbol!=0:
@@ -15,4 +18,9 @@ class Constellation:
         return np.array([self.constellation[b] for b in group_bits], dtype=complex) # could be made faster with numpy
     
     def symbols_to_bits(self, symbols):
-        pass
+        bit_list = []
+        for symbol in symbols:
+            for inequalities, bits in self.constellation_inequalities:
+                if inequalities(symbol):
+                    bit_list.extend(bits)
+                    

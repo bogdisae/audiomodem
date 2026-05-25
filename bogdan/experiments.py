@@ -1,6 +1,7 @@
 from rx import *
 from tx import *
 from helper import *
+from scipy.io.wavfile import write, read
 
 # chirp response
 # t, ch = chirp_signal()
@@ -72,6 +73,14 @@ from helper import *
 # ax[1, 1].plot(statistics2)
 # plt.show()
 
+# def synchronisation_test_simulated():
+
+#     receiver = Rx(None, recording, correlation_dist, 1300, reference_noise, 0, 0)
+#     receiver.synchronise_noise_key()
+#     receiver.channel_estimate()
+
+#     synchronisation_plot(recording, receiver.correlation, receiver.windowed, receiver.H, receiver.synchronisation_index)
+
 # Cross-correlation with noise
 # t, n_0 = white_noise(d=.3)
 # taps = 1000
@@ -108,7 +117,7 @@ def synchronisation_test_key():
 
     n, k = Tx.create_noise_key(noise_sample_len, n_taps)
 
-    write('bogdan/recordings/synchronisation_test.wav', 44100, k)
+    write('bogdan/recordings/synchronisation_test.wav', 48000, k)
     n.dump("bogdan/recordings/synchronisation_test_noise")
 
 def synchronisation_test_response():
@@ -120,7 +129,42 @@ def synchronisation_test_response():
     receiver.synchronise_noise_key()
     receiver.channel_estimate()
 
-    synchronisation_plot(recording, receiver.correlation, receiver.windowed, receiver.h, receiver.synchronisation_index)
+    synchronisation_plot(recording, receiver.correlation, receiver.windowed, receiver.H, receiver.synchronisation_index)
 
 # synchronisation_test_key()
-synchronisation_test_response()
+# synchronisation_test_response()
+
+
+def transmit_data_test():
+    constellation = Constellation(2, {
+        ('0', '0'): (1+1j)/np.sqrt(2),
+        ('0', '1'): (-1+1j)/np.sqrt(2),
+        ('1', '0'): (1-1j)/np.sqrt(2),
+        ('1', '1'): (-1-1j)/np.sqrt(2)
+    })
+    data = np.array([100, 50, 32, 42, 56, 200, 43, 53, 23, 12, 50, 32], dtype=np.uint8)
+    reference_noise = read("bogdan/recordings/transmission_test_key.wav")[1]
+    tx = Tx(constellation, data, reference_noise, 32, 1024)
+    tx.encode()
+    write("bogdan/recordings/data_test.wav", 48000, tx.transmitted_signl)
+
+def receive_data_test():
+    signal = read("bogdan/recordings/data_test.wav")[1]
+    reference_noise = np.load("bogdan/recordings/synchronisation_test_noise", allow_pickle=True)
+    constellation = Constellation(2, {
+        ('0', '0'): (1+1j)/np.sqrt(2),
+        ('0', '1'): (-1+1j)/np.sqrt(2),
+        ('1', '0'): (1-1j)/np.sqrt(2),
+        ('1', '1'): (-1-1j)/np.sqrt(2)
+    }, {
+        ('0', '0'): lambda s: (s.real >= 0) & (s.imag >= 0),
+        ('0', '1'): lambda s: (s.real < 0) & (s.imag >=  0),
+        ('1', '0'): lambda s: (s.real >=  0) & (s.imag < 0),
+        ('1', '1'): lambda s: (s.real <  0) & (s.imag <  0),
+    })
+    rx = Rx(constellation, signal, 14530, 1300, reference_noise, 32, 1024)
+    rx.decode()
+
+
+# transmit_data_test()
+receive_data_test()
