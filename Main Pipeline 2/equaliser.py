@@ -106,6 +106,7 @@ class RepeatedChirp(Equaliser):
     # override parent method
     def synchronise(self, signal: np.ndarray, plot=True) -> int:
         print("Synchronising using repeated chirp")
+        print("Sync signal length", len(signal))
 
         key = self.generate()
 
@@ -122,14 +123,16 @@ class RepeatedChirp(Equaliser):
         # Find the estimated sample index where the data starts
         dataStartIdx = sync_index + self.lengthInSamples
         
-        repeatedChirp = self.generate()
+        t = np.arange(self.chirpLength) / self.fs
+        singleChirp = chirp(t, f0=self.f0, t1=self.chirpLength / self.fs, f1=self.f1, method='linear')
+
         # FFT of known transmitted chirp
-        X = np.fft.fft(repeatedChirp, n=self.chirpLength)
+        X = np.fft.fft(singleChirp, n=self.chirpLength)
         H_list = []
 
         for i in range(self.numRepeats):
 
-            start = dataStartIdx + i * self.blockLength
+            start = sync_index + i * self.blockLength
             print(i, start)
             segment = rxSignal[start:start + self.chirpLength]
             
