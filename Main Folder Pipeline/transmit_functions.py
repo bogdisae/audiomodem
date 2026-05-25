@@ -8,14 +8,28 @@ class Constellation:
         self.constellation = constellation
     
     def bits_to_symbols(self, bits):
+        print("Bits to symbols, bits length:", len(bits))
         if len(bits)%self.bits_per_symbol!=0:
             raise Exception(f"Bit string not divisible by {self.bits_per_symbol}")
             # Pad bits instead?
         group_bits = [tuple(bits[i:i+self.bits_per_symbol]) for i in range(0, len(bits), self.bits_per_symbol)]
+        print(f'Grouped bits into {len(group_bits)} symbols')
         return np.array([self.constellation[b] for b in group_bits], dtype=complex) # could be made faster with numpy
     
     def symbols_to_bits(self, symbols):
         pass
+
+    def symbols_to_colors(self, symbols):
+        # Map symbols to colors for visualization
+        symbol_colors = {
+            (1+1j)/np.sqrt(2): 'blue',
+            (-1+1j)/np.sqrt(2): 'orange',
+            (1-1j)/np.sqrt(2): 'green',
+            (-1-1j)/np.sqrt(2): 'red'
+        }
+        colour_list = [symbol_colors[s] for s in symbols]
+        print(f'Mapped constellation symbols to a list of {len(colour_list)} colors')
+        return colour_list
 
 
 # def bits_to_qpsk(bit_list, constellation:Constellation): Replaced by Constellation class
@@ -31,10 +45,15 @@ class Constellation:
 #     return symbols / np.sqrt(2)
 
 def frame_symbols(symbols, frame_size):
-
     'Splits the symbols into the specified size'
+    framed_symbols = [symbols[i:i+frame_size] for i in range(0, len(symbols), frame_size)]
 
-    return [symbols[i:i+frame_size] for i in range(0, len(symbols), frame_size)]
+    if len(framed_symbols[-1]) < frame_size:
+        print(f"Warning: Last frame has only {len(framed_symbols[-1])} symbols, expected {frame_size}. Consider padding.")
+        framed_symbols[-1] = np.pad(framed_symbols[-1].astype(complex), (0, frame_size - len(framed_symbols[-1])), mode='constant', constant_values=(1+1j)/np.sqrt(2))
+        print(f"Last frame after padding: {len(framed_symbols[-1])} symbols")
+
+    return framed_symbols
 
 def ofdm_modulate(block, n_fft=1024):
     X = np.zeros(n_fft, dtype=complex)
@@ -67,6 +86,10 @@ def bytes_csv_to_bits(text):
 
     return bit_list
 
+def text_to_bits(text):
+    #Convert text to utfa-8 bytes, then to bits
+    byte_array = text.encode('utf-8')
+    return [int(b) for byte in byte_array for b in format(byte, '08b')]
 
 def build_transmit_signal(ofdm_blocks,
                           cp_len=128,

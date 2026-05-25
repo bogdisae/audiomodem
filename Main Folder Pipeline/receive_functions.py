@@ -8,7 +8,7 @@ from scipy.io.wavfile import write
 from rx_signal import RxSignal
 import questionary
 import plotly.graph_objects as go
-
+import json
 
 '''CRITICAL OPERATION FUNCTIONS'''
 
@@ -112,14 +112,28 @@ def demodulate_ofdm_signal(params, received_signal, equalizer_coeffs, data_start
 
     block_length = params['block_length']
     cp_length = params['cyclic_prefix_length']
+    num_subcarriers = (block_length // 2) - 1
 
+    #first block comes in during key, but later the cp is removed
     early_idx = data_start_idx - params['read_prefix_early_samples']
+
     symbol_len = block_length + cp_length
 
     remaining = len(received_signal) - early_idx
-    n_blocks = remaining // symbol_len
+    
+    n_blocks = 22
+    print(f'Length of symbols expected if all {n_blocks} are full: {n_blocks * block_length}, Remaining samples after sync index: {remaining}')
+    #n_blocks = remaining // symbol_len
 
     recovered_blocks = []
+
+    #Colour list name
+    filename = questionary.text("Enter colours filename (without extension):").ask()
+    with open(f"Main Folder Pipeline/Audio Files/{filename}_colours.json", "r", encoding="utf-8") as f:
+        colours_read = json.load(f)
+
+    print(f'Length of colour file: {len(colours_read)}')
+    print(f'First 10 colours: {colours_read[:10]}')
 
     for block_idx in range(n_blocks):
 
@@ -135,34 +149,52 @@ def demodulate_ofdm_signal(params, received_signal, equalizer_coeffs, data_start
         # Remove cyclic prefix
         symbol = symbol_cp[cp_length:]
 
+        print(len(symbol))
+
+        #colour_symbol = 
+
         # FFT to frequency domain
         Y = np.fft.fft(symbol, n = block_length )
 
         # Extract positive-frequency carriers
-        num_subcarriers = (block_length // 2) - 1
         data_carriers = Y[1 : num_subcarriers + 1]
 
         # Equalisation
         H = equalizer_coeffs[:num_subcarriers]
 
         # Avoid divide-by-zero
-        eps = 1e-12
+        eps = 1e-6
 
+        #Account for channel effects by dividing by the channel estimation (equalisation)
         data_carriers = data_carriers / (H + eps)
 
+        #Account for linear phase shift due to reading some samples early (if applicable)
+        if params['read_prefix_early_samples'] > 0:
+            lin_phase_shift = np.exp(-1j * 2 * np.pi * np.arange(1, num_subcarriers + 1) * params['read_prefix_early_samples'] / block_length) #careful to ignore DC and include N/2 - 1
+            data_carriers = data_carriers * lin_phase_shift
+
         recovered_blocks.append(data_carriers)
+
 
     if len(recovered_blocks) == 0:
         return np.array([]), []
 
     recovered_symbols = np.concatenate(recovered_blocks)
-
+    print(f'Number of recovered symbols: {len(recovered_symbols)}')
     plt.figure(figsize=(6,6))
 
     plt.scatter(
         np.real(recovered_symbols),
         np.imag(recovered_symbols),
+        c = colours_read,
         s=10
+    )
+
+    plt.scatter(
+        [-1,-1,1,1],
+        [-1,1,-1,1],
+        c = ['grey', 'grey', 'grey', 'grey'],
+        s=50,        marker='X',
     )
 
     plt.axhline(0)

@@ -1,10 +1,13 @@
 #import relevant libraries
+from fileinput import filename
+import json
 from scipy.io.wavfile import write
 from pathlib import Path
 import questionary
-from transmit_functions import bytes_csv_to_bits, frame_symbols, ofdm_modulate, build_transmit_signal, Constellation
+from transmit_functions import add_cyclic_prefix, bytes_csv_to_bits, frame_symbols, ofdm_modulate, build_transmit_signal, Constellation, text_to_bits
 from receive_functions import generate_key
 import numpy as np
+
 
 def pick_text_file(prompt_text: str, folder: Path) -> str:
     txt_files = sorted(folder.glob('*.txt'))
@@ -36,15 +39,29 @@ def main(params):
     })
 
     # Convert data to blocks (frames) of bits
-    bit_list = bytes_csv_to_bits(text)
-    symbols = constellation.bits_to_symbols(bit_list)
-    num_Info_Symbols = (params['block_length'] // 2) - 1    # E.g only 511 symbols for a 1024 length block
-    framed_symbols = frame_symbols(symbols, num_Info_Symbols)    
+    
+    #This is needed for the file is already utf-8 text.
+    #bit_list = bytes_csv_to_bits(text)
 
+    bit_list = text_to_bits(text)
+
+    symbols = constellation.bits_to_symbols(bit_list)
+    print(f'Length of symbols in transmit: {len(symbols)}')
+    
+    num_Info_Symbols = (params['block_length'] // 2) - 1    # E.g only 511 symbols for a 1024 length block
+    framed_symbols = frame_symbols(symbols, num_Info_Symbols)   
+    
+    
+
+    colours = constellation.symbols_to_colors(np.concatenate(framed_symbols)) 
+    print(len(framed_symbols), len(framed_symbols[0]), f'Final block length {len(framed_symbols[-1])} (should be <= {num_Info_Symbols})')
+    
+    
     # OFDM modulation
     ofdm_blocks = [ofdm_modulate(frame, n_fft=params['block_length']) for frame in framed_symbols]
+    print("Number of OFDM blocks:", len(ofdm_blocks))
     print("Length of OFDM blocks:", len(ofdm_blocks[0]))
-    
+
     key = generate_key(params['fs'], params['length_of_key']/params['fs'], params['f0'], params['f1'], params['key_type'])
 
     fullSignal = build_transmit_signal(ofdm_blocks, params['cyclic_prefix_length'], key)
@@ -54,6 +71,10 @@ def main(params):
     if filename is None:
         raise SystemExit("No filename provided")
     write(f"Main Folder Pipeline/Audio Files/{filename}.wav", params['fs'], combined_int16)
+    
+    with open(f"Main Folder Pipeline/Audio Files/{filename}_colours.json", "w", encoding="utf-8") as f:
+        json.dump(colours, f)
+
 
 
 if __name__ == "__main__":
