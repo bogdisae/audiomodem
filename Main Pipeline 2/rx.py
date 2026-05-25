@@ -29,7 +29,7 @@ class Rx:
 
     def __init__(self, constellation: Constellation, signal:np.ndarray, cp_length: int,
                  block_length: int, equaliser : Equaliser,
-                 early_samples = 20, f_low = 230, f_high = 14500):
+                 early_samples = 10, f_low = 230, f_high = 14500):
         
         self.constellation = constellation
         self.signal = signal
@@ -59,7 +59,7 @@ class Rx:
         )
 
         X *= phase_correction
-        
+
         data_bins = X[self.active_bins]
         return data_bins
 

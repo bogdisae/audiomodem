@@ -234,3 +234,53 @@ def plot_constellation(symbols, title="Constellation Diagram", show=True):
 
     if show:
         plt.show()
+
+
+
+#------------------------------------------------------------------------------------------------
+# FUNCTIONS FOR TESTING EFFECTIVENESS
+
+import csv
+
+def csv_bytes_to_binary_sequence(path):
+
+    with open(path, 'r') as f:
+        data = f.read()
+
+    decimal_bytes = [int(x) for x in data.split(',')]
+
+    binary_sequence = []
+
+    for byte in decimal_bytes:
+        binary_sequence.extend(list(format(byte, '08b')))
+
+    return binary_sequence
+
+def calculate_ber(seq1, seq2):
+    """
+    Calculates BER between two binary sequences.
+
+    Sequences can be:
+    - lists of strings ['0','1',...]
+    - lists of ints [0,1,...]
+    - strings "010101"
+
+    The longer sequence is truncated to match the shorter one.
+    """
+
+    # Convert everything to strings
+    seq1 = [str(bit) for bit in seq1]
+    seq2 = [str(bit) for bit in seq2]
+
+    # Match lengths
+    min_len = min(len(seq1), len(seq2))
+
+    seq1 = seq1[:min_len]
+    seq2 = seq2[:min_len]
+
+    # Count errors
+    errors = sum(b1 != b2 for b1, b2 in zip(seq1, seq2))
+
+    ber = errors / min_len
+
+    return ber, errors, min_len

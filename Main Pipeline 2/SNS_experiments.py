@@ -2,6 +2,7 @@ from equaliser import Equaliser, RepeatedChirp
 from tx import Tx
 from rx import Rx
 from helper import pick_text_file, csv_to_data_bytes, pick_wav_file, normalise_signal, record_audio, plot_constellation
+from helper import csv_bytes_to_binary_sequence, calculate_ber
 from pathlib import Path
 import numpy as np
 import questionary
@@ -83,11 +84,18 @@ def receiveRepeated_chirp_plus_data():
     print ("Number of coefficients:", len(receiver.H))
     print("First 10 estimated coefficients:\n", receiver.H[:10])
 
-    print(receiver.data_bytes[:100])
+    print(receiver.data_bits[:200])
+    plot_constellation(receiver.data_symbols[0:2000])
 
-    plot_constellation(receiver.data_symbols[25:200])
+    shaqbits = csv_bytes_to_binary_sequence("Main Pipeline 2/Data Files/BIGSHAQ.txt")
+    ber, errors, min_len = calculate_ber(shaqbits, receiver.data_bits[:5000])
+
+    print("BER:", ber)
+    print("Errors:", errors)
+    print("Min Len", min_len)
 
 receiveRepeated_chirp_plus_data()
 
 #generateRepeatedChirp_plus_data()
+
 
