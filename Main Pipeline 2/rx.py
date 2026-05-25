@@ -21,10 +21,9 @@ class Rx:
     data_bits: np.ndarray
     data_bytes: np.ndarray
 
-    def __init__(self, constellation: Constellation, signal:np.ndarray, n_taps:int, cp_length: int, block_length: int):
+    def __init__(self, constellation: Constellation, signal:np.ndarray, cp_length: int, block_length: int):
         self.constellation = constellation
         self.signal = signal
-        self.n_taps = n_taps
         self.cp_length = cp_length
         self.block_length = block_length
 

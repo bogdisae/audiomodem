@@ -17,7 +17,7 @@ class Tx:
     data_bits: np.ndarray
     data_symbols: np.ndarray
     ofdm_symbol_blocks: np.ndarray
-    transmitted_signl: np.ndarray
+    transmitted_signal: np.ndarray
 
     def __init__(self, constellation: Constellation, data_bytes: np.ndarray, equaliser : Equaliser, cp_length: int, block_length: int):
         self.constellation = constellation
