@@ -20,7 +20,7 @@ class Constellation:
     def symbols_to_bits(self, symbols):
         bit_list = []
         for symbol in symbols:
-            for inequalities, bits in self.constellation_inequalities:
-                if inequalities(symbol):
-                    bit_list.extend(bits)
+            bits = next((k for k, cond in self.constellation_inequalities.items() if cond(symbol)))
+            bit_list.extend(bits)
+        return bit_list
                     

@@ -1,5 +1,4 @@
 import numpy as np
-from helper import cross_correlation
 from constellation import Constellation
 
 class Rx:
@@ -21,10 +20,9 @@ class Rx:
     data_bits: np.ndarray
     data_bytes: np.ndarray
 
-    def __init__(self, constellation: Constellation, signal:np.ndarray, n_taps:int, cp_length: int, block_length: int):
+    def __init__(self, constellation: Constellation, signal:np.ndarray, cp_length: int, block_length: int):
         self.constellation = constellation
         self.signal = signal
-        self.n_taps = n_taps
         self.cp_length = cp_length
         self.block_length = block_length
 
@@ -36,18 +34,17 @@ class Rx:
         return data_bins
 
     def extract_ofdm_blocks(self):
-        self.ofdm_blocks = self.signal[self.synchronisation_index:].resize(self.block_length+self.cp_length, -1)
+        self.ofdm_blocks = self.signal[self.synchronisation_index:].reshape(-1, self.block_length+self.cp_length)
         self.data_symbols = []
         for block in self.ofdm_blocks:
             self.data_symbols.extend(self.decode_ofdm_block(block))
 
     def decode_symbols(self):
         self.data_bits = []
-        self.data_bits = np.array([self.constellation.bits_per_symbol(symbol) for symbol in self.data_symbols])
-        self.data_bits.ravel()
+        self.data_bits = self.constellation.symbols_to_bits(self.data_symbols)
 
     def bits_to_bytes(self):
-        self.data_bytes = np.packbits(self.data_bits.astype(np.uint8))
+        self.data_bytes = np.packbits(np.array(self.data_bits).astype(np.uint8))
     
     def decode(self):
         # self.synchronise_noise_key()

@@ -26,7 +26,7 @@ def synchronisation_test_response():
     synchronisation_plot(recording, receiver.correlation, receiver.windowed, receiver.h, receiver.synchronisation_index)
 
 # synchronisation_test_key()
-synchronisation_test_response()
+# synchronisation_test_response()
 
 def ofdm_test():
     constellation = Constellation(2, {
@@ -44,6 +44,12 @@ def ofdm_test():
     tx = Tx(constellation, data, None, 32, 1024)
     tx.encode_symbols()
     tx.prep_ofdm_blocks()
+    ofdm_blocks = np.concatenate(tx.ofdm_symbol_blocks)
 
-    rx = Rx(constellation, None, )
-    write("bogdan/recordings/data_test.wav", 48000, tx.transmitted_signl)
+    rx = Rx(constellation, ofdm_blocks / max(abs(ofdm_blocks)), 32, 1024)
+    rx.synchronisation_index = 0
+    rx.H = np.ones(1024)
+    rx.decode()
+    print(rx.data_bytes)
+
+ofdm_test()

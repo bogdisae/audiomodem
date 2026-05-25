@@ -47,9 +47,12 @@ class Tx:
 
     def prep_ofdm_blocks(self):
         half_block_length = self.block_length // 2 -1
-        pad = half_block_length - len(self.data_symbols) % half_block_length
-        padded = np.pad(self.data_symbols, (0, pad % half_block_length))  # % n avoids padding when already divisible
-        blocks = padded.reshape(-1, half_block_length)
+        padding_symbols = np.array(self.constellation.bits_to_symbols(('0','0'))) # symbol zeros
+        pad_length = half_block_length - len(self.data_symbols) % half_block_length
+        if pad_length > 0:
+            padding = np.resize(padding_symbols, pad_length)
+            self.data_symbols = np.concatenate([self.data_symbols, padding])
+        blocks = self.data_symbols.reshape(-1, half_block_length)
         self.ofdm_symbol_blocks = [self.prep_ofdm_block(block) for block in blocks]
     
     def assemble_signal(self):
