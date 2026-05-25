@@ -30,8 +30,6 @@ def generateRepeatedChirp():
     repeatedChirp = RepeatedChirp(10, 1024, 1376, 0, 20000, sampleRate)
     sig = repeatedChirp.generate()
 
-    #transmitter = Tx(None, data_bytes, repeatedChirp, 128, 1024)
-
     combined_int16 = np.int16(sig * 32767) # Convert to wav amplitudes
 
     filename = questionary.text("Enter output filename (without extension):").ask()
@@ -50,8 +48,7 @@ def generateRepeatedChirp_plus_data():
     transmitter = Tx(constellation, data_bytes, repeatedChirp, 128, 1024)
     transmitter.encode()
 
-    # concatenate sync key + OFDM payload
-    sig = np.concatenate([key, transmitter.transmitted_signal])
+    sig = transmitter.transmitted_signal
 
     combined_int16 = np.int16(sig * 32767) # Convert to wav amplitudes
     filename = questionary.text("Enter output filename (without extension):").ask()
@@ -87,3 +84,5 @@ def receiveRepeated_chirp_plus_data():
     print(receiver.data_bytes)
 
 receiveRepeated_chirp_plus_data()
+
+#generateRepeatedChirp_plus_data()
