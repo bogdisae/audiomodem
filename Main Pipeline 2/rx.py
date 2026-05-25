@@ -33,7 +33,12 @@ class Rx:
         return data_bins
 
     def extract_ofdm_blocks(self):
-        self.ofdm_blocks = self.signal[self.synchronisation_index:].reshape(-1, self.block_length+self.cp_length)
+        block_length = self.block_length + self.cp_length
+        pad_length = len(self.ofdm_blocks) % block_length
+        if pad_length > 0:
+            self.ofdm_blocks = np.pad(self.ofdm_blocks, (0, block_length - pad_length))
+        self.ofdm_blocks = self.ofdm_blocks.reshape(-1, block_length)
+
         self.data_symbols = []
         for block in self.ofdm_blocks:
             self.data_symbols.extend(self.decode_ofdm_block(block))
