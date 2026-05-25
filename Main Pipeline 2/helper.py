@@ -55,6 +55,12 @@ def synchronisation_plot(recording, correlation, windowed, h, start_index = None
 
     plt.show()
 
+def plot_constellation(symbols):
+    fig, ax = plt.subplots(1, 1, constrained_layout=True)
+    ax.scatter(symbols.real, symbols.imag)
+    ax.set_title("received symbols")
+    plt.show()
+
 def plot_signal(title : str, signal : np.ndarray, v_line_index, abs = False):
     # V_line_index draws a vertical line at an index of interest. Set to -1 to remove
 
