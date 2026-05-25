@@ -20,7 +20,8 @@ def normalise_signal(signal):
     return signal / max_val
 
 # THIS FUNCTION CAN SO FAR ONLY GENERATE TYPES OF CHIRPS. CAN ALWAYS ADD MORE 
-def generate_key(fs, T, f0, f1, type_key='chirp'):
+def generate_key(fs, T, f0, f1, type_key):
+    
     if type_key == 'chirp' or type_key == 'up_down_chirp':
         t = np.linspace(0, T, int(fs * T), endpoint=False)
 
@@ -30,13 +31,43 @@ def generate_key(fs, T, f0, f1, type_key='chirp'):
             # Reverse the arguements to make a "down" chirp
             signal += chirp(t, f0=f1, t1=T, f1=f0, method='linear')
 
+    elif type_key == 'repeat_chirp_0.5s':
+
+        block_len = 1024 # WOULD HAVE HAD THIS AS AN ARGUEMENT BUT WILL MESS UP. JUST USING FOR TESTING!!
+        num_repeats = 10
+
+        target_duration = 0.5
+        target_samples = int(target_duration * fs)
+
+        chirp_samples = num_repeats * block_len
+
+        silence_len = (target_samples - chirp_samples) // num_repeats
+        print(silence_len)
+
+        t = np.arange(block_len) / fs
+
+        single_chirp = chirp(t, f0=f0, t1=block_len/fs, f1=f1, method='linear')
+
+        silence = np.zeros(silence_len)
+
+        sections = []
+
+        for _ in range(num_repeats):
+            sections.append(single_chirp)
+            sections.append(silence)
+
+        signal = np.concatenate(sections)
+
+    else:
+        raise ValueError(f"Unknown key type: {type_key}")
+
     return signal / np.max(np.abs(signal))
 
 def key_synchronise(rxSig, fs, T, f0, f1, key_type='chirp', plot=True):
 
     # SIGNAL INPUT TYPE IS RxSignal (our own class)
 
-    if key_type == 'chirp' or key_type == 'up_down_chirp':
+    if key_type == 'chirp' or key_type == 'up_down_chirp' or key_type == 'repeat_chirp_0.5s':
         # IN THIS CASE DO A MATCHED FILTER
         
         signal = np.asarray(rxSig.sigArray).squeeze()
@@ -54,6 +85,8 @@ def key_synchronise(rxSig, fs, T, f0, f1, key_type='chirp', plot=True):
             plt.xlabel("Sample index")
             plt.ylabel("Correlation magnitude")
             plt.show()
+    
+
 
     return sync_index
 

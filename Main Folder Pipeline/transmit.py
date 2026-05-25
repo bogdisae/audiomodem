@@ -59,8 +59,8 @@ def main(params):
 if __name__ == "__main__":
     params = {
             # MAYBE ADD CHIRP PARAMATERS E.G CHIRP LENGTH, START AND END FREQUENCIES - SAM
-            'key_type': 'chirp', #up_down_chirp
-            'length_of_key': 48000, # length of key 
+            'key_type': 'repeat_chirp_0.5s', #up_down_chirp
+            'length_of_key': 24000, # length of key 
             'f0': 0, #Start frequency of chirp
             'f1': 20000, #End frequency of chirp
             'block_length': 1024,
