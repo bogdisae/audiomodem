@@ -135,7 +135,6 @@ class RepeatedChirp(Equaliser):
         for i in range(self.numRepeats):
 
             start = sync_index + i * self.blockLength
-            print(i, start)
             segment = rxSignal[start:start + self.chirpLength]
             
             # FFT of received chirp
