@@ -7,7 +7,7 @@ import questionary
 from pathlib import Path
 
 
-def cross_correlation(x, k):
+def auto_correlation(x, k):
     y = []
     for i in range(0, len(x)-k):
         y.append(x[i]*x[i+k])
@@ -55,7 +55,16 @@ def synchronisation_plot(recording, correlation, windowed, h, start_index = None
 
     plt.show()
 
+def matched_filter_plot(corr : np.ndarray, sync_index):
 
+    x = np.arange(len(corr))
+    plt.figure()
+    plt.plot(x, np.abs(corr))
+    plt.axvline(sync_index, color='r')
+    plt.title("Matched Filter Output - Absolute value")
+    plt.xlabel("Sample index")
+    plt.ylabel("Correlation magnitude")
+    plt.show()
 
     #------------------------------------------------------------------------------------------
 
