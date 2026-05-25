@@ -15,7 +15,7 @@ class Equaliser:
     def synchronise(self, signal: np.ndarray, plot = True) -> int:
         raise NotImplementedError
 
-    def estimate(self, signal: np.ndarray, plot = True):
+    def estimate(self, signal: np.ndarray, sync_index, plot = True):
         raise NotImplementedError
 
 
@@ -51,7 +51,7 @@ class Chirp(Equaliser):
 
         return sync_index
 
-    def estimate(self, rxSignal: np.ndarray, sync_index: int):
+    def estimate(self, rxSignal: np.ndarray, sync_index: int, plot = True):
         """
         Simple single-shot channel estimate using the chirp only.
         """
@@ -114,6 +114,8 @@ class RepeatedChirp(Equaliser):
         sync_index = np.argmax(np.abs(corr))
 
         if plot:
+            matched_filter_plot(key, 0)
+            matched_filter_plot(signal, 0)
             matched_filter_plot(corr, sync_index)
 
         return sync_index

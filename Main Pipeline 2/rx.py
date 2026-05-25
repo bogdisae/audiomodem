@@ -54,7 +54,7 @@ class Rx:
     def decode(self):
         
         self.synchronisation_index = self.equaliser.synchronise(self.signal, True)
-        self.H = self.equaliser.estimate(self.signal, True)
+        self.H = self.equaliser.estimate(self.signal, self.synchronisation_index, True)
 
         self.extract_ofdm_blocks()
         self.decode_symbols()
