@@ -16,6 +16,10 @@ class Rx:
     correlation: np.ndarray
     H: np.ndarray
     h: np.ndarray
+    ofdm_blocks: np.ndarray
+    data_symbols: np.ndarray
+    data_bits: np.ndarray
+    data_bytes: np.ndarray
 
     def __init__(self, constellation: Constellation, signal:np.ndarray, correlation_dist:int, n_taps:int, noise_key: np.ndarray, cp_length: int, block_length: int):
         self.constellation = constellation
@@ -52,20 +56,32 @@ class Rx:
         y = self.signal[self.synchronisation_index: self.synchronisation_index + self.correlation_dist]
         self.channel_estimate_division(y, self.noise_key)
 
-    def extract_ofdm_block():
-        pass
+    def decode_ofdm_block(self, block):
+        cp_discarded = block[-self.block_length:]
+        Y = np.fft.fft(cp_discarded)
+        X = Y / self.H[0:len(Y)] # Zero-forcing
+        data_bins = X[1:self.block_length//2]
+        return data_bins
 
-    def decode_symbols():
-        pass
+    def extract_ofdm_blocks(self):
+        self.ofdm_blocks = self.signal[self.synchronisation_index:].resize(self.block_length+self.cp_length, -1)
+        self.data_symbols = []
+        for block in self.ofdm_blocks:
+            self.data_symbols.extend(self.decode_ofdm_block(block))
 
-    def bits_to_bytes():
-        pass
+    def decode_symbols(self):
+        self.data_bits = []
+        self.data_bits = np.array([self.constellation.bits_per_symbol(symbol) for symbol in self.data_symbols])
+        self.data_bits.ravel()
+
+    def bits_to_bytes(self):
+        self.data_bytes = np.packbits(self.data_bits.astype(np.uint8))
     
     def decode(self):
         self.synchronise_noise_key()
         self.channel_estimate()
 
-        self.extract_ofdm_block()
+        self.extract_ofdm_blocks()
         self.decode_symbols()
         self.bits_to_bytes()
 
