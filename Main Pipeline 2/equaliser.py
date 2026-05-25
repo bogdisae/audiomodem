@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.signal import chirp, correlate
 import matplotlib.pyplot as plt
+from helper import matched_filter_plot
 
 
 class Equaliser:
@@ -32,6 +33,7 @@ class RepeatedChirp(Equaliser):
         self.numRepeats = numRepeats
         self.chirpLength = chirpLength
         self.silenceLength = silenceLength
+        self.blockLength = chirpLength + silenceLength
         self.f0 = f0
         self.f1 = f1
 
@@ -67,13 +69,36 @@ class RepeatedChirp(Equaliser):
         sync_index = np.argmax(np.abs(corr))
 
         if plot:
-            x = np.arange(len(corr))
-            plt.figure()
-            plt.plot(x, np.abs(corr))
-            plt.axvline(sync_index, color='r')
-            plt.title("Matched Filter Output - Absolute value")
-            plt.xlabel("Sample index")
-            plt.ylabel("Correlation magnitude")
-            plt.show()
+            matched_filter_plot(corr, sync_index)
 
         return sync_index
+    
+    def estimate(self, rxSignal: np.ndarray, sync_index):
+
+        # Find the estimated sample index where the data starts
+        dataStartIdx = sync_index + self.lengthInSamples
+        
+        repeatedChirp = self.generate()
+        # FFT of known transmitted chirp
+        X = np.fft.fft(repeatedChirp, n=self.chirpLength)
+        H_list = []
+
+        for i in range(self.numRepeats):
+
+            start = dataStartIdx + i * self.blockLength
+            print(i, start)
+            segment = rxSignal[start:start + self.chirpLength]
+            
+            # FFT of received chirp
+            Y = np.fft.fft(segment, n = self.chirpLength)
+
+            eps = 1e-12
+
+            H = Y / (X + eps)
+
+            H_list.append(H)
+
+        H_list = np.array(H_list)
+        H_avg = np.mean(H_list, axis=0)
+
+        return H_list, H_avg
