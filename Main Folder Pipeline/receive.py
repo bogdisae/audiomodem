@@ -47,7 +47,7 @@ def main(params):
     # NOW WE SYNCHRONISE!
 
     try:
-        rxSig.keyIdxStart = key_synchronise(rxSig, params['fs'], params['length_of_key'] / params['fs'], params['f0'], params['f1'], params['key_type'])
+        rxSig.keyIdxStart = key_synchronise(rxSig, params['fs'], params['length_of_key'] / params['fs'], params['f0'], params['f1'], params['key_type'], False)
     except ValueError as e:
         print("Error during matched filtering:", e)
         raise
@@ -69,11 +69,14 @@ def main(params):
     eps = 1e-12  # Prevent divide-by-zero instability
     H = Y[1:-1] / (S[1:-1] + eps) # Remove DC and nyquist bins
 
-    # TEMPORARY TEST CODE
-    H_1024 = np.interp(np.linspace(0, len(H)-1, 1024), np.arange(len(H)), H)
+    # np.interp does not support complex numbers, so must be dealt with.
+    xp = np.arange(len(H))
+    x_new = np.linspace(0, len(H)-1, 1024)
+    H_1024 = (np.interp(x_new, xp, np.real(H)) + 
+          1j * np.interp(x_new, xp, np.imag(H)))
 
 
-    freqs = np.fft.rfftfreq(DFT_LENGTH, d=1 / params['fs'])[1:-1]
+    f'''reqs = np.fft.rfftfreq(DFT_LENGTH, d=1 / params['fs'])[1:-1]
     plt.figure(figsize=(10,4))
     plt.plot(freqs, 20 * np.log10(np.abs(H) + 1e-12))
     plt.xlabel('Frequency (Hz)')
@@ -88,7 +91,7 @@ def main(params):
     plt.ylabel("Magnitude (dB)")
     plt.title("OFDM Channel Response (1024 subcarriers)")
     plt.grid(True)
-    plt.show()
+    plt.show()'''
 
 
     #h_coeffs = wiener_filter_coeffs(isolated_key, key, filter_N=500, fs = params['fs'], plotting=True)
