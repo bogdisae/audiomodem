@@ -24,10 +24,12 @@ class Rx:
     bin_low : int
     bin_high : int
     active_bins : np.ndarray
+    early_samples : int
 
 
-    def __init__(self, constellation: Constellation, signal:np.ndarray, cp_length: int, block_length: int, equaliser : Equaliser,
-                 f_low = 230, f_high = 14500):
+    def __init__(self, constellation: Constellation, signal:np.ndarray, cp_length: int,
+                 block_length: int, equaliser : Equaliser,
+                 early_samples = 20, f_low = 230, f_high = 14500):
         
         self.constellation = constellation
         self.signal = signal
@@ -36,6 +38,7 @@ class Rx:
         self.equaliser = equaliser
         self.f_low = f_low
         self.f_high = f_high
+        self.early_samples = early_samples
 
         # Calulate active subcarrier mask
         self.bin_low = int(np.ceil(f_low * block_length / equaliser.fs))
@@ -48,6 +51,15 @@ class Rx:
         cp_discarded = block[-self.block_length:]
         Y = np.fft.fft(cp_discarded)
         X = Y / self.H[0:len(Y)] # Zero-forcing
+
+        # Phase correction for FFT window offset
+        k = np.arange(len(X))
+        phase_correction = np.exp(
+            1j * 2 * np.pi * k * self.early_samples / self.block_length
+        )
+
+        X *= phase_correction
+        
         data_bins = X[self.active_bins]
         return data_bins
 
@@ -76,7 +88,7 @@ class Rx:
         self.H = self.equaliser.estimate(self.signal, key_start_index, True)
 
         # TRY GOING EARLY
-        self.synchronisation_index = self.synchronisation_index + 128
+        self.synchronisation_index = self.synchronisation_index + self.cp_length - self.early_samples
 
         # BOGDAN YOU FORGOT THIS LINE
         self.ofdm_blocks = self.signal[self.synchronisation_index:]

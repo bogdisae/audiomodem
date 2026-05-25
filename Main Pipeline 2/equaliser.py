@@ -114,10 +114,10 @@ class RepeatedChirp(Equaliser):
         corr = correlate(signal, key, mode='valid')
         key_start_index = np.argmax(np.abs(corr))
 
-        # if plot:
+        if plot:
         #     plot_signal("Transmitted key", key, -1)
-        #     plot_signal("Received signal", signal, -1)
-        #     plot_signal("Correlation plot", corr, key_start_index, True)
+            plot_signal("Received signal", signal, -1)
+            plot_signal("Correlation plot", corr, key_start_index, True)
 
         return key_start_index, key_start_index + self.lengthInSamples
     
