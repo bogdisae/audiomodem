@@ -71,7 +71,7 @@ def symbol_offset_test():
     tx.encode_symbols()
     tx.prep_ofdm_blocks()
     # apply an offset
-    tx.ofdm_symbol_blocks = [np.concatenate([block[-10:], block[10:]]) for block in tx.ofdm_symbol_blocks]
+    tx.ofdm_symbol_blocks = [np.concatenate([block[-30:], block[30:]]) for block in tx.ofdm_symbol_blocks]
     ofdm_blocks = np.concatenate(tx.ofdm_symbol_blocks)
 
     rx = Rx(constellation, ofdm_blocks / max(abs(ofdm_blocks)), 32, 1024, None)
@@ -81,6 +81,6 @@ def symbol_offset_test():
     rx.decode_symbols()
     rx.bits_to_bytes()
 
-    plot_constellation(rx.data_symbols)
+    plot_constellation(np.array(rx.data_symbols))
 
-# symbol_offset_test()
+symbol_offset_test()

@@ -57,7 +57,7 @@ def synchronisation_plot(recording, correlation, windowed, h, start_index = None
 
 def plot_constellation(symbols):
     fig, ax = plt.subplots(1, 1, constrained_layout=True)
-    ax.plot(symbols)
+    ax.scatter(symbols.real, symbols.imag)
     ax.set_title("received symbols")
     plt.show()
 
