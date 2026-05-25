@@ -12,7 +12,7 @@ class Equaliser:
         raise NotImplementedError
 
     # FUNCTIONS TO BE IMPLEMENTED IN CHILD CLASSES
-    def synchronise(self, signal: np.ndarray, plot = True) -> int:
+    def synchronise(self, signal: np.ndarray, plot = True):
         raise NotImplementedError
 
     def estimate(self, signal: np.ndarray, sync_index, plot = True):
@@ -37,7 +37,7 @@ class Chirp(Equaliser):
         m = np.max(np.abs(signal))
         return signal / m if m != 0 else signal
 
-    def synchronise(self, signal: np.ndarray, plot=True) -> int:
+    def synchronise(self, signal: np.ndarray, plot=True):
         print("Synchronising using single chirp")
 
         key = self.generate()
@@ -47,7 +47,8 @@ class Chirp(Equaliser):
         sync_index = np.argmax(np.abs(corr))
 
         if plot:
-            matched_filter_plot(corr, sync_index)
+            # plot_signal(corr, sync_index) ARGUEMENTS NEED TO BE UPDATED
+            pass
 
         return sync_index
 
@@ -104,21 +105,21 @@ class RepeatedChirp(Equaliser):
         return signal / m if m != 0 else signal
 
     # override parent method
-    def synchronise(self, signal: np.ndarray, plot=True) -> int:
+    def synchronise(self, signal: np.ndarray, plot=True):
         print("Synchronising using repeated chirp")
         print("Sync signal length", len(signal))
 
         key = self.generate()
 
         corr = correlate(signal, key, mode='valid')
-        sync_index = np.argmax(np.abs(corr))
+        key_start_index = np.argmax(np.abs(corr))
 
-        if plot:
-            plot_signal("Transmitted key", key, -1)
-            plot_signal("Received signal", signal, -1)
-            plot_signal("Correlation plot", corr, sync_index, True)
+        # if plot:
+        #     plot_signal("Transmitted key", key, -1)
+        #     plot_signal("Received signal", signal, -1)
+        #     plot_signal("Correlation plot", corr, key_start_index, True)
 
-        return sync_index + self.lengthInSamples
+        return key_start_index, key_start_index + self.lengthInSamples
     
     def estimate(self, rxSignal: np.ndarray, sync_index, plot = True):
 
@@ -151,4 +152,10 @@ class RepeatedChirp(Equaliser):
         if plot:
             plot_multiple_channel_estimates(H_list)
 
-        return H_list
+        # H_avg = np.mean(H_list, axis = 0)
+
+        H_sorted = np.sort(H_list, axis=0)
+        H_trimmed = H_sorted[1:-1]   # drop min/max
+        H_avg = np.mean(H_trimmed, axis=0)
+
+        return H_avg

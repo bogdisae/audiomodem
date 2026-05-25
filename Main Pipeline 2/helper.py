@@ -80,6 +80,10 @@ def plot_signal(title : str, signal : np.ndarray, v_line_index, abs = False):
 def plot_multiple_channel_estimates(H_list):
     H_avg = np.mean(H_list, axis=0)
 
+    H_sorted = np.sort(H_list, axis=0)
+    H_trimmed = H_sorted[1:-1]   # drop min/max
+    H_trimmed_avg = np.mean(H_trimmed, axis=0)
+
     num = len(H_list)
 
     plt.figure(figsize=(12, 6))
@@ -88,6 +92,7 @@ def plot_multiple_channel_estimates(H_list):
         plt.plot(20*np.log10(np.abs(H_list[i]) + 1e-12), alpha=0.5, label=f"chirp {i}" if i < 5 else None)
 
     plt.plot(20*np.log10(np.abs(H_avg) + 1e-12), color='black', linewidth=2, label="AVERAGE")
+    plt.plot(20*np.log10(np.abs(H_trimmed_avg) + 1e-12), color='grey', linewidth=2, label="AVERAGE - TRIMMED")
 
     plt.title("Channel Estimates per Chirp + Average")
     plt.xlabel("Subcarrier index")
@@ -201,3 +206,31 @@ def save_wav_file(signal, fs):
     if filename is None:
         raise SystemExit("No filename provided")
     write(f"Main Pipeline 2/Audio Files/{filename}.wav", fs, combined_int16)
+
+
+
+def plot_constellation(symbols, title="Constellation Diagram", show=True):
+    """
+    Plots complex data symbols on the IQ plane.
+
+    Parameters:
+        symbols (np.ndarray): Array of complex symbols
+        title (str): Plot title
+        show (bool): Whether to call plt.show()
+    """
+    symbols = np.asarray(symbols)
+
+    plt.figure(figsize=(6, 6))
+    plt.scatter(symbols.real, symbols.imag, s=10)
+
+    plt.axhline(0, color='black', linewidth=0.5)
+    plt.axvline(0, color='black', linewidth=0.5)
+
+    plt.xlabel("In-phase (I)")
+    plt.ylabel("Quadrature (Q)")
+    plt.title(title)
+    plt.grid(True)
+    plt.axis("equal")
+
+    if show:
+        plt.show()

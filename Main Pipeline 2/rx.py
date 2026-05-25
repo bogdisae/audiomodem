@@ -18,27 +18,45 @@ class Rx:
     data_bits: np.ndarray
     data_bytes: np.ndarray
 
-    def __init__(self, constellation: Constellation, signal:np.ndarray, cp_length: int, block_length: int, equaliser : Equaliser):
+    # SNS ADDITIONS xx
+    f_low : int
+    f_high : int
+    bin_low : int
+    bin_high : int
+    active_bins : np.ndarray
+
+
+    def __init__(self, constellation: Constellation, signal:np.ndarray, cp_length: int, block_length: int, equaliser : Equaliser,
+                 f_low = 230, f_high = 14500):
+        
         self.constellation = constellation
         self.signal = signal
         self.cp_length = cp_length
         self.block_length = block_length
         self.equaliser = equaliser
+        self.f_low = f_low
+        self.f_high = f_high
+
+        # Calulate active subcarrier mask
+        self.bin_low = int(np.ceil(f_low * block_length / equaliser.fs))
+        self.bin_high = int(np.floor(f_high * block_length / equaliser.fs))
+        # Using the equaliser fs feels messy but will do
+        self.active_bins = np.arange(self.bin_low, self.bin_high + 1)
+
 
     def decode_ofdm_block(self, block):
         cp_discarded = block[-self.block_length:]
         Y = np.fft.fft(cp_discarded)
         X = Y / self.H[0:len(Y)] # Zero-forcing
-        data_bins = X[1:self.block_length//2]
+        data_bins = X[self.active_bins]
         return data_bins
 
     def extract_ofdm_blocks(self):
-        block_length = self.block_length + self.cp_length
-        self.ofdm_blocks = self.signal[self.synchronisation_index+self.cp_length:]
-        pad_length = len(self.ofdm_blocks) % block_length
+        ofdm_symbol_length = self.block_length + self.cp_length
+        pad_length = len(self.ofdm_blocks) % ofdm_symbol_length
         if pad_length > 0:
-            self.ofdm_blocks = np.pad(self.ofdm_blocks, (0, block_length - pad_length))
-        self.ofdm_blocks = self.ofdm_blocks.reshape(-1, block_length)
+            self.ofdm_blocks = np.pad(self.ofdm_blocks, (0, ofdm_symbol_length - pad_length))
+        self.ofdm_blocks = self.ofdm_blocks.reshape(-1, ofdm_symbol_length)
 
         self.data_symbols = []
         for block in self.ofdm_blocks:
@@ -53,8 +71,15 @@ class Rx:
     
     def decode(self):
         
-        self.synchronisation_index = self.equaliser.synchronise(self.signal, True)
-        self.H = self.equaliser.estimate(self.signal, self.synchronisation_index, True)
+        # Synchronise 
+        key_start_index, self.synchronisation_index = self.equaliser.synchronise(self.signal, True)
+        self.H = self.equaliser.estimate(self.signal, key_start_index, True)
+
+        # TRY GOING EARLY
+        self.synchronisation_index = self.synchronisation_index + 128
+
+        # BOGDAN YOU FORGOT THIS LINE
+        self.ofdm_blocks = self.signal[self.synchronisation_index:]
 
         self.extract_ofdm_blocks()
         self.decode_symbols()

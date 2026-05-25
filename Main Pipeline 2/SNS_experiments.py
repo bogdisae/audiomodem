@@ -1,7 +1,7 @@
 from equaliser import Equaliser, RepeatedChirp
 from tx import Tx
 from rx import Rx
-from helper import pick_text_file, csv_to_data_bytes, pick_wav_file, normalise_signal, record_audio
+from helper import pick_text_file, csv_to_data_bytes, pick_wav_file, normalise_signal, record_audio, plot_constellation
 from pathlib import Path
 import numpy as np
 import questionary
@@ -55,8 +55,8 @@ def generateRepeatedChirp_plus_data():
     if filename is None:
         raise SystemExit("No filename provided")
     write(f"Main Pipeline 2/Audio Files/{filename}.wav", sampleRate, combined_int16)
+    
 
-# generateRepeatedChirp_plus_data()
 
 def receiveRepeated_chirp_plus_data():
 
@@ -80,10 +80,14 @@ def receiveRepeated_chirp_plus_data():
     repeatedChirp = RepeatedChirp(10, 1024, 1376, 0, 20000, sampleRate)
     receiver = Rx(constellation, sig, 128, 1024, repeatedChirp)
     receiver.decode()
-    print(receiver.H[:100])
+    print ("Number of coefficients:", len(receiver.H))
+    print("First 10 estimated coefficients:\n", receiver.H[:10])
 
-    print(receiver.data_bytes)
+    print(receiver.data_bytes[:100])
+
+    plot_constellation(receiver.data_symbols[25:200])
 
 receiveRepeated_chirp_plus_data()
 
 #generateRepeatedChirp_plus_data()
+
