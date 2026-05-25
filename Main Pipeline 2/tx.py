@@ -72,8 +72,8 @@ class Tx:
     
     def assemble_signal(self):
         ofdm_blocks = np.copy(self.ofdm_symbol_blocks)
-        ofdm_blocks = ofdm_blocks / abs(max(ofdm_blocks))
-        self.transmitted_signal = np.concatenate([self.equaliser.generate(), np.zeros(self.cp_length), np.concatenate(ofdm_blocks)])
+        ofdm_blocks = ofdm_blocks / np.abs(np.max(ofdm_blocks))
+        self.transmitted_signaal = np.concatenate([self.equaliser.generate(), np.zeros(self.cp_length), np.concatenate(ofdm_blocks)])
 
     def encode(self):
         self.encode_symbols()

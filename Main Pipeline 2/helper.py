@@ -134,3 +134,59 @@ def pick_wav_file(prompt_text: str, folder: Path) -> str:
     if choice is None:
         raise SystemExit('No file selected')
     return str(folder / choice)
+
+def normalise_signal(signal):
+    signal = signal.astype(np.float32)
+    max_val = np.max(np.abs(signal))
+    if max_val == 0:
+        return signal
+    return signal / max_val
+
+
+def record_audio(fs, channels=1):
+
+    print("Press ENTER to start recording...")
+    input() # Enter must be pressed, bit tekky from chat here
+
+    print("Recording... press ENTER again to stop.")
+
+    frames = []
+    recording = True
+
+    def callback(indata, frames_count, time, status):
+        if recording:
+            frames.append(indata.copy())
+
+    stream = sd.InputStream(
+        samplerate=fs,
+        channels=channels,
+        dtype="float32",
+        callback=callback,
+    )
+
+    stream.start()
+
+    # wait for second ENTER in main thread
+    input()
+
+    recording = False
+    stream.stop()
+    stream.close()
+
+    audio = np.concatenate(frames, axis=0)
+
+    if channels == 1:
+        audio = audio.reshape(-1)
+
+    save_wav_file(audio, fs)
+
+    return audio
+
+
+def save_wav_file(signal, fs):
+    # Also save the wav file for future use
+    combined_int16 = np.int16(signal * 32767) # Convert to wav amplitudes
+    filename = questionary.text("Enter filename (without extension):").ask()
+    if filename is None:
+        raise SystemExit("No filename provided")
+    write(f"Main Pipeline 2/Audio Files/{filename}.wav", fs, combined_int16)

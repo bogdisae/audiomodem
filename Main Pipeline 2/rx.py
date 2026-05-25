@@ -1,18 +1,16 @@
 import numpy as np
 from constellation import Constellation
+from equaliser import Equaliser, RepeatedChirp
 
 class Rx:
     signal: np.ndarray
     correlation_dist: int
-    # n_taps: int
     cp_length: int
     block_length: int
     constellation: Constellation
+    equaliser : Equaliser
 
-    # noise_key: np.ndarray
     synchronisation_index: int
-    # windowed: np.ndarray
-    # correlation: np.ndarray
     H: np.ndarray
     h: np.ndarray
     ofdm_blocks: np.ndarray
@@ -20,11 +18,12 @@ class Rx:
     data_bits: np.ndarray
     data_bytes: np.ndarray
 
-    def __init__(self, constellation: Constellation, signal:np.ndarray, cp_length: int, block_length: int):
+    def __init__(self, constellation: Constellation, signal:np.ndarray, cp_length: int, block_length: int, equaliser : Equaliser):
         self.constellation = constellation
         self.signal = signal
         self.cp_length = cp_length
         self.block_length = block_length
+        self.equaliser = equaliser
 
     def decode_ofdm_block(self, block):
         cp_discarded = block[-self.block_length:]
@@ -52,8 +51,9 @@ class Rx:
         self.data_bytes = np.packbits(np.array(self.data_bits).astype(np.uint8))
     
     def decode(self):
-        # self.synchronise_noise_key()
-        # self.channel_estimate()
+        
+        self.synchronisation_index = self.equaliser.synchronise(self.signal, True)
+        self.H = self.equaliser.estimate(self.signal, True)
 
         self.extract_ofdm_blocks()
         self.decode_symbols()
