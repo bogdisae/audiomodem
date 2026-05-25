@@ -20,13 +20,54 @@ class Equaliser:
 
 
 class Chirp(Equaliser):
-    def __init__(self, f0, f1, fs=48000):
+    def __init__(self, f0, f1, chirpLength, fs=48000):
         super().__init__(fs)
+
         self.f0 = f0
         self.f1 = f1
+        self.chirpLength = chirpLength
+        self.lengthInSamples = chirpLength
 
-    def synchronise(self, signal: np.ndarray, plot=True):
-        raise NotImplementedError  
+    def generate(self) -> np.ndarray:
+        t = np.arange(self.chirpLength) / self.fs
+
+        signal = chirp(t, f0=self.f0, f1=self.f1, t1=self.chirpLength / self.fs, method='linear')
+
+        # normalise (important for stable correlation / channel estimation)
+        m = np.max(np.abs(signal))
+        return signal / m if m != 0 else signal
+
+    def synchronise(self, signal: np.ndarray, plot=True) -> int:
+        print("Synchronising using single chirp")
+
+        key = self.generate()
+
+        # matched filter (time-reversed correlation equivalent)
+        corr = correlate(signal, key, mode='valid')
+        sync_index = np.argmax(np.abs(corr))
+
+        if plot:
+            matched_filter_plot(corr, sync_index)
+
+        return sync_index
+
+    def estimate(self, rxSignal: np.ndarray, sync_index: int):
+        """
+        Simple single-shot channel estimate using the chirp only.
+        """
+        key = self.generate()
+
+        start = sync_index
+        segment = rxSignal[start:start + self.chirpLength]
+
+        # FFT-based channel estimate
+        X = np.fft.fft(key, n=self.chirpLength)
+        Y = np.fft.fft(segment, n=self.chirpLength)
+
+        eps = 1e-12
+        H = Y / (X + eps)
+
+        return H
 
 
 class RepeatedChirp(Equaliser):
