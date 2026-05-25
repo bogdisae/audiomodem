@@ -1,29 +1,32 @@
 import numpy as np
 from scipy.signal import chirp, correlate
 import matplotlib.pyplot as plt
-from helper import matched_filter_plot
+from helper import matched_filter_plot, plot_multiple_channel_estimates
 
 
 class Equaliser:
     def __init__(self, fs=48000):
         self.fs = fs
 
+    def generate(self) -> np.ndarray: 
+        raise NotImplementedError
+
     # FUNCTIONS TO BE IMPLEMENTED IN CHILD CLASSES
-    def synchronise(self, signal: np.ndarray, plot=True) -> int:
+    def synchronise(self, signal: np.ndarray, plot = True) -> int:
         raise NotImplementedError
 
-    def estimate(self, signal: np.ndarray):
+    def estimate(self, signal: np.ndarray, plot = True):
         raise NotImplementedError
 
 
-# class Chirp(Equaliser):
-#     def __init__(self, f0, f1, fs=48000):
-#         super().__init__(fs)
-#         self.f0 = f0
-#         self.f1 = f1
+class Chirp(Equaliser):
+    def __init__(self, f0, f1, fs=48000):
+        super().__init__(fs)
+        self.f0 = f0
+        self.f1 = f1
 
-#     def synchronise(self, signal: np.ndarray, plot=True):
-#         raise NotImplementedError  
+    def synchronise(self, signal: np.ndarray, plot=True):
+        raise NotImplementedError  
 
 
 class RepeatedChirp(Equaliser):
@@ -73,7 +76,7 @@ class RepeatedChirp(Equaliser):
 
         return sync_index
     
-    def estimate(self, rxSignal: np.ndarray, sync_index):
+    def estimate(self, rxSignal: np.ndarray, sync_index, plot = True):
 
         # Find the estimated sample index where the data starts
         dataStartIdx = sync_index + self.lengthInSamples
@@ -99,6 +102,8 @@ class RepeatedChirp(Equaliser):
             H_list.append(H)
 
         H_list = np.array(H_list)
-        H_avg = np.mean(H_list, axis=0)
 
-        return H_list, H_avg
+        if plot:
+            plot_multiple_channel_estimates(H_list)
+
+        return H_list

@@ -66,9 +66,26 @@ def matched_filter_plot(corr : np.ndarray, sync_index):
     plt.ylabel("Correlation magnitude")
     plt.show()
 
-    #------------------------------------------------------------------------------------------
+def plot_multiple_channel_estimates(H_list):
+    H_avg = np.mean(H_list, axis=0)
 
-    #SAMS HELPER FUNCTIONS
+    num = len(H_list)
+
+    plt.figure(figsize=(12, 6))
+
+    for i in range(num):
+        plt.plot(20*np.log10(np.abs(H_list[i]) + 1e-12), alpha=0.5, label=f"chirp {i}" if i < 5 else None)
+
+    plt.plot(20*np.log10(np.abs(H_avg) + 1e-12), color='black', linewidth=2, label="AVERAGE")
+
+    plt.title("Channel Estimates per Chirp + Average")
+    plt.xlabel("Subcarrier index")
+    plt.ylabel("Magnitude (dB)")
+    plt.grid()
+    plt.legend()
+    plt.show()
+
+
 
 def csv_to_data_bytes(filename: str) -> np.ndarray:
     """
