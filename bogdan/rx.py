@@ -84,5 +84,3 @@ class Rx:
         self.extract_ofdm_blocks()
         self.decode_symbols()
         self.bits_to_bytes()
-
-
