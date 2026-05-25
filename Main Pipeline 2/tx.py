@@ -12,6 +12,7 @@ class Tx:
     constellation: Constellation
     cp_length: int
     block_length: int
+    equaliser: Equaliser
 
     data_bits: np.ndarray
     data_symbols: np.ndarray
@@ -54,7 +55,7 @@ class Tx:
     def assemble_signal(self):
         ofdm_blocks = np.copy(self.ofdm_symbol_blocks)
         ofdm_blocks = ofdm_blocks / abs(max(ofdm_blocks))
-        self.transmitted_signl = np.concatenate([self.noise_preamble, np.zeros(self.cp_length), np.concatenate(ofdm_blocks)])
+        self.transmitted_signl = np.concatenate([self.equaliser.generate(), np.zeros(self.cp_length), np.concatenate(ofdm_blocks)])
 
     def encode(self):
         self.encode_symbols()
