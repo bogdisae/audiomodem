@@ -52,4 +52,35 @@ def ofdm_test():
     rx.decode()
     print(rx.data_bytes)
 
-ofdm_test()
+# ofdm_test()
+
+def symbol_offset_test():
+    constellation = Constellation(2, {
+        ('0', '0'): (1+1j)/np.sqrt(2),
+        ('0', '1'): (-1+1j)/np.sqrt(2),
+        ('1', '0'): (1-1j)/np.sqrt(2),
+        ('1', '1'): (-1-1j)/np.sqrt(2)
+    }, {
+        ('0', '0'): lambda s: (s.real >= 0) & (s.imag >= 0),
+        ('0', '1'): lambda s: (s.real < 0) & (s.imag >=  0),
+        ('1', '0'): lambda s: (s.real >=  0) & (s.imag < 0),
+        ('1', '1'): lambda s: (s.real <  0) & (s.imag <  0),
+    })
+    data = np.array([100, 50, 32, 42, 56, 200, 43, 53, 23, 12, 50, 32], dtype=np.uint8)
+    tx = Tx(constellation, data, None, 32, 1024)
+    tx.encode_symbols()
+    tx.prep_ofdm_blocks()
+    # apply an offset
+    tx.ofdm_symbol_blocks = [np.concatenate([block[-10:], block[10:]]) for block in tx.ofdm_symbol_blocks]
+    ofdm_blocks = np.concatenate(tx.ofdm_symbol_blocks)
+
+    rx = Rx(constellation, ofdm_blocks / max(abs(ofdm_blocks)), 32, 1024, None)
+    rx.synchronisation_index = 0
+    rx.H = np.ones(1024)
+    rx.extract_ofdm_blocks()
+    rx.decode_symbols()
+    rx.bits_to_bytes()
+
+    plot_constellation(rx.data_symbols)
+
+# symbol_offset_test()

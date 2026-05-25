@@ -55,6 +55,12 @@ def synchronisation_plot(recording, correlation, windowed, h, start_index = None
 
     plt.show()
 
+def plot_constellation(symbols):
+    fig, ax = plt.subplots(1, 1, constrained_layout=True)
+    ax.plot(symbols)
+    ax.set_title("received symbols")
+    plt.show()
+
 def matched_filter_plot(corr : np.ndarray, sync_index):
 
     x = np.arange(len(corr))
