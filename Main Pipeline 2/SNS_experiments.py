@@ -80,6 +80,7 @@ def receiveRepeated_chirp_plus_data():
     repeatedChirp = RepeatedChirp(10, 1024, 1376, 0, 20000, sampleRate)
     receiver = Rx(constellation, sig, 128, 1024, repeatedChirp)
     receiver.decode()
+    print(receiver.H[:100])
 
     print(receiver.data_bytes)
 

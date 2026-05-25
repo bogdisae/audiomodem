@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.signal import chirp, correlate
 import matplotlib.pyplot as plt
-from helper import matched_filter_plot, plot_multiple_channel_estimates
+from helper import plot_signal, plot_multiple_channel_estimates
 
 
 class Equaliser:
@@ -114,9 +114,9 @@ class RepeatedChirp(Equaliser):
         sync_index = np.argmax(np.abs(corr))
 
         if plot:
-            matched_filter_plot(key, 0)
-            matched_filter_plot(signal, 0)
-            matched_filter_plot(corr, sync_index)
+            plot_signal("Transmitted key", key, -1)
+            plot_signal("Received signal", signal, -1)
+            plot_signal("Correlation plot", corr, sync_index, True)
 
         return sync_index
     

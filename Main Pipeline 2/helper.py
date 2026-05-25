@@ -55,15 +55,20 @@ def synchronisation_plot(recording, correlation, windowed, h, start_index = None
 
     plt.show()
 
-def matched_filter_plot(corr : np.ndarray, sync_index):
+def plot_signal(title : str, signal : np.ndarray, v_line_index, abs = False):
+    # V_line_index draws a vertical line at an index of interest. Set to -1 to remove
 
-    x = np.arange(len(corr))
+    if abs : signal = np.abs(signal) # To plot absolute value
+
+    x = np.arange(len(signal))
     plt.figure()
-    plt.plot(x, np.abs(corr))
-    plt.axvline(sync_index, color='r')
-    plt.title("Matched Filter Output - Absolute value")
+    plt.plot(x, signal)
+
+    if v_line_index != -1 : plt.axvline(v_line_index, color='r')
+
+    plt.title(title)
     plt.xlabel("Sample index")
-    plt.ylabel("Correlation magnitude")
+    #plt.ylabel()
     plt.show()
 
 def plot_multiple_channel_estimates(H_list):
