@@ -34,7 +34,7 @@ class Rx:
 
     def extract_ofdm_blocks(self):
         block_length = self.block_length + self.cp_length
-        self.ofdm_blocks = self.signal[self.synchronisation_index:]
+        self.ofdm_blocks = self.signal[self.synchronisation_index+self.cp_length:]
         pad_length = len(self.ofdm_blocks) % block_length
         if pad_length > 0:
             self.ofdm_blocks = np.pad(self.ofdm_blocks, (0, block_length - pad_length))
