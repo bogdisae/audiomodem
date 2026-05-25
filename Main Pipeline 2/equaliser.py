@@ -118,7 +118,7 @@ class RepeatedChirp(Equaliser):
             plot_signal("Received signal", signal, -1)
             plot_signal("Correlation plot", corr, sync_index, True)
 
-        return sync_index
+        return sync_index + self.lengthInSamples
     
     def estimate(self, rxSignal: np.ndarray, sync_index, plot = True):
 
