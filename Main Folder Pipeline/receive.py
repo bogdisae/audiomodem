@@ -91,10 +91,10 @@ def main(params):
     plt.show()
 
 
-    h_coeffs = wiener_filter_coeffs(isolated_key, key, filter_N=500, fs = params['fs'], plotting=True)
+    #h_coeffs = wiener_filter_coeffs(isolated_key, key, filter_N=500, fs = params['fs'], plotting=True)
 
     
-    #AARON WILL FIX SATURDAY
+    '''#AARON WILL FIX SATURDAY
     run_comparison = True
     if run_comparison:
         #compare_wiener_length(isolated_key, key, params['fs'])
@@ -106,7 +106,7 @@ def main(params):
             "compare_all_filters": True,
             "show_db": True
             }
-        )
+        )'''
     
 
 
