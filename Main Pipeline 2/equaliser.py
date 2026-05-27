@@ -159,3 +159,35 @@ class RepeatedChirp(Equaliser):
         H_avg = np.mean(H_trimmed, axis=0)
 
         return H_avg
+    
+
+
+
+
+class RepeatedChirp(Equaliser):
+    def __init__(self, numRepeats, chirpLength, silenceLength, f0, f1, fs=48000):
+        super().__init__(fs)
+
+        self.numRepeats = numRepeats
+        self.chirpLength = chirpLength
+        self.silenceLength = silenceLength
+        self.blockLength = chirpLength + silenceLength
+        self.f0 = f0
+        self.f1 = f1
+
+        self.lengthInSamples = numRepeats * (chirpLength + silenceLength)
+        self.lengthInSeconds = self.lengthInSamples / self.fs
+
+
+    def generate(self):
+
+       return NotImplementedError
+
+    # override parent method
+    def synchronise(self, signal: np.ndarray, plot=True):
+
+        return NotImplementedError
+    
+    def estimate(self, rxSignal: np.ndarray, sync_index, plot = True):
+
+        return NotImplementedError

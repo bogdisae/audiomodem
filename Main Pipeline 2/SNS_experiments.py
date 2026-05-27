@@ -24,6 +24,15 @@ constellation = Constellation(2, {
     ('1', '1'): lambda s: (s.real <  0) & (s.imag <  0),
 })
 
+# BPSK
+# constellation = Constellation(2, {
+#     ('0'): 1,
+#     ('1'): -1,
+# }, {
+#     ('0'): lambda s: (s.real >= 0),
+#     ('1'): lambda s: (s.real < 0)
+# })
+
 def generateRepeatedChirp():
     text_file = pick_text_file("Select message file:", Path("./Main Pipeline 2/Data Files"))
     data_bytes = csv_to_data_bytes(text_file)
