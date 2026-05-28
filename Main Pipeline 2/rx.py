@@ -75,6 +75,12 @@ class Rx:
             self.data_symbols.extend(self.decode_ofdm_block(block))
 
     def decode_symbols(self):
+        #Check for NaN/Inf in data symbols - give warning
+        symbols = np.array(self.data_symbols)
+        bad = ~np.isfinite(symbols)
+        if bad.any():
+            print(f"WARNING: {bad.sum()} NaN/Inf symbols at indices {np.where(bad)[0][:10]}")
+
         self.data_bits = []
         self.data_bits = self.constellation.symbols_to_bits(self.data_symbols)
 
@@ -86,6 +92,10 @@ class Rx:
         # Synchronise 
         key_start_index, self.synchronisation_index = self.equaliser.synchronise(self.signal, True)
         self.H = self.equaliser.estimate(self.signal, key_start_index, True)
+
+        #Diagnostic prints
+        #print(f"NaN in H: {np.sum(np.isnan(self.H))}, Inf in H: {np.sum(np.isinf(self.H))}")
+        #print(f"sync_index: {self.synchronisation_index}, signal length: {len(self.signal)}")
 
         # TRY GOING EARLY
         self.synchronisation_index = self.synchronisation_index + self.cp_length - self.early_samples

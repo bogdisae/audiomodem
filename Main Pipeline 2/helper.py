@@ -121,6 +121,22 @@ def csv_to_data_bytes(filename: str) -> np.ndarray:
     return np.array(byte_list, dtype=np.uint8)
 
 
+def pick_csv_file(prompt_text: str, folder: Path) -> str:
+    csv_files = sorted(folder.glob('*.csv'))
+    
+    if not csv_files:
+        raise FileNotFoundError(f'No .csv files found in {folder}')
+
+    choice = questionary.select(
+        prompt_text,
+        choices=[path.name for path in csv_files],
+    ).ask()
+
+    if choice is None:
+        raise SystemExit('No file selected')
+
+    return str(folder / choice)
+
 def pick_text_file(prompt_text: str, folder: Path) -> str:
     txt_files = sorted(folder.glob('*.txt'))
     
@@ -146,6 +162,19 @@ def pick_wav_file(prompt_text: str, folder: Path) -> str:
     choice = questionary.select(
         prompt_text,
         choices=[path.name for path in wav_files],
+    ).ask()
+    if choice is None:
+        raise SystemExit('No file selected')
+    return str(folder / choice)
+
+def pick_m4a_file(prompt_text: str, folder: Path) -> str:
+    m4a_files = sorted(folder.glob('*.m4a'))
+    if not m4a_files:
+        raise FileNotFoundError(f'No .m4a files found in {folder}')
+
+    choice = questionary.select(
+        prompt_text,
+        choices=[path.name for path in m4a_files],
     ).ask()
     if choice is None:
         raise SystemExit('No file selected')
