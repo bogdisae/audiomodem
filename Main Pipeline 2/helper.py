@@ -309,7 +309,10 @@ def calculate_ber(seq1, seq2):
 
     # Count errors
     errors = sum(b1 != b2 for b1, b2 in zip(seq1, seq2))
-
-    ber = errors / min_len
+    if min_len != 0:
+        ber = errors / min_len
+    else:
+        print(f'Squence with zero length is: {1 if len(seq1) == 0 else 2}')
+        raise ValueError("Sequences are empty, cannot compute BER")
 
     return ber, errors, min_len

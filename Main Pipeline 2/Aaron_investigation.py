@@ -49,14 +49,22 @@ def convert_text_to_utf8_bytes():
         f.write(csv_data)
     print(data_bytes[:100])
 
-def generateChirp_plus_data():
+def generateChirp_plus_data(standard = True):
     text_file = pick_csv_file("Select message file:", Path("./Main Pipeline 2/Data Files"))
     data_bytes = csv_to_data_bytes(text_file)
 
-    repeatedChirp = RepeatedChirp(10, 1024, 1376, 0, 20000, sampleRate)
-    key = repeatedChirp.generate()
 
-    transmitter = Tx(constellation, data_bytes, repeatedChirp, 128, 1024)
+    #STANDARD CHIRP PARAMETERS
+    if standard == True:
+        repeatedChirp = RepeatedChirp(10, 1024, 1376, 20, 20000, sampleRate)
+        key = repeatedChirp.generate()
+        transmitter = Tx(constellation, data_bytes, repeatedChirp, 1024, 1024)
+    else:
+        #Experimental CHIRP PARAMETERS
+        repeatedChirp = RepeatedChirp(10, 1024, 1376, 0, 20000, sampleRate)
+        key = repeatedChirp.generate()
+        transmitter = Tx(constellation, data_bytes, repeatedChirp, 1024, 1024)
+
     transmitter.encode()
     #Plot shows all are correct
     #plot_constellation(transmitter.data_symbols[-2000:], "Transmitted Constellation")
@@ -74,7 +82,7 @@ def generateChirp_plus_data():
     write(f"Main Pipeline 2/Audio Files/Aaron_Recordings/{filename}.wav", sampleRate, combined_int16)
     print(f'Saved in dir: Main Pipeline 2/Audio Files/Aaron_Recordings/{filename}.wav')
 
-def receiveRepeated_chirp_plus_data():
+def receiveRepeated_chirp_plus_data(standard = True):
 
     mode = questionary.select("Do you want to record audio or select an existing file?",
         choices=["Record audio", "Select file"]
@@ -92,9 +100,12 @@ def receiveRepeated_chirp_plus_data():
         sig = record_audio(sampleRate)
         sig = normalise_signal(sig)
     
-
-    repeatedChirp = RepeatedChirp(10, 1024, 1376, 0, 20000, sampleRate)
-    receiver = Rx(constellation, sig, 128, 1024, repeatedChirp)
+    if standard == True:
+        repeatedChirp = RepeatedChirp(10, 1024, 1376, 20, 20000, sampleRate)
+        receiver = Rx(constellation, sig, 1024, 1024, repeatedChirp)
+    else:
+        repeatedChirp = RepeatedChirp(10, 1024, 1376, 0, 20000, sampleRate)
+        receiver = Rx(constellation, sig, 128, 1024, repeatedChirp)
     receiver.decode()
     print ("Number of coefficients:", len(receiver.H))
     print("First 10 estimated coefficients:\n", receiver.H[:10])
@@ -103,14 +114,48 @@ def receiveRepeated_chirp_plus_data():
     plot_constellation(receiver.data_symbols[0:2000])
 
     text_file = pick_csv_file("Select message file:", Path("./Main Pipeline 2/Data Files"))
-    know_bit_seq = csv_bytes_to_binary_sequence(text_file)
-    ber, errors, min_len = calculate_ber(know_bit_seq, receiver.data_bits[:5000])
+    known_bit_seq = csv_bytes_to_binary_sequence(text_file)
+    ber, errors, min_len = calculate_ber(known_bit_seq, receiver.data_bits[:5000])
 
     print("BER:", ber)
     print("Errors:", errors)
     print("Min Len", min_len)
 
-#m4a_to_wav()
-#generateChirp_plus_data()
-receiveRepeated_chirp_plus_data()
+    blocks_ber = []
+    bits_per_symbol = constellation.bits_per_symbol
+    bits_per_block = len(receiver.active_bins) * bits_per_symbol
+    print(f"No. Blocks expected: {len(known_bit_seq) / bits_per_block}")
+
+    for i in range(len(receiver.ofdm_blocks)):
+        
+        start = i * bits_per_block
+        end = (i + 1) * bits_per_block
+        try:
+            ber_i, errors_i, min_len_i = calculate_ber(
+                known_bit_seq[start:end],
+                receiver.data_bits[start:end]
+            )
+            blocks_ber.append(ber_i)
+        except:
+            print(f'Disregarding final bits in partial block - Partial block BER not supported')
+    
+    print(f"BER variance: {np.var(blocks_ber)}")
+    print(f"BER trend: {np.polyfit(range(len(blocks_ber)), blocks_ber, 1)}")
+
+    plt.plot(blocks_ber)
+    plt.title("BER per OFDM block")
+    plt.show()
+
+
+mode = questionary.select("Which function do you want to run?", choices=[
+    "Convert M4A to WAV and run","Laptop rec and run",'Create and save']).ask()
+
+if mode == "Convert M4A to WAV and run":
+    m4a_to_wav()
+    receiveRepeated_chirp_plus_data()
+elif mode == "Laptop rec and run":
+    receiveRepeated_chirp_plus_data()
+else:
+    generateChirp_plus_data()
+
 #convert_text_to_utf8_bytes()
