@@ -182,7 +182,7 @@ class GolayPairs(Equaliser):
         a = np.array([rng.choice([-1, 1])], dtype=int)
         b = np.array([a[0]], dtype=int)
 
-        for _ in range(self.indivLength - 1):
+        for _ in range(int(np.log2(self.indivLength)) - 1):
             a_next = np.concatenate([a, b])
             b_next = np.concatenate([a, -b])
             a, b = a_next, b_next
@@ -194,12 +194,12 @@ class GolayPairs(Equaliser):
         silence = np.zeros(self.pairSilence)
         pair_sections = []
 
-        for i in range(self.num_pairs):
+        for i in range(self.numPairs):
             pair_sections.append(self.a_ref)
-            if self.silence_length > 0:
+            if self.pairSilence > 0:
                 pair_sections.append(silence)
             pair_sections.append(self.b_ref)
-            if self.num_pairs > i: #Only add silence between pairs, not after final pair
+            if self.numPairs > i: #Only add silence between pairs, not after final pair
                 pair_sections.append(silence)
 
         signal = np.concatenate(pair_sections)

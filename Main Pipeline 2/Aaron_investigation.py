@@ -1,3 +1,4 @@
+print("Importing modules...")
 import os
 
 from rx import *
@@ -10,6 +11,7 @@ from scipy.io import wavfile
 from scipy.io.wavfile import write
 from constellation import Constellation
 from equaliser import *
+print("Modules imported successfully")
 
 sampleRate = 48000
 
@@ -146,16 +148,26 @@ def receiveRepeated_chirp_plus_data(standard = True):
     plt.title("BER per OFDM block")
     plt.show()
 
+print("Functions compiled successfully")
 
-mode = questionary.select("Which function do you want to run?", choices=[
-    "Convert M4A to WAV and run","Laptop rec and run",'Create and save']).ask()
+def main():
+    mode = questionary.select("Which function do you want to run?", choices=[
+        "Convert M4A to WAV and run","Laptop rec and run",'Create and save']).ask()
 
-if mode == "Convert M4A to WAV and run":
-    m4a_to_wav()
-    receiveRepeated_chirp_plus_data()
-elif mode == "Laptop rec and run":
-    receiveRepeated_chirp_plus_data()
-else:
-    generateChirp_plus_data()
+    if mode == "Convert M4A to WAV and run":
+        m4a_to_wav()
+        receiveRepeated_chirp_plus_data()
+    elif mode == "Laptop rec and run":
+        receiveRepeated_chirp_plus_data()
+    else:
+        generateChirp_plus_data()
 
-#convert_text_to_utf8_bytes()
+    #convert_text_to_utf8_bytes()
+
+#main()
+print("Main function defined successfully")
+
+golay_pairs = GolayPairs(1024, 1024, numPairs=1, fs=sampleRate)
+print("Generating Golay pairs...")
+golay_pilot = golay_pairs.generate()
+plot_signal("Golay Pilot", golay_pilot, -1)
