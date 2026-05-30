@@ -1,14 +1,15 @@
 print("Importing modules...")
 import os
 
-from rx import *
+
+from proposed_rx import *
 from proposed_tx import *
 from helper import *
 from pathlib import Path
 import numpy as np
 import questionary
 from scipy.io import wavfile
-from scipy.io.wavfile import write
+from scipy.io.wavfile import read, write
 from constellation import Constellation
 from equaliser import *
 from proposed_synchroniser import *
@@ -52,6 +53,29 @@ def convert_text_to_utf8_bytes():
         f.write(csv_data)
     print(data_bytes[:100])
 
+def roundtrip_test(transmitter):
+    write("tmp_tx.wav", sampleRate, np.int16(transmitter.transmitted_signal * 32767))
+    fs_rx, rx_sig = read("tmp_tx.wav")
+    rx_sig = rx_sig.astype(float) / 32767.0
+    print("Roundtrip: wrote tmp_tx.wav and read back", fs_rx, "samples:", len(rx_sig))
+    assert fs_rx == sampleRate, "Sample rate mismatch in roundtrip test"
+    assert len(rx_sig) == len(transmitter.transmitted_signal), "Sample length mismatch in roundtrip test"
+    print("Roundtrip test passed")
+
+def pilot_alignment_CPE_estimation(golayPairs, synchroniser, rx_sig):
+    # tx_pilot from the equaliser used by transmitter (at TX time)
+    tx_pilot = golayPairs.generate()            # same object used to build Tx
+
+    # find pilot in received signal via synchroniser
+    pilot_start_idx = synchroniser.synchronise(rx_sig, False)[1] + golayPairs.pairSilence  # for RepeatedChirpSync
+
+    rx_pilot = rx_sig[pilot_start_idx:pilot_start_idx + golayPairs.lengthInSamples]
+    print(f'tx_pilot length: {len(tx_pilot)}, rx_pilot length: {len(rx_pilot)}')
+
+   
+    cpe = np.angle(np.vdot(rx_pilot, np.conj(tx_pilot)))
+    print("Pilot start:", pilot_start_idx, "Pilot CPE (rad):", cpe)
+
 def generateChirp_plus_data(standard = True):
     text_file = pick_csv_file("Select message file:", Path("./Main Pipeline 2/Data Files"))
     data_bytes = csv_to_data_bytes(text_file)
@@ -59,22 +83,45 @@ def generateChirp_plus_data(standard = True):
 
     #STANDARD CHIRP PARAMETERS
     if standard == True:
-        repeatedChirp = RepeatedChirp(10, 1024, 1024, 20, 20000, sampleRate)
+        repeatedChirp = RepeatedChirpSync(10, 1024, 1024, 20, 20000, sampleRate)
         key = repeatedChirp.generate()
-        transmitter = Tx(constellation, data_bytes, repeatedChirp, 1024, 1024)
+        golayPairs = GolayPairs(1024, 1024, numPairs=1, fs=sampleRate)
+        pilot_seq = golayPairs.generate()
+        transmitter = Tx(
+            constellation=constellation,
+            data_bytes=data_bytes,
+            equaliser=golayPairs,
+            synchroniser=repeatedChirp,
+            cp_length=1024,
+            block_length=1024,
+            pilot_spacing=10,
+        )
     else:
         #Experimental CHIRP PARAMETERS
-        repeatedChirp = RepeatedChirp(10, 1024, 1024, 0, 20000, sampleRate)
+        repeatedChirp = RepeatedChirpSync(10, 1024, 1024, 0, 20000, sampleRate)
         key = repeatedChirp.generate()
-        transmitter = Tx(constellation, data_bytes, repeatedChirp, 1024, 1024)
+        golayPairs = GolayPairs(1024, 1024, numPairs=1, fs=sampleRate)
+        pilot_seq = golayPairs.generate()
+        transmitter = Tx(
+            constellation=constellation,
+            data_bytes=data_bytes,
+            equaliser=golayPairs,
+            synchroniser=repeatedChirp,
+            cp_length=1024,
+            block_length=1024,
+            pilot_spacing=10,
+        )
 
     transmitter.encode()
-    #Plot shows all are correct
-    #plot_constellation(transmitter.data_symbols[-2000:], "Transmitted Constellation")
+
+    roundtrip_test(transmitter)
     
-    bad_mask = ~np.isfinite(transmitter.data_symbols) | np.isnan(transmitter.data_symbols)
-    print(f'Number of bad symbols: {np.sum(bad_mask)}')
-    print(f'Indices of bad symbols: {np.where(bad_mask)[0]}')
+    #Plot shows all are correct
+    plot_constellation(transmitter.data_symbols[-2000:], "Transmitted Constellation")
+    
+    #bad_mask = ~np.isfinite(transmitter.data_symbols) | np.isnan(transmitter.data_symbols)
+    #print(f'Number of bad symbols: {np.sum(bad_mask)}')
+    #print(f'Indices of bad symbols: {np.where(bad_mask)[0]}')
     
     sig = transmitter.transmitted_signal
 
@@ -104,20 +151,64 @@ def receiveRepeated_chirp_plus_data(standard = True):
         sig = normalise_signal(sig)
     
     if standard == True:
-        repeatedChirp = RepeatedChirp(10, 1024, 1024, 20, 20000, sampleRate)
-        receiver = Rx(constellation, sig, 1024, 1024, repeatedChirp)
+        repeatedChirp = RepeatedChirpSync(10, 1024, 1024, 20, 20000, sampleRate)
+        golayPairs = GolayPairs(1024, 1024, numPairs=1, fs=sampleRate)
+        receiver = Rx(constellation, sig, 1024, 1024, golayPairs, repeatedChirp)
     else:
-        repeatedChirp = RepeatedChirp(10, 1024, 1024, 0, 20000, sampleRate)
-        receiver = Rx(constellation, sig, 128, 1024, repeatedChirp)
-    receiver.decode()
-    print ("Number of coefficients:", len(receiver.H))
-    print("First 10 estimated coefficients:\n", receiver.H[:10])
+        repeatedChirp = RepeatedChirpSync(10, 1024, 1024, 0, 20000, sampleRate)
+        golayPairs = GolayPairs(1024, 1024, numPairs=1, fs=sampleRate)
+        receiver = Rx(constellation, sig, 128, 1024, golayPairs, repeatedChirp)
 
-    print(receiver.data_bits[:200])
-    plot_constellation(receiver.data_symbols[0:2000])
+    pilot_alignment_CPE_estimation(golayPairs, repeatedChirp, sig)
+
+    receiver.decode()
+
+    print(f'Symbols decoded: {receiver.data_symbols[:100]}')
+    #print ("Number of coefficients:", len(receiver.H))
+    #print("First 10 estimated coefficients:\n", receiver.H[:10])
+
+    print(receiver.data_bits[:100])
+    plot_constellation(receiver.data_symbols[0:1000])
+
+    print('__________________________________________________________\n_____________________________________________________________________')
 
     text_file = pick_csv_file("Select message file:", Path("./Main Pipeline 2/Data Files"))
+    data_bytes = csv_to_data_bytes(text_file)
+    repeatedChirp = RepeatedChirpSync(10, 1024, 1024, 20, 20000, sampleRate)
+    key = repeatedChirp.generate()
+    golayPairs = GolayPairs(1024, 1024, numPairs=1, fs=sampleRate)
+    pilot_seq = golayPairs.generate()
+    transmitter = Tx(
+            constellation=constellation,
+            data_bytes=data_bytes,
+            equaliser=golayPairs,
+            synchroniser=repeatedChirp,
+            cp_length=1024,
+            block_length=1024,
+            pilot_spacing=10,
+        )
+    transmitter.encode()
+
+    X_tx = transmitter.data_symbols
+    X_eq = receiver.data_symbols
+
+    pilot_sym = golayPairs.generate()
+
+
+    print("mean power TX (data):", np.mean(np.abs(X_tx)**2))
+    print("mean power RX equalised:", np.mean(np.abs(X_eq)**2))
+    #print("H mean abs:", np.mean(np.abs(H)), "min/max:", np.min(np.abs(H)), np.max(np.abs(H)))
+    # verify fft/ifft identity
+    diff = np.max(np.abs(np.fft.fft(np.fft.ifft(X_tx)) - X_tx))
+    print("fft(ifft) identity max error:", diff)
+    # pilot energy
+    if 'pilot_sym' in globals():
+        print("pilot mean power:", np.mean(np.abs(pilot_sym)**2))
+
+    '''text_file = pick_csv_file("Select message file:", Path("./Main Pipeline 2/Data Files"))
     known_bit_seq = csv_bytes_to_binary_sequence(text_file)
+
+    bit_check = np.linspace(0, len(known_bit_seq)-1, 5000, dtype=int)
     ber, errors, min_len = calculate_ber(known_bit_seq, receiver.data_bits[:5000])
 
     print("BER:", ber)
@@ -149,6 +240,10 @@ def receiveRepeated_chirp_plus_data(standard = True):
     plt.title("BER per OFDM block")
     plt.show()
 
+    print("H shape:", receiver.H.shape)
+    print("H stats: min,max,mean:", np.min(np.abs(receiver.H)), np.max(np.abs(receiver.H)), np.mean(np.abs(receiver.H)))
+    print("NaN/Inf in H:", np.sum(np.isnan(receiver.H)), np.sum(np.isinf(receiver.H)))'''
+
 print("Functions compiled successfully")
 
 def main():
@@ -165,10 +260,10 @@ def main():
 
     #convert_text_to_utf8_bytes()
 
-#main()
-print("Main function defined successfully")
+main()
+'''print("Main function defined successfully")
 
 golay_pairs = GolayPairs(1024, 1024, numPairs=1, fs=sampleRate)
 print("Generating Golay pairs...")
 golay_pilot = golay_pairs.generate()
-plot_signal("Golay Pilot", golay_pilot, -1)
+plot_signal("Golay Pilot", golay_pilot, -1)'''

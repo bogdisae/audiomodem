@@ -2,7 +2,7 @@ import numpy as np
 from scipy.signal import chirp, correlate
 import matplotlib.pyplot as plt
 from helper import plot_signal, plot_multiple_channel_estimates
-from scipy.linalg import solve_toeplitz
+
 
 class Equaliser:
     def __init__(self, fs=48000):
@@ -182,11 +182,13 @@ class GolayPairs(Equaliser):
         a = np.array([rng.choice([-1, 1])], dtype=int)
         b = np.array([a[0]], dtype=int)
 
-        for _ in range(int(np.log2(self.indivLength)) - 1):
+        for _ in range(int(np.log2(self.indivLength))):
             a_next = np.concatenate([a, b])
             b_next = np.concatenate([a, -b])
             a, b = a_next, b_next
 
+        assert len(a) == self.indivLength
+        assert len(b) == self.indivLength
         return a, b
 
 
@@ -199,11 +201,12 @@ class GolayPairs(Equaliser):
             if self.pairSilence > 0:
                 pair_sections.append(silence)
             pair_sections.append(self.b_ref)
-            if self.numPairs > i: #Only add silence between pairs, not after final pair
+            if self.numPairs > (i+1): #Only add silence between pairs, not after final pair
+                '''Not sure if this silence is accounted for if multiple pairs - may need to be added'''
                 pair_sections.append(silence)
-
+        print('length of pair sections:', [len(section) for section in pair_sections])
         signal = np.concatenate(pair_sections)
-
+        print(f'indivLength: {self.indivLength}, pairSilence: {self.pairSilence}, Length of signal: {len(signal)}')
         m = np.max(np.abs(signal))
         return signal / m if m != 0 else signal
 
@@ -217,7 +220,13 @@ class GolayPairs(Equaliser):
         H_list = []
 
         indiv_len = self.indivLength
-        pair_stride = self.block_length
+        pair_stride = self.blockLength
+
+        self.a_ref, self.b_ref = self.generate_pair(seed=0) # Generate a reference pair for diagnostic plots
+        
+        
+        '''CORRELATE in the iteration is not liked'''
+
 
         for i in range(self.numPairs):
             
@@ -226,15 +235,31 @@ class GolayPairs(Equaliser):
             a_rx = rxSignal[start:start + indiv_len]
             b_rx = rxSignal[start + indiv_len + self.pairSilence : start + 2 * indiv_len + self.pairSilence]
 
-            corr_a = correlate(a_rx, self.a_ref, mode='valid')
-            corr_b = correlate(b_rx, self.b_ref, mode='valid')
+            corr_a = correlate(a_rx, self.a_ref, mode='full')
+            corr_b = correlate(b_rx, self.b_ref, mode='full')
 
-            h_est = corr_a + corr_b
+            #Extract causal part starting at zero lag
+            h_est = corr_a[indiv_len-1:2*indiv_len-1] + corr_b[indiv_len-1:2*indiv_len-1]
 
-            h_est.truncate(self.indivLength)
+            #C_aa[n] + C_bb[n] = 2N*delta[n] -> Normalise by 2N to get actual impulse response estimate
 
-            H_est = np.fft.fft(h_est, n=self.indivLength)
-            H_list.append(H_est)
+            #Correct normaisation for scaled pairs
+            denom = np.sum(a_rx**2) + np.sum(b_rx**2)
+            h_norm = h_est / (denom) if denom != 0 else h_est / (2*self.indivLength)
 
-        H_est_avg = np.mean(H_list, axis=0)
-        return H_est_avg
+            #Truncate
+            print(f'Estimated impulse response for pair {i}: {h_norm}')
+
+            H_norm = np.fft.fft(h_norm, n=self.indivLength)
+            
+
+            H_list.append(H_norm)
+
+
+        #print(f'H: {H_list}')
+        H_norm_avg = np.mean(H_list, axis=0)
+        
+
+        #print(f'H values: {np.mean(np.abs(H_est_avg))}, {np.mean(np.abs(H_est_avg))}')
+        
+        return H_norm_avg
