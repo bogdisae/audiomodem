@@ -17,7 +17,7 @@ print("Modules imported successfully")
 
 sampleRate = 48000
 
-constellation = Constellation(2, {
+'''constellation = Constellation(2, {
     ('0', '0'): (1+1j)/np.sqrt(2),
     ('0', '1'): (-1+1j)/np.sqrt(2),
     ('1', '0'): (1-1j)/np.sqrt(2),
@@ -28,7 +28,15 @@ constellation = Constellation(2, {
     ('1', '0'): lambda s: (s.real >=  0) & (s.imag < 0),
     ('1', '1'): lambda s: (s.real <  0) & (s.imag <  0),
 })
+'''
 
+constellation = Constellation(1, {
+    ('0',): 1,
+    ('1',): -1
+}, {
+    ('0',): lambda s: s.real >= 0,
+    ('1',): lambda s: s.real < 0
+})
 def m4a_to_wav():
     selected_path = pick_m4a_file("Select an M4A file:", Path("./Main Pipeline 2/Audio Files/Aaron_Recordings/Phone_rec"))
     # Use ffmpeg to convert the selected M4A file to WAV format
@@ -83,7 +91,7 @@ def generateChirp_plus_data(standard = True):
 
     #STANDARD CHIRP PARAMETERS
     if standard == True:
-        repeatedChirp = RepeatedChirpSync(10, 1024, 1024, 20, 20000, sampleRate)
+        repeatedChirp = RepeatedChirpSync(2, 1024, 1024, 20, 20000, sampleRate)
         key = repeatedChirp.generate()
         golayPairs = GolayPairs(1024, 1024, numPairs=1, fs=sampleRate)
         pilot_seq = golayPairs.generate()
@@ -98,7 +106,7 @@ def generateChirp_plus_data(standard = True):
         )
     else:
         #Experimental CHIRP PARAMETERS
-        repeatedChirp = RepeatedChirpSync(10, 1024, 1024, 0, 20000, sampleRate)
+        repeatedChirp = RepeatedChirpSync(2, 1024, 1024, 0, 20000, sampleRate)
         key = repeatedChirp.generate()
         golayPairs = GolayPairs(1024, 1024, numPairs=1, fs=sampleRate)
         pilot_seq = golayPairs.generate()
@@ -151,11 +159,11 @@ def receiveRepeated_chirp_plus_data(standard = True):
         sig = normalise_signal(sig)
     
     if standard == True:
-        repeatedChirp = RepeatedChirpSync(10, 1024, 1024, 20, 20000, sampleRate)
+        repeatedChirp = RepeatedChirpSync(2, 1024, 1024, 20, 20000, sampleRate)
         golayPairs = GolayPairs(1024, 1024, numPairs=1, fs=sampleRate)
         receiver = Rx(constellation, sig, 1024, 1024, golayPairs, repeatedChirp)
     else:
-        repeatedChirp = RepeatedChirpSync(10, 1024, 1024, 0, 20000, sampleRate)
+        repeatedChirp = RepeatedChirpSync(2, 1024, 1024, 0, 20000, sampleRate)
         golayPairs = GolayPairs(1024, 1024, numPairs=1, fs=sampleRate)
         receiver = Rx(constellation, sig, 128, 1024, golayPairs, repeatedChirp)
 
@@ -168,7 +176,7 @@ def receiveRepeated_chirp_plus_data(standard = True):
     #print("First 10 estimated coefficients:\n", receiver.H[:10])
 
     print(receiver.data_bits[:100])
-    plot_constellation(receiver.data_symbols[0:1000])
+    plot_constellation(receiver.data_symbols[0:500])
 
     print('__________________________________________________________\n_____________________________________________________________________')
 
@@ -205,7 +213,7 @@ def receiveRepeated_chirp_plus_data(standard = True):
     if 'pilot_sym' in globals():
         print("pilot mean power:", np.mean(np.abs(pilot_sym)**2))
 
-    '''text_file = pick_csv_file("Select message file:", Path("./Main Pipeline 2/Data Files"))
+    text_file = pick_csv_file("Select message file:", Path("./Main Pipeline 2/Data Files"))
     known_bit_seq = csv_bytes_to_binary_sequence(text_file)
 
     bit_check = np.linspace(0, len(known_bit_seq)-1, 5000, dtype=int)
@@ -242,7 +250,7 @@ def receiveRepeated_chirp_plus_data(standard = True):
 
     print("H shape:", receiver.H.shape)
     print("H stats: min,max,mean:", np.min(np.abs(receiver.H)), np.max(np.abs(receiver.H)), np.mean(np.abs(receiver.H)))
-    print("NaN/Inf in H:", np.sum(np.isnan(receiver.H)), np.sum(np.isinf(receiver.H)))'''
+    print("NaN/Inf in H:", np.sum(np.isnan(receiver.H)), np.sum(np.isinf(receiver.H)))
 
 print("Functions compiled successfully")
 
@@ -267,3 +275,39 @@ golay_pairs = GolayPairs(1024, 1024, numPairs=1, fs=sampleRate)
 print("Generating Golay pairs...")
 golay_pilot = golay_pairs.generate()
 plot_signal("Golay Pilot", golay_pilot, -1)'''
+experiment = False
+if experiment:
+    indivLength = 512
+    seed = 0
+    rng = np.random.default_rng(seed)
+
+    a = np.array([rng.choice([-1, 1])], dtype=int)
+    b = np.array([a[0]], dtype=int)
+
+    for _ in range(int(np.log2(indivLength))):
+        a_next = np.concatenate([a, b])
+        b_next = np.concatenate([a, -b])
+        a, b = a_next, b_next
+
+    assert len(a) == indivLength
+    assert len(b) == indivLength
+    
+    
+    a_corr = np.correlate(a, a, mode='full')
+    b_corr = np.correlate(b, b, mode='full')
+
+    fig_a, ax_a = plt.subplots()
+    ax_a.stem(a_corr, label='C_aa', basefmt=' ')
+    ax_a.set_xlabel('Lag')
+    ax_a.set_ylabel('Correlation')
+    ax_a.legend()
+    ax_a.set_title('Autocorrelation of a')
+
+    fig_b, ax_b = plt.subplots()
+    ax_b.stem(b_corr, label='C_bb', basefmt=' ')
+    ax_b.set_xlabel('Lag')
+    ax_b.set_ylabel('Correlation')
+    ax_b.legend()
+    ax_b.set_title('Autocorrelation of b')
+
+    plt.show()

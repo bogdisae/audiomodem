@@ -1,4 +1,5 @@
 import numpy as np
+
 from scipy.signal import chirp, correlate
 import matplotlib.pyplot as plt
 from helper import plot_signal, plot_multiple_channel_estimates
@@ -225,11 +226,8 @@ class GolayPairs(Equaliser):
         self.a_ref, self.b_ref = self.generate_pair(seed=0) # Generate a reference pair for diagnostic plots
         
         
-        '''CORRELATE in the iteration is not liked'''
-
-
         for i in range(self.numPairs):
-            
+            print(f'iteration {i} out of {self.numPairs}')
             start = sync_index + i * pair_stride
 
             a_rx = rxSignal[start:start + indiv_len]
@@ -238,17 +236,36 @@ class GolayPairs(Equaliser):
             corr_a = correlate(a_rx, self.a_ref, mode='full')
             corr_b = correlate(b_rx, self.b_ref, mode='full')
 
+            if i == 0:
+                import questionary
+                plot_corr = False
+                plot_corr = questionary.select("Plot correlation results for first pair? (y/n)", choices=['y', 'n']).ask()
+                if plot_corr == 'y':
+                    fig_a, ax_a = plt.subplots()
+                    ax_a.stem(corr_a, label='C_aa', basefmt=' ')
+                    ax_a.set_xlabel('Lag')
+                    ax_a.set_ylabel('Correlation')
+                    ax_a.legend()
+                    ax_a.set_title('Autocorrelation of a')
+
+                    fig_b, ax_b = plt.subplots()
+                    ax_b.stem(corr_b, label='C_bb', basefmt=' ')
+                    ax_b.set_xlabel('Lag')
+                    ax_b.set_ylabel('Correlation')
+                    ax_b.legend()
+                    ax_b.set_title('Autocorrelation of b')
+                    plt.show()
+
             #Extract causal part starting at zero lag
             h_est = corr_a[indiv_len-1:2*indiv_len-1] + corr_b[indiv_len-1:2*indiv_len-1]
 
             #C_aa[n] + C_bb[n] = 2N*delta[n] -> Normalise by 2N to get actual impulse response estimate
 
             #Correct normaisation for scaled pairs
-            denom = np.sum(a_rx**2) + np.sum(b_rx**2)
-            h_norm = h_est / (denom) if denom != 0 else h_est / (2*self.indivLength)
+            h_norm = h_est / (2*self.indivLength)
 
             #Truncate
-            print(f'Estimated impulse response for pair {i}: {h_norm}')
+            print(f'Estimated impulse response for pair {i}, h_est length: {len(h_norm)}, h_est values: {h_norm}')
 
             H_norm = np.fft.fft(h_norm, n=self.indivLength)
             

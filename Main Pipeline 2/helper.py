@@ -61,7 +61,7 @@ def plot_constellation(symbols):
     ax.set_title("received symbols")
     plt.show()
 
-def plot_signal(title : str, signal : np.ndarray, v_line_index, abs = False):
+def plot_signal(title : str, signal : np.ndarray, v_line_index, second_v_line_index=None, abs = False):
     # V_line_index draws a vertical line at an index of interest. Set to -1 to remove
 
     if abs : signal = np.abs(signal) # To plot absolute value
@@ -71,6 +71,8 @@ def plot_signal(title : str, signal : np.ndarray, v_line_index, abs = False):
     plt.plot(x, signal)
 
     if v_line_index != -1 : plt.axvline(v_line_index, color='r')
+    if second_v_line_index is not None and second_v_line_index != -1:
+        plt.axvline(second_v_line_index, color='g')
 
     plt.title(title)
     plt.xlabel("Sample index")

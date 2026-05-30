@@ -90,14 +90,53 @@ class RepeatedChirpSync(Synchroniser):
 
         key = self.generate()
 
-        corr = correlate(signal, key, mode='valid')
+        corr = np.abs(correlate(signal, key, mode='valid'))
         key_start_index = np.argmax(np.abs(corr))
 
+        #Find second peak idx for coarse CFO estimation
+        # Mask out a window around it
+        
+        exclusion = 200  # samples either side — adjust to be wider than your peak
+        masked = corr.copy()
+        masked[ : key_start_index + exclusion] = 0
+
+        # Second peak
+        second_idx = np.argmax(masked)
         if plot:
         #     plot_signal("Transmitted key", key, -1)
             plot_signal("Received signal", signal, -1)
-            plot_signal("Correlation plot", corr, key_start_index, True)
+            plot_signal("Correlation plot", corr, key_start_index, second_idx, True)
+        
+        return key_start_index, key_start_index + self.lengthInSamples, second_idx
 
-        return key_start_index, key_start_index + self.lengthInSamples
+    def Coarse_CFO_correction(self, signal: np.ndarray, sync_index, sync_2nd_peak):
+        from scipy.signal import hilbert
+        first_chirp = signal[sync_index:sync_index + self.chirpLength]
+        second_chirp = signal[sync_2nd_peak:sync_2nd_peak + self.chirpLength]
+
+        #Comlpex digital key - must be complex for phase estimation
+        key = hilbert(self.generate())
+
+        corr = correlate(signal, key, mode='valid')
+
+        peak_one_complex = corr[sync_index]
+        peak_two_complex = corr[sync_2nd_peak]
+
+        #phi
+        phase_diff = np.angle(peak_one_complex) - np.angle(peak_two_complex)
+
+        #Time separation
+        T_c = (sync_2nd_peak - sync_index) / self.fs
+
+        #Phase rotation (phi) of arguement j 2pi delta_f T_c
+        delta_f = phase_diff / (2 * np.pi * T_c)
+
+        '''print(f"First chirp segment: {first_chirp[:10]},\nSecond chirp segment: {second_chirp[:10]}")
+        print(f"Estimated phase difference between chirps: {phase_diff} radians")'''
+        print(f"Estimated CFO: {delta_f} Hz")
+
+        correction_wave = np.exp(-1j * 2 * np.pi * delta_f * np.arange(len(signal)) / self.fs)
+        corrected_signal = signal * correction_wave
+        return corrected_signal
     
     

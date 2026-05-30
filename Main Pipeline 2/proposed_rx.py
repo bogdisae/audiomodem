@@ -107,13 +107,18 @@ class Rx:
     def decode(self):
         
         # Synchronise 
-        key_start_index, self.synchronisation_index = self.synchroniser.synchronise(self.signal, True)
+        key_start_index, self.synchronisation_index, second_peak_index = self.synchroniser.synchronise(self.signal, True)
 
         self.pilot_start_index = self.synchronisation_index + self.key_pilot_samples_spacing
         #print(f'Initial pilot start index: {self.pilot_start_index}')
         #print(f'key start index: {key_start_index}, synchronisation index: {self.synchronisation_index}')
         symbol_length = self.block_length + self.cp_length
         decoded_symbols = []
+
+        '''INITIAL CFO ESTIMATION - COARSE ADJUSTMENT'''
+        self.signal = self.synchroniser.Coarse_CFO_correction(self.signal, key_start_index, second_peak_index)
+        '''DOES NOT WORK FROM HERE'''
+
 
         if self.pilot_spacing == 0:
             current_pilot_start = self.pilot_start_index #CP length zeros transmitted after sync signal
