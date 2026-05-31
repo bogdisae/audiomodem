@@ -176,7 +176,7 @@ def receiveRepeated_chirp_plus_data(standard = True):
     #print("First 10 estimated coefficients:\n", receiver.H[:10])
 
     print(receiver.data_bits[:100])
-    plot_constellation(receiver.data_symbols[0:500])
+    plot_constellation(receiver.data_symbols[0:1000])
 
     print('__________________________________________________________\n_____________________________________________________________________')
 
@@ -266,48 +266,4 @@ def main():
     else:
         generateChirp_plus_data()
 
-    #convert_text_to_utf8_bytes()
-
 main()
-'''print("Main function defined successfully")
-
-golay_pairs = GolayPairs(1024, 1024, numPairs=1, fs=sampleRate)
-print("Generating Golay pairs...")
-golay_pilot = golay_pairs.generate()
-plot_signal("Golay Pilot", golay_pilot, -1)'''
-experiment = False
-if experiment:
-    indivLength = 512
-    seed = 0
-    rng = np.random.default_rng(seed)
-
-    a = np.array([rng.choice([-1, 1])], dtype=int)
-    b = np.array([a[0]], dtype=int)
-
-    for _ in range(int(np.log2(indivLength))):
-        a_next = np.concatenate([a, b])
-        b_next = np.concatenate([a, -b])
-        a, b = a_next, b_next
-
-    assert len(a) == indivLength
-    assert len(b) == indivLength
-    
-    
-    a_corr = np.correlate(a, a, mode='full')
-    b_corr = np.correlate(b, b, mode='full')
-
-    fig_a, ax_a = plt.subplots()
-    ax_a.stem(a_corr, label='C_aa', basefmt=' ')
-    ax_a.set_xlabel('Lag')
-    ax_a.set_ylabel('Correlation')
-    ax_a.legend()
-    ax_a.set_title('Autocorrelation of a')
-
-    fig_b, ax_b = plt.subplots()
-    ax_b.stem(b_corr, label='C_bb', basefmt=' ')
-    ax_b.set_xlabel('Lag')
-    ax_b.set_ylabel('Correlation')
-    ax_b.legend()
-    ax_b.set_title('Autocorrelation of b')
-
-    plt.show()

@@ -239,11 +239,16 @@ class GolayPairs(Equaliser):
             corr_a = correlate(a_rx, self.a_ref, mode='full')
             corr_b = correlate(b_rx, self.b_ref, mode='full')
 
-            if i == 0:
+            '''if i == 0:
                 import questionary
                 plot_corr = False
                 plot_corr = questionary.select("Plot correlation results for first pair? (y/n)", choices=['y', 'n']).ask()
                 if plot_corr == 'y':
+                    plt.plot(corr_a+corr_b)
+                    plt.title('Combined correlation of received a and b with reference sequences')
+                    plt.xlabel('Lag')
+                    plt.ylabel('Correlation')
+                    plt.show()
                     fig_a, ax_a = plt.subplots()
                     ax_a.stem(corr_a, label='C_aa', basefmt=' ')
                     ax_a.set_xlabel('Lag')
@@ -257,7 +262,7 @@ class GolayPairs(Equaliser):
                     ax_b.set_ylabel('Correlation')
                     ax_b.legend()
                     ax_b.set_title('Autocorrelation of b')
-                    plt.show()
+                    plt.show()'''
 
             #Extract causal part starting at zero lag
             h_est = corr_a[indiv_len-1:2*indiv_len-1] + corr_b[indiv_len-1:2*indiv_len-1]
