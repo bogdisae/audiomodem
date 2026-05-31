@@ -28,7 +28,7 @@ class Tx:
     active_bins : np.ndarray
 
     def __init__(self, constellation: Constellation, data_bytes: np.ndarray, equaliser : Equaliser, cp_length: int, block_length: int,
-                 f_low = 230, f_high = 14500):
+                 f_low = 4000, f_high = 13000):
         
         self.constellation = constellation
         self.data_bytes = data_bytes

@@ -29,7 +29,7 @@ class Rx:
 
     def __init__(self, constellation: Constellation, signal:np.ndarray, cp_length: int,
                  block_length: int, equaliser : Equaliser,
-                 early_samples = 30, f_low = 230, f_high = 14500):
+                 early_samples = 30, f_low = 4000, f_high = 13000):
         
         self.constellation = constellation
         self.signal = signal
@@ -58,7 +58,10 @@ class Rx:
             1j * 2 * np.pi * k * self.early_samples / self.block_length
         )
 
+        TEMPOERARY_global_rotation = np.exp(1j * np.deg2rad(15))
+
         X *= phase_correction
+        # X *= TEMPOERARY_global_rotation
 
         data_bins = X[self.active_bins]
         return data_bins

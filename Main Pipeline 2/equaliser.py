@@ -44,13 +44,14 @@ class Chirp(Equaliser):
 
         # matched filter (time-reversed correlation equivalent)
         corr = correlate(signal, key, mode='valid')
-        sync_index = np.argmax(np.abs(corr))
+        key_start_index = np.argmax(np.abs(corr))
 
         if plot:
-            # plot_signal(corr, sync_index) ARGUEMENTS NEED TO BE UPDATED
+            plot_signal("Received signal", signal, -1)
+            plot_signal("Correlation plot", corr, key_start_index, True)
             pass
 
-        return sync_index
+        return key_start_index, key_start_index + self.lengthInSamples
 
     def estimate(self, rxSignal: np.ndarray, sync_index: int, plot = True):
         """
@@ -115,7 +116,7 @@ class RepeatedChirp(Equaliser):
         key_start_index = np.argmax(np.abs(corr))
 
         if plot:
-        #     plot_signal("Transmitted key", key, -1)
+            plot_signal("Transmitted key", key, -1)
             plot_signal("Received signal", signal, -1)
             plot_signal("Correlation plot", corr, key_start_index, True)
 
@@ -160,34 +161,3 @@ class RepeatedChirp(Equaliser):
 
         return H_avg
     
-
-
-
-
-class RepeatedChirp(Equaliser):
-    def __init__(self, numRepeats, chirpLength, silenceLength, f0, f1, fs=48000):
-        super().__init__(fs)
-
-        self.numRepeats = numRepeats
-        self.chirpLength = chirpLength
-        self.silenceLength = silenceLength
-        self.blockLength = chirpLength + silenceLength
-        self.f0 = f0
-        self.f1 = f1
-
-        self.lengthInSamples = numRepeats * (chirpLength + silenceLength)
-        self.lengthInSeconds = self.lengthInSamples / self.fs
-
-
-    def generate(self):
-
-       return NotImplementedError
-
-    # override parent method
-    def synchronise(self, signal: np.ndarray, plot=True):
-
-        return NotImplementedError
-    
-    def estimate(self, rxSignal: np.ndarray, sync_index, plot = True):
-
-        return NotImplementedError
