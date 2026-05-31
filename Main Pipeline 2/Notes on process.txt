@@ -1,0 +1,23 @@
+Work out indexing using expected indecies
+ESTIMATE CFO - COARSE CORRECTION:
+    convert received chirps to complex form (zero Im component)
+    work out the phase difference between the two recorded chirps at the digitally known Indices
+    apply correction wave following phase rotation equation
+    apply this corrected wave to the signal
+    make sure corrected_signal is the same length by padding with zeros at the start (makes sure indexing later on does not have to change)
+    corrected_signal (complex) is returned and used here forwards
+
+Isolate Golay sequence - indexing verified digitally (does it work for ISI Channel? Not yet - but index spacing is as expected)
+    Isolate sequence A and B.
+    Correlate each with their reference sequence - Currently messy, peak negative at 1022 - Don't understand cause of this error yet
+    calculate taps by adding the causal correlation sequences (to length of Block - 1024)
+    Obtain H via fft
+    Return H (averaged if multiple Golay pairs in pilot seq - untested)
+    Decode the OFDM blocks up to the next pilot sequence
+    Append decoded symbols
+    Estimate using next pilot sequence.
+
+Decode pilot symbols
+    Read 30 samples early
+    apply frequency specific rotation to remove rotation effect 
+
