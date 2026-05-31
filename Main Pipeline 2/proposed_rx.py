@@ -116,9 +116,11 @@ class Rx:
         decoded_symbols = []
 
         '''INITIAL CFO ESTIMATION - COARSE ADJUSTMENT'''
-        self.signal_corrected = self.synchroniser.Coarse_CFO_correction(self.signal, key_start_index, second_peak_index)
+        '''CFO NOT NEEDED'''
+        #self.signal_corrected = self.synchroniser.Coarse_CFO_correction(self.signal, key_start_index, second_peak_index)
+        self.signal_corrected = self.signal
         print(f'Starting from sync index {self.synchronisation_index}')
-        '''DOES NOT WORK FROM HERE'''
+        
 
 
         if self.pilot_spacing == 0:

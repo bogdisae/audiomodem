@@ -239,12 +239,20 @@ class GolayPairs(Equaliser):
             corr_a = correlate(a_rx, self.a_ref, mode='full')
             corr_b = correlate(b_rx, self.b_ref, mode='full')
 
-            '''if i == 0:
+            #Extract causal part starting at zero lag
+            h_est = corr_a[indiv_len-1:2*indiv_len-1] + corr_b[indiv_len-1:2*indiv_len-1]
+
+            #C_aa[n] + C_bb[n] = 2N*delta[n] -> Normalise by 2N to get actual impulse response estimate
+
+            #Correct normaisation for scaled pairs
+            h_norm = h_est / (2*self.indivLength)
+
+            if i == 0:
                 import questionary
                 plot_corr = False
                 plot_corr = questionary.select("Plot correlation results for first pair? (y/n)", choices=['y', 'n']).ask()
                 if plot_corr == 'y':
-                    plt.plot(corr_a+corr_b)
+                    plt.plot(h_norm)
                     plt.title('Combined correlation of received a and b with reference sequences')
                     plt.xlabel('Lag')
                     plt.ylabel('Correlation')
@@ -262,15 +270,7 @@ class GolayPairs(Equaliser):
                     ax_b.set_ylabel('Correlation')
                     ax_b.legend()
                     ax_b.set_title('Autocorrelation of b')
-                    plt.show()'''
-
-            #Extract causal part starting at zero lag
-            h_est = corr_a[indiv_len-1:2*indiv_len-1] + corr_b[indiv_len-1:2*indiv_len-1]
-
-            #C_aa[n] + C_bb[n] = 2N*delta[n] -> Normalise by 2N to get actual impulse response estimate
-
-            #Correct normaisation for scaled pairs
-            h_norm = h_est / (2*self.indivLength)
+                    plt.show()
 
             #Truncate
             print(f'Estimated impulse response for pair {i}, h_est length: {len(h_norm)}, h_est values: {h_norm}')
