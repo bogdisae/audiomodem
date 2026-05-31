@@ -1,15 +1,173 @@
+print("Importing modules...")
+import os
+
 from rx import *
 from tx import *
 from helper import *
+from pathlib import Path
+import numpy as np
+import questionary
+from scipy.io import wavfile
+from scipy.io.wavfile import write
+from constellation import Constellation
+from equaliser import *
+print("Modules imported successfully")
 
-def create_file():
-    #Test params
-    key_len_sec = 0.5
-    f0 = 0
-    f1 = 24000
+sampleRate = 48000
 
-    key = Tx.chirp_signal(d=key_len_sec, f0=f0, f1=f1, savefile = True, fieldir="./Audio Files/Aaron_audio", fs = 48000)
-    write('Main Pipeline 2/Audio_Files/Aaron_audio/chirp_key.wav', 48000, key)
-    #n.dump('Audio Files/Aaron_audio/chirp_key_noise')
+constellation = Constellation(2, {
+    ('0', '0'): (1+1j)/np.sqrt(2),
+    ('0', '1'): (-1+1j)/np.sqrt(2),
+    ('1', '0'): (1-1j)/np.sqrt(2),
+    ('1', '1'): (-1-1j)/np.sqrt(2)
+}, {
+    ('0', '0'): lambda s: (s.real >= 0) & (s.imag >= 0),
+    ('0', '1'): lambda s: (s.real < 0) & (s.imag >=  0),
+    ('1', '0'): lambda s: (s.real >=  0) & (s.imag < 0),
+    ('1', '1'): lambda s: (s.real <  0) & (s.imag <  0),
+})
 
-create_file()
+def m4a_to_wav():
+    selected_path = pick_m4a_file("Select an M4A file:", Path("./Main Pipeline 2/Audio Files/Aaron_Recordings/Phone_rec"))
+    # Use ffmpeg to convert the selected M4A file to WAV format
+    selected_path = Path(selected_path)
+    output_path = selected_path.parent.parent / f"{selected_path.stem}.wav"
+    command = f'ffmpeg -i "{selected_path}" -ar {sampleRate} -ac 1 "{output_path}"'
+    os.system(command)
+    print(f"Converted {selected_path} to {output_path}")
+
+def convert_text_to_utf8_bytes():
+    text_file = Path(pick_text_file("Select message file:", Path("./Main Pipeline 2/Data Files")))
+    # Read the selected text file as text, then encode it to UTF-8 bytes.
+    text = text_file.read_text(encoding="utf-8")
+    data_bytes = text.encode("utf-8")
+    csv_data = ",".join(str(byte) for byte in data_bytes)
+
+    # Save file as a .csv of comma-separated byte values for future use.
+    filename = questionary.text("Enter output filename (without extension):").ask()
+    if filename is None:
+        raise SystemExit("No filename provided")
+    with open(f"Main Pipeline 2/Data Files/{filename}.csv", "w", encoding="utf-8", newline="") as f:
+        f.write(csv_data)
+    print(data_bytes[:100])
+
+def generateChirp_plus_data(standard = True):
+    text_file = pick_csv_file("Select message file:", Path("./Main Pipeline 2/Data Files"))
+    data_bytes = csv_to_data_bytes(text_file)
+
+
+    #STANDARD CHIRP PARAMETERS
+    if standard == True:
+        repeatedChirp = RepeatedChirp(10, 1024, 1376, 20, 20000, sampleRate)
+        key = repeatedChirp.generate()
+        transmitter = Tx(constellation, data_bytes, repeatedChirp, 1024, 1024)
+    else:
+        #Experimental CHIRP PARAMETERS
+        repeatedChirp = RepeatedChirp(10, 1024, 1376, 0, 20000, sampleRate)
+        key = repeatedChirp.generate()
+        transmitter = Tx(constellation, data_bytes, repeatedChirp, 1024, 1024)
+
+    transmitter.encode()
+    #Plot shows all are correct
+    #plot_constellation(transmitter.data_symbols[-2000:], "Transmitted Constellation")
+    
+    bad_mask = ~np.isfinite(transmitter.data_symbols) | np.isnan(transmitter.data_symbols)
+    print(f'Number of bad symbols: {np.sum(bad_mask)}')
+    print(f'Indices of bad symbols: {np.where(bad_mask)[0]}')
+    
+    sig = transmitter.transmitted_signal
+
+    combined_int16 = np.int16(sig * 32767) # Convert to wav amplitudes
+    filename = questionary.text("Enter output filename (without extension):").ask()
+    if filename is None:
+        raise SystemExit("No filename provided")
+    write(f"Main Pipeline 2/Audio Files/Aaron_Recordings/{filename}.wav", sampleRate, combined_int16)
+    print(f'Saved in dir: Main Pipeline 2/Audio Files/Aaron_Recordings/{filename}.wav')
+
+def receiveRepeated_chirp_plus_data(standard = True):
+
+    mode = questionary.select("Do you want to record audio or select an existing file?",
+        choices=["Record audio", "Select file"]
+    ).ask()
+
+    if mode is None: raise SystemExit("No option selected")
+
+    if mode == "Select file":
+        selected_path = pick_wav_file("Select a WAV file:", Path("./Main Pipeline 2/Audio Files/Aaron_Recordings/"))
+        fs_rx, sig = wavfile.read(selected_path)
+        sig = normalise_signal(sig)
+
+    elif mode == "Record audio":
+        print("Recording mode selected")
+        sig = record_audio(sampleRate)
+        sig = normalise_signal(sig)
+    
+    if standard == True:
+        repeatedChirp = RepeatedChirp(10, 1024, 1376, 20, 20000, sampleRate)
+        receiver = Rx(constellation, sig, 1024, 1024, repeatedChirp)
+    else:
+        repeatedChirp = RepeatedChirp(10, 1024, 1376, 0, 20000, sampleRate)
+        receiver = Rx(constellation, sig, 128, 1024, repeatedChirp)
+    receiver.decode()
+    print ("Number of coefficients:", len(receiver.H))
+    print("First 10 estimated coefficients:\n", receiver.H[:10])
+
+    print(receiver.data_bits[:200])
+    plot_constellation(receiver.data_symbols[0:2000])
+
+    text_file = pick_csv_file("Select message file:", Path("./Main Pipeline 2/Data Files"))
+    known_bit_seq = csv_bytes_to_binary_sequence(text_file)
+    ber, errors, min_len = calculate_ber(known_bit_seq, receiver.data_bits[:5000])
+
+    print("BER:", ber)
+    print("Errors:", errors)
+    print("Min Len", min_len)
+
+    blocks_ber = []
+    bits_per_symbol = constellation.bits_per_symbol
+    bits_per_block = len(receiver.active_bins) * bits_per_symbol
+    print(f"No. Blocks expected: {len(known_bit_seq) / bits_per_block}")
+
+    for i in range(len(receiver.ofdm_blocks)):
+        
+        start = i * bits_per_block
+        end = (i + 1) * bits_per_block
+        try:
+            ber_i, errors_i, min_len_i = calculate_ber(
+                known_bit_seq[start:end],
+                receiver.data_bits[start:end]
+            )
+            blocks_ber.append(ber_i)
+        except:
+            print(f'Disregarding final bits in partial block - Partial block BER not supported')
+    
+    print(f"BER variance: {np.var(blocks_ber)}")
+    print(f"BER trend: {np.polyfit(range(len(blocks_ber)), blocks_ber, 1)}")
+
+    plt.plot(blocks_ber)
+    plt.title("BER per OFDM block")
+    plt.show()
+
+print("Functions compiled successfully")
+
+def main():
+    mode = questionary.select("Which function do you want to run?", choices=[
+        "Convert M4A to WAV and run","Laptop rec and run",'Create and save']).ask()
+
+    if mode == "Convert M4A to WAV and run":
+        m4a_to_wav()
+        receiveRepeated_chirp_plus_data()
+    elif mode == "Laptop rec and run":
+        receiveRepeated_chirp_plus_data()
+    else:
+        generateChirp_plus_data()
+
+    #convert_text_to_utf8_bytes()
+
+#main()
+print("Main function defined successfully")
+
+golay_pairs = GolayPairs(1024, 1024, numPairs=1, fs=sampleRate)
+print("Generating Golay pairs...")
+golay_pilot = golay_pairs.generate()
+plot_signal("Golay Pilot", golay_pilot, -1)

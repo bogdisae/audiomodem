@@ -19,8 +19,10 @@ class Constellation:
     
     def symbols_to_bits(self, symbols):
         bit_list = []
-        for symbol in symbols:
+        for i,symbol in enumerate(symbols):
             bits = next((k for k, cond in self.constellation_inequalities.items() if cond(symbol)))
+            if bits is None:
+                raise ValueError(f"Symbol at index {i} does not belong to any constellation point")
             bit_list.extend(bits)
         return bit_list
                     
