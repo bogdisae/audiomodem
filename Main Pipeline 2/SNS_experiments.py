@@ -92,8 +92,31 @@ def receiveRepeated_chirp_plus_data():
     # plot_constellation(receiver.data_symbols)
     print("Number of data symbols:", len(receiver.data_symbols))
     
-    plt.plot(receiver.a_history)
-    plt.title("Slope of frequency offset vs OFDM block")
+    plt.figure(figsize=(8, 4))
+
+    plt.plot(receiver.a_history, linewidth=2)
+
+    plt.title("Frequency Offset Slope vs OFDM Block")
+    plt.xlabel("OFDM Block")
+    plt.ylabel("Estimated Slope")
+
+    plt.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    plt.show()
+
+
+    plt.figure(figsize=(8, 4))
+
+    plt.plot(receiver.a_history, 'o-', linewidth=2, markersize=4)
+
+    plt.title("Frequency Offset Slope vs OFDM Block")
+    plt.xlabel("OFDM Block")
+    plt.ylabel("Estimated Slope")
+
+    plt.grid(True, alpha=0.3)
+
+    plt.tight_layout()
     plt.show()
 
     shaqbits = csv_bytes_to_binary_sequence("Main Pipeline 2/Data Files/BIGSHAQ_repeated.txt")

@@ -80,31 +80,53 @@ class Rx:
         pilot_ref = self.constellation.default_pilot
 
         # phase error
-        phase_error = np.unwrap(np.angle(pilots / pilot_ref))
-
+        phase_error = np.angle(pilots / pilot_ref)
 
         f = self.pilot_bins * self.equaliser.fs / self.block_length
         y = phase_error
         a_meas = np.sum(f * y) / np.sum(f * f) # Basically linear regression but origin stays at 0
         self.a_history.append(a_meas)
 
-        # DEBUGGING PLOT ---------------------------------------------------------
-        # k = self.pilot_bins
-        # y = phase_error
+
+        # # ---------------- DEBUG PLOT ----------------
+
+        # # sort for clean plotting (VERY important for readability)
+        # idx = np.argsort(f)
+        # f_sorted = f[idx]
+        # y_sorted = y[idx]
+
+        # # slope (already computed)
+        # a = a_meas
+
+        # # fitted line
+        # y_fit = a * f_sorted
 
         # plt.figure()
-        # plt.plot(k, y, 'o-', label="Measured phase error")
 
-        # # best-fit line through origin
-        # plt.plot(k, a * k, '--', label="Best fit (origin-constrained)")
+        # # measured data
+        # plt.plot(f_sorted, y_sorted, 'o-', label="Measured phase error")
 
-        # plt.xlabel("Subcarrier index (k)")
+        # # fitted line
+        # plt.plot(f_sorted, y_fit, '--', label=f"Fit: y = {a:.3e} * f")
+
+        # plt.xlabel("Frequency (Hz)")
         # plt.ylabel("Phase (radians)")
-        # plt.title(f"Phase offset vs subcarrier index (block {block_index})")
+        # plt.title(f"Phase offset vs frequency (block {block_index})")
+
         # plt.grid(True)
         # plt.legend()
+
+        # # show slope as annotation
+        # plt.text(
+        #     0.05, 0.95,
+        #     f"Slope a = {a:.3e} rad/Hz",
+        #     transform=plt.gca().transAxes,
+        #     verticalalignment='top'
+        # )
+
         # plt.show()
-        #------------------------------------------------------------------------------
+
+        # # --------------------------------------------
 
         # a_meas_per_block = a_meas_per_block / block_index
         # self.a = 
