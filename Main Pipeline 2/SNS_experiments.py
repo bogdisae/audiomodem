@@ -9,6 +9,7 @@ import questionary
 from scipy.io import wavfile
 from scipy.io.wavfile import write
 from constellation import Constellation
+import matplotlib.pyplot as plt
 
 sampleRate = 48000
 
@@ -22,7 +23,8 @@ sampleRate = 48000
 #     ('0', '1'): lambda s: (s.real < 0) & (s.imag >=  0),
 #     ('1', '0'): lambda s: (s.real >=  0) & (s.imag < 0),
 #     ('1', '1'): lambda s: (s.real <  0) & (s.imag <  0),
-# })
+# },
+# default_pilot = (1+1j)/np.sqrt(2))
 
 constellation = Constellation(1, {
     ('0',): 1+0j,
@@ -30,7 +32,8 @@ constellation = Constellation(1, {
 }, {
     ('0',): lambda s: (s.real >= 0),
     ('1',): lambda s: (s.real < 0),
-})
+}, 
+default_pilot = 1+0j)
 
 
 def generateRepeatedChirp_plus_data():
@@ -76,9 +79,9 @@ def receiveRepeated_chirp_plus_data():
     print ("Number of coefficients:", len(receiver.H))
     print("First 10 estimated coefficients:\n", receiver.H[:10])
 
-    print(receiver.data_bits[:200])
-    plot_constellation(receiver.data_symbols[:200])
-    plot_constellation(receiver.data_symbols[0:2000])
+    # print(receiver.data_bits[:200])
+    # plot_constellation(receiver.data_symbols[:200])
+    # plot_constellation(receiver.data_symbols[0:2000])
     # plot_constellation(receiver.data_symbols[2000:4000])
     # plot_constellation(receiver.data_symbols[4000:6000])
     # plot_constellation(receiver.data_symbols[6000:8000])
@@ -86,18 +89,32 @@ def receiveRepeated_chirp_plus_data():
     # plot_constellation(receiver.data_symbols[10000:12000])
     # plot_constellation(receiver.data_symbols[12000:14000])
     # plot_constellation(receiver.data_symbols[14000:16000])
+    # plot_constellation(receiver.data_symbols)
     print("Number of data symbols:", len(receiver.data_symbols))
+    
+    plt.plot(receiver.a_history)
+    plt.title("Slope of frequency offset vs OFDM block")
+    plt.show()
 
+    shaqbits = csv_bytes_to_binary_sequence("Main Pipeline 2/Data Files/BIGSHAQ_repeated.txt")
 
+    rx_bits = np.array(receiver.data_bits)
 
-    shaqbits = csv_bytes_to_binary_sequence("Main Pipeline 2/Data Files/BIGSHAQ.txt")
-    ber, errors, min_len = calculate_ber(shaqbits, receiver.data_bits[:2000])
+    step = 2000
+    max_len = min(len(shaqbits), len(rx_bits))
 
-    print("BER:", ber)
-    print("Errors:", errors)
-    print("Min Len", min_len)
+    n = step
+    while n <= max_len:
 
-    print(receiver.data_bytes)
+        ber, errors, min_len = calculate_ber(
+            shaqbits[:n],
+            rx_bits[:n]
+        )
+
+        print(f"[{n} bits] BER: {ber:.6e} | Errors: {errors} | MinLen: {min_len}")
+
+        n *= 1.4
+        n = int(n)
 
 def generateSingleChirp_plus_data():
     

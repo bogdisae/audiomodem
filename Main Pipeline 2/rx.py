@@ -1,6 +1,7 @@
 import numpy as np
 from constellation import Constellation
 from equaliser import Equaliser, RepeatedChirp
+import matplotlib.pyplot as plt
 
 class Rx:
     signal: np.ndarray
@@ -18,18 +19,20 @@ class Rx:
     data_bits: np.ndarray
     data_bytes: np.ndarray
 
-    # SNS ADDITIONS xx
     f_low : int
     f_high : int
     bin_low : int
     bin_high : int
     active_bins : np.ndarray
     early_samples : int
-
+    pilot_spacing : int
+    
+    # Debug
+    a_history : list
 
     def __init__(self, constellation: Constellation, signal:np.ndarray, cp_length: int,
                  block_length: int, equaliser : Equaliser,
-                 early_samples = 30, f_low = 4000, f_high = 13000):
+                 early_samples = 30, f_low = 4000, f_high = 13000, pilot_spacing = 10):
         
         self.constellation = constellation
         self.signal = signal
@@ -39,31 +42,76 @@ class Rx:
         self.f_low = f_low
         self.f_high = f_high
         self.early_samples = early_samples
+        self.pilot_spacing = pilot_spacing
+
+        # tracking parameters (NEW)
+        self.a = 0.0          # SFO slope estimate
 
         # Calulate active subcarrier mask
         self.bin_low = int(np.ceil(f_low * block_length / equaliser.fs))
         self.bin_high = int(np.floor(f_high * block_length / equaliser.fs))
-        # Using the equaliser fs feels messy but will do
         self.active_bins = np.arange(self.bin_low, self.bin_high + 1)
 
+        # Pilot calculation identical to transmitter
+        self.pilot_bins = self.active_bins[::pilot_spacing] 
+        self.data_bins = np.array([k for k in self.active_bins if k not in self.pilot_bins])
 
-    def decode_ofdm_block(self, block):
+        # Debug
+        self.a_history = []
+
+    def decode_ofdm_block(self, block, block_index):
         cp_discarded = block[-self.block_length:]
         Y = np.fft.fft(cp_discarded)
-        X = Y / self.H[0:len(Y)] # Zero-forcing
+        X = Y / self.H[0:len(Y)]  # Zero-forcing
 
         # Phase correction for FFT window offset
         k = np.arange(len(X))
         phase_correction = np.exp(
             1j * 2 * np.pi * k * self.early_samples / self.block_length
         )
-
-        TEMPOERARY_global_rotation = np.exp(1j * np.deg2rad(15))
-
         X *= phase_correction
-        # X *= TEMPOERARY_global_rotation
 
-        data_bins = X[self.active_bins]
+        # -----------------------------
+        # PILOT-BASED TRACKINGa
+        # -----------------------------
+
+        
+        pilots = X[self.pilot_bins]
+        pilot_ref = self.constellation.default_pilot
+
+        # phase error
+        phase_error = np.unwrap(np.angle(pilots / pilot_ref))
+
+
+        f = self.pilot_bins * self.equaliser.fs / self.block_length
+        y = phase_error
+        a_meas = np.sum(f * y) / np.sum(f * f) # Basically linear regression but origin stays at 0
+        self.a_history.append(a_meas)
+
+        # DEBUGGING PLOT ---------------------------------------------------------
+        # k = self.pilot_bins
+        # y = phase_error
+
+        # plt.figure()
+        # plt.plot(k, y, 'o-', label="Measured phase error")
+
+        # # best-fit line through origin
+        # plt.plot(k, a * k, '--', label="Best fit (origin-constrained)")
+
+        # plt.xlabel("Subcarrier index (k)")
+        # plt.ylabel("Phase (radians)")
+        # plt.title(f"Phase offset vs subcarrier index (block {block_index})")
+        # plt.grid(True)
+        # plt.legend()
+        # plt.show()
+        #------------------------------------------------------------------------------
+
+        # a_meas_per_block = a_meas_per_block / block_index
+        # self.a = 
+
+        # extract data
+        data_bins = X[self.data_bins]
+
         return data_bins
 
     def extract_ofdm_blocks(self):
@@ -74,8 +122,8 @@ class Rx:
         self.ofdm_blocks = self.ofdm_blocks.reshape(-1, ofdm_symbol_length)
 
         self.data_symbols = []
-        for block in self.ofdm_blocks:
-            self.data_symbols.extend(self.decode_ofdm_block(block))
+        for i, block in enumerate(self.ofdm_blocks):
+            self.data_symbols.extend(self.decode_ofdm_block(block, i))
 
     def decode_symbols(self):
         #Check for NaN/Inf in data symbols - give warning

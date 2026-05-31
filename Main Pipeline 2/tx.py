@@ -26,15 +26,17 @@ class Tx:
     bin_low : int
     bin_high : int
     active_bins : np.ndarray
+    pilot_spacing : int
 
     def __init__(self, constellation: Constellation, data_bytes: np.ndarray, equaliser : Equaliser, cp_length: int, block_length: int,
-                 f_low = 4000, f_high = 13000):
+                 f_low = 4000, f_high = 13000, pilot_spacing = 10):
         
         self.constellation = constellation
         self.data_bytes = data_bytes
         self.equaliser = equaliser
         self.cp_length = cp_length
         self.block_length = block_length
+        self.pilot_spacing = pilot_spacing
 
         # Calulate active subcarrier mask
         self.bin_low = int(np.ceil(f_low * block_length / equaliser.fs))
@@ -42,14 +44,10 @@ class Tx:
         # Using the equaliser fs feels messy but will do
         self.active_bins = np.arange(self.bin_low, self.bin_high + 1)
 
+        # --- PILOT SETUP ---
+        self.pilot_bins = self.active_bins[::pilot_spacing] # If spacing = 10, bins are indices 0, 10, 20 etc
+        self.data_bins = np.array([k for k in self.active_bins if k not in self.pilot_bins])
 
-    def create_noise_key(noise_samples, n_taps):
-        n = np.random.uniform(-1.0, 1.0, noise_samples)
-        n[1::2] = 0.0
-        key = np.zeros(2*noise_samples + n_taps)
-        key[0:noise_samples] = n
-        key[-noise_samples:] = n
-        return n, key
     
     def bytes_to_bits(self):
         self.data_bits = np.unpackbits(self.data_bytes).astype(str)
@@ -61,17 +59,21 @@ class Tx:
     def prep_ofdm_block(self, block):
         X = np.zeros(self.block_length, dtype=complex)
 
-        # Positive-frequency active bins
-        X[self.active_bins] = block
+        # Positive-frequency DATA bins
+        X[self.data_bins] = block
+
+        # Insert pilots
+        X[self.pilot_bins] = self.constellation.default_pilot
 
         # Hermitian symmetry
-        X[-self.active_bins] = np.conj(block)
+        X[-self.data_bins] = np.conj(X[self.data_bins])
+        X[-self.pilot_bins] = np.conj(X[self.pilot_bins])
 
         ofdm_block = np.fft.ifft(X).real
         return np.concatenate([ofdm_block[-self.cp_length:], ofdm_block])
 
     def prep_ofdm_blocks(self):
-        symbols_per_block = len(self.active_bins)
+        symbols_per_block = len(self.data_bins)
 
         padding_symbols = np.array(self.constellation.bits_to_symbols(('0', '0')))
 
@@ -93,6 +95,7 @@ class Tx:
         ofdm_blocks = np.copy(self.ofdm_symbol_blocks)
         ofdm_blocks = ofdm_blocks / np.abs(np.max(ofdm_blocks))
         self.transmitted_signal = np.concatenate([self.equaliser.generate(), np.zeros(self.cp_length), np.concatenate(ofdm_blocks)])
+
 
     def encode(self):
         self.encode_symbols()
