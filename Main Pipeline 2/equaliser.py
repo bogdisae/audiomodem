@@ -233,6 +233,9 @@ class GolayPairs(Equaliser):
             a_rx = rxSignal[start:start + indiv_len]
             b_rx = rxSignal[start + indiv_len + self.pairSilence : start + 2 * indiv_len + self.pairSilence]
 
+            print(f'a_rx length: {len(a_rx)}, b_rx length: {len(b_rx)}')
+            print(f'a seq idx: {start} to {start + indiv_len}, b seq idx: {start + indiv_len + self.pairSilence} to {start + 2 * indiv_len + self.pairSilence}')
+
             corr_a = correlate(a_rx, self.a_ref, mode='full')
             corr_b = correlate(b_rx, self.b_ref, mode='full')
 

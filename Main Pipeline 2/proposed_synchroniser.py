@@ -109,21 +109,26 @@ class RepeatedChirpSync(Synchroniser):
         
         return key_start_index, key_start_index + self.lengthInSamples, second_idx
 
-    def Coarse_CFO_correction(self, signal: np.ndarray, sync_index, sync_2nd_peak):
+    def Coarse_CFO_correction(self, signal: np.ndarray, sync_index, sync_2nd_peak, plot=True):
         from scipy.signal import hilbert
-        first_chirp = signal[sync_index:sync_index + self.chirpLength]
-        second_chirp = signal[sync_2nd_peak:sync_2nd_peak + self.chirpLength]
+        first_chirp = hilbert(signal[sync_index:sync_index + self.chirpLength].astype(float))
+        #second_chirp = hilbert(signal[sync_2nd_peak:sync_2nd_peak + self.chirpLength].astype(float))
+        #Use digitally known second peak since it is more robust
+        second_chirp = hilbert(signal[sync_index + self.blockLength:sync_index + self.blockLength + self.chirpLength].astype(float))
 
         #Comlpex digital key - must be complex for phase estimation
         key = hilbert(self.generate())
 
         corr = correlate(signal, key, mode='valid')
 
-        peak_one_complex = corr[sync_index]
-        peak_two_complex = corr[sync_2nd_peak]
+        #peak_one_complex = corr[sync_index]
+        #peak_two_complex = corr[sync_2nd_peak]
+
+
 
         #phi
-        phase_diff = np.angle(peak_one_complex) - np.angle(peak_two_complex)
+        #phase_diff = np.angle(peak_one_complex) - np.angle(peak_two_complex)
+        phase_diff = np.angle(np.sum(first_chirp * np.conj(second_chirp)))
 
         #Time separation
         T_c = (sync_2nd_peak - sync_index) / self.fs
@@ -135,8 +140,36 @@ class RepeatedChirpSync(Synchroniser):
         print(f"Estimated phase difference between chirps: {phase_diff} radians")'''
         print(f"Estimated CFO: {delta_f} Hz")
 
-        correction_wave = np.exp(-1j * 2 * np.pi * delta_f * np.arange(len(signal)) / self.fs)
-        corrected_signal = signal * correction_wave
+        correction_wave = np.exp(-1j * 2 * np.pi * delta_f * np.arange(len(signal[sync_index:])) / self.fs)
+        corrected_signal = signal[sync_index:sync_index + len(correction_wave)] * correction_wave
+
+        if plot:
+            plt.figure(figsize=(14, 8))
+            plt.subplot(6, 1, 1)
+            plt.title("Original Signal Real (First 8000 samples)")
+            plt.plot(np.real(signal[sync_index:sync_index + 8000]))
+            plt.subplot(6, 1, 2)
+            plt.title("Original Signal Imag (First 8000 samples)")
+            plt.plot(np.imag(signal[sync_index:sync_index + 8000]))
+            plt.subplot(6, 1, 3)
+            plt.title("Correction Waveform Real (First 8000 samples)")
+            plt.plot(np.real(correction_wave[:8000]))
+            plt.subplot(6, 1, 4)
+            plt.title("Correction Waveform Imag (First 8000 samples)")
+            plt.plot(np.imag(correction_wave[:8000]))
+            plt.subplot(6, 1, 5)
+            plt.title("Corrected Signal Real (First 8000 samples)")
+            plt.plot(np.real(corrected_signal[:8000]))
+            plt.subplot(6, 1, 6)
+            plt.title("Corrected Signal Imag (First 8000 samples)")
+            plt.plot(np.imag(corrected_signal[:8000]))
+            plt.tight_layout(pad=2.0)
+            plt.show()
+
+            print(type(corrected_signal), corrected_signal.dtype)
+
+        #Add zeros to the start of the corrected signal to align it with the original signal length and not mess up other indexing
+        corrected_signal = np.concatenate((np.zeros(sync_index), corrected_signal))
         return corrected_signal
     
     

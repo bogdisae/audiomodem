@@ -100,7 +100,7 @@ class Rx:
         self.data_bytes = np.packbits(np.array(self.data_bits).astype(np.uint8))
 
     def _decode_ofdm_region(self, start_index, end_index):
-        self.ofdm_blocks = self.signal[start_index:end_index]
+        self.ofdm_blocks = self.signal_corrected[start_index:end_index]
         self.extract_ofdm_blocks()
         return list(self.data_symbols)
     
@@ -116,29 +116,31 @@ class Rx:
         decoded_symbols = []
 
         '''INITIAL CFO ESTIMATION - COARSE ADJUSTMENT'''
-        self.signal = self.synchroniser.Coarse_CFO_correction(self.signal, key_start_index, second_peak_index)
+        self.signal_corrected = self.synchroniser.Coarse_CFO_correction(self.signal, key_start_index, second_peak_index)
+        print(f'Starting from sync index {self.synchronisation_index}')
         '''DOES NOT WORK FROM HERE'''
 
 
         if self.pilot_spacing == 0:
             current_pilot_start = self.pilot_start_index #CP length zeros transmitted after sync signal
             #print("Estimating channel using pilot 1/1")
-            self.H = self.equaliser.estimate(self.signal, current_pilot_start, True)
+            self.H = self.equaliser.estimate(self.signal_corrected, current_pilot_start, True)
 
             data_start_index = current_pilot_start + self.equaliser.lengthInSamples
-            decoded_symbols.extend(self._decode_ofdm_region(data_start_index, len(self.signal))) #No more pilots in signal
+            decoded_symbols.extend(self._decode_ofdm_region(data_start_index, len(self.signal_corrected))) #No more pilots in signal
         else:
             current_pilot_start = self.pilot_start_index
+            
             section_index = 0
 
-            while current_pilot_start + self.equaliser.lengthInSamples <= len(self.signal):
+            while current_pilot_start + self.equaliser.lengthInSamples <= len(self.signal_corrected):
                 
                 
-                self.H = self.equaliser.estimate(self.signal, current_pilot_start, True)
+                self.H = self.equaliser.estimate(self.signal_corrected, current_pilot_start, True)
 
                 section_data_start = current_pilot_start + self.equaliser.lengthInSamples
                 section_data_end = min(
-                    len(self.signal),
+                    len(self.signal_corrected),
                     section_data_start + self.pilot_spacing * symbol_length,
                 )
                 #print(f"Estimating channel using pilot section {section_index}, section data start idx: {section_data_start}, end: {section_data_end}")
