@@ -37,7 +37,7 @@ def generateRepeatedChirp_plus_data():
     text_file = pick_text_file("Select message file:", Path("./Main Pipeline 2/Data Files"))
     data_bytes = csv_to_data_bytes(text_file)
 
-    repeatedChirp = RepeatedChirp(10, 1024, 0, 20, 20000, sampleRate)
+    repeatedChirp = RepeatedChirp(10, 1024, 4000, 20, 20000, sampleRate)
     key = repeatedChirp.generate()
 
     transmitter = Tx(constellation, data_bytes, repeatedChirp, 1024, 1024)
@@ -70,7 +70,7 @@ def receiveRepeated_chirp_plus_data():
         sig = normalise_signal(sig)
     
 
-    repeatedChirp = RepeatedChirp(10, 1024, 0, 20, 20000, sampleRate)
+    repeatedChirp = RepeatedChirp(10, 1024, 4000, 20, 20000, sampleRate)
     receiver = Rx(constellation, sig, 1024, 1024, repeatedChirp)
     receiver.decode()
     print ("Number of coefficients:", len(receiver.H))
@@ -79,13 +79,13 @@ def receiveRepeated_chirp_plus_data():
     print(receiver.data_bits[:200])
     plot_constellation(receiver.data_symbols[:200])
     plot_constellation(receiver.data_symbols[0:2000])
-    # plot_constellation(receiver.data_symbols[2000:4000])
-    # plot_constellation(receiver.data_symbols[4000:6000])
-    # plot_constellation(receiver.data_symbols[6000:8000])
-    # plot_constellation(receiver.data_symbols[8000:10000])
-    # plot_constellation(receiver.data_symbols[10000:12000])
-    # plot_constellation(receiver.data_symbols[12000:14000])
-    # plot_constellation(receiver.data_symbols[14000:16000])
+    plot_constellation(receiver.data_symbols[2000:4000])
+    plot_constellation(receiver.data_symbols[4000:6000])
+    plot_constellation(receiver.data_symbols[6000:8000])
+    plot_constellation(receiver.data_symbols[8000:10000])
+    plot_constellation(receiver.data_symbols[10000:12000])
+    plot_constellation(receiver.data_symbols[12000:14000])
+    plot_constellation(receiver.data_symbols[14000:16000])
     print("Number of data symbols:", len(receiver.data_symbols))
 
 
