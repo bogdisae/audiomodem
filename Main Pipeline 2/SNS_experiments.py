@@ -1,4 +1,4 @@
-from equaliser import Equaliser, RepeatedChirp, Chirp
+from equaliser import Equaliser, RepeatedChirp, Chirp 
 from proposed_synchroniser import RepeatedChirpSync
 from proposed_tx import Tx
 from proposed_rx import Rx
@@ -44,7 +44,7 @@ def generateRepeatedChirp_plus_data():
     repeatedChirp = RepeatedChirp(10, 1024, 0, 20, 20000, sampleRate)
     key = repeatedChirp.generate()
 
-    transmitter = Tx(constellation, data_bytes, repeatedChirp, 1024, 1024)
+    transmitter = Tx(constellation, data_bytes, repeatedChirp, 'Block', 1024, 1024)
     transmitter.encode()
 
     sig = transmitter.transmitted_signal
@@ -73,9 +73,9 @@ def receiveRepeated_chirp_plus_data():
         sig = record_audio(sampleRate)
         sig = normalise_signal(sig)
     
-
-    repeatedChirp = RepeatedChirp(10, 1024, 0, 20, 20000, sampleRate)
-    receiver = Rx(constellation, sig, 1024, 1024, repeatedChirp)
+    repeatedChirpEstim = RepeatedChirp(10, 1024, 0, 20, 20000, sampleRate)
+    repeatedChirpSync = RepeatedChirpSync(10, 1024, 0, 20, 20000, sampleRate)
+    receiver = Rx(constellation, sig, 1024, 1024, repeatedChirpEstim, repeatedChirpSync, "Chirp", "COMB")
     receiver.decode()
     print ("Number of coefficients:", len(receiver.H))
     print("First 10 estimated coefficients:\n", receiver.H[:10])

@@ -36,7 +36,7 @@ class Tx:
     pilot_config : str
 
 
-    def __init__(self, constellation: Constellation, data_bytes: np.ndarray, equaliser : Equaliser, synchroniser: Synchroniser, pilot_config,  cp_length: int, block_length: int, pilot_type = "Not required yet"
+    def __init__(self, constellation: Constellation, data_bytes: np.ndarray, equaliser : Equaliser, synchroniser: Synchroniser, pilot_config,  cp_length: int, block_length: int, pilot_type = "Not required yet",
                 pilot_spacing = 10, key_pilot_samples_spacing = 1024, f_low = 230, f_high = 14500):
         
         self.constellation = constellation

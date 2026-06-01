@@ -61,11 +61,12 @@ class Rx:
         self.bin_high = int(np.floor(f_high * block_length / synchroniser.fs))
         self.active_bins = np.arange(self.bin_low, self.bin_high + 1)
 
+        self.pilot_config = pilot_config
+
         if pilot_config == "Block":
             self.key_pilot_samples_spacing = key_pilot_samples_spacing
             self.pilot_spacing = pilot_spacing   #No. blocks between pilot symbols - set to 0 for no repeats
             self.pilot_type = pilot_type
-            self.pilot_config = pilot_config
             self.pair_count = 1 #Not supported yet for multi Golay pairs
         else:
             self.pilot_bins = self.active_bins[::pilot_spacing] #This is a simple way to select pilot bins for comb configuration - every nth active bin is a pilot
@@ -141,13 +142,15 @@ class Rx:
         # Synchronise 
         key_start_index, self.synchronisation_index, second_peak_index = self.synchroniser.synchronise(self.signal, True)
 
-        self.pilot_start_index = self.synchronisation_index + self.key_pilot_samples_spacing
-        #print(f'Initial pilot start index: {self.pilot_start_index}')
-        #print(f'key start index: {key_start_index}, synchronisation index: {self.synchronisation_index}')
-        symbol_length = self.block_length + self.cp_length
-        decoded_symbols = []  
 
         if self.pilot_config == "Block": #Block or comb
+
+            self.pilot_start_index = self.synchronisation_index + self.key_pilot_samples_spacing
+            #print(f'Initial pilot start index: {self.pilot_start_index}')
+            #print(f'key start index: {key_start_index}, synchronisation index: {self.synchronisation_index}')
+            symbol_length = self.block_length + self.cp_length
+            decoded_symbols = []  
+
             if self.pilot_spacing == 0:
                 current_pilot_start = self.pilot_start_index #CP length zeros transmitted after sync signal
                 print("Estimating channel using pilot 1/1")
@@ -175,14 +178,15 @@ class Rx:
 
                     current_pilot_start = section_data_end
                     section_index += 1
+            self.data_symbols = decoded_symbols
         else: #pilot type is comb
 
             self.H = self.equaliser.estimate(self.signal, key_start_index, plot=True) #Assuming Chirp type estimator
             self.ofdm_blocks = self.signal[self.synchronisation_index+self.cp_length:]
             self.extract_ofdm_blocks()
-            raise NotImplementedError("Comb pilot type not implemented yet")
+            
 
-        self.data_symbols = decoded_symbols
+        
         self.decode_symbols()
         self.bits_to_bytes()
 
