@@ -33,7 +33,7 @@ class Rx:
     pilot_spacing : int
 
     def __init__(self, constellation: Constellation, signal:np.ndarray, cp_length: int,
-                 block_length: int, equaliser : Equaliser, synchroniser : Synchroniser, pilot_type, pilot_config
+                 block_length: int, equaliser : Equaliser, synchroniser : Synchroniser, pilot_type, pilot_config,
                  early_samples = 30, pilot_spacing = 10, key_pilot_samples_spacing = 1024, f_low = 230, f_high = 14500):
         
         self.constellation = constellation
