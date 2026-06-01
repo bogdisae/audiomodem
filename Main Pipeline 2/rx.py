@@ -25,14 +25,13 @@ class Rx:
     bin_high : int
     active_bins : np.ndarray
     early_samples : int
-    pilot_spacing : int
     
     # Debug
     a_history : list
 
     def __init__(self, constellation: Constellation, signal:np.ndarray, cp_length: int,
                  block_length: int, equaliser : Equaliser,
-                 early_samples = 30, f_low = 4000, f_high = 13000, pilot_spacing = 10):
+                 early_samples = 30, f_low = 4000, f_high = 13000):
         
         self.constellation = constellation
         self.signal = signal
@@ -42,7 +41,6 @@ class Rx:
         self.f_low = f_low
         self.f_high = f_high
         self.early_samples = early_samples
-        self.pilot_spacing = pilot_spacing
 
         # tracking parameters (NEW)
         self.a = 0.0          # SFO slope estimate
@@ -52,10 +50,28 @@ class Rx:
         self.bin_high = int(np.floor(f_high * block_length / equaliser.fs))
         self.active_bins = np.arange(self.bin_low, self.bin_high + 1)
 
-        # Pilot calculation identical to transmitter
-        self.pilot_bins = self.active_bins[::pilot_spacing] 
-        self.data_bins = np.array([k for k in self.active_bins if k not in self.pilot_bins])
+        # Data occupies the entire active band
+        self.data_bins = self.active_bins
 
+        # Pilot frequency limits
+        pilot_low = 200
+        pilot_high = 18000
+
+        pilot_bin_low = int(np.ceil(pilot_low * block_length / equaliser.fs))
+        pilot_bin_high = int(np.floor(pilot_high * block_length / equaliser.fs))
+
+        # Candidate pilot bins
+        pilot_candidates = np.arange(
+            pilot_bin_low,
+            pilot_bin_high + 1
+        )
+
+        # Remove data carriers
+        self.pilot_bins = np.setdiff1d(
+            pilot_candidates,
+            self.data_bins
+        )
+    
         # Debug
         self.a_history = []
 
@@ -65,14 +81,16 @@ class Rx:
         X = Y / self.H[0:len(Y)]  # Zero-forcing
 
         # Phase correction for FFT window offset
-        k = np.arange(len(X))
+        k = np.arange(len(X)) 
         phase_correction = np.exp(
             1j * 2 * np.pi * k * self.early_samples / self.block_length
         )
         X *= phase_correction
 
+        X *= np.exp(-1j * 0.00020683 * k * block_index)
+
         # -----------------------------
-        # PILOT-BASED TRACKINGa
+        # PILOT-BASED TRACKING
         # -----------------------------
 
         
@@ -80,15 +98,16 @@ class Rx:
         pilot_ref = self.constellation.default_pilot
 
         # phase error
-        phase_error = np.angle(pilots / pilot_ref)
+        phase_error = np.unwrap(np.angle(pilots / pilot_ref))
 
-        f = self.pilot_bins * self.equaliser.fs / self.block_length
+        k = self.pilot_bins
         y = phase_error
-        a_meas = np.sum(f * y) / np.sum(f * f) # Basically linear regression but origin stays at 0
+        slopes = phase_error / k
+        a_meas = np.median(slopes)
         self.a_history.append(a_meas)
 
 
-        # # ---------------- DEBUG PLOT ----------------
+        # ---------------- DEBUG PLOT ----------------
 
         # # sort for clean plotting (VERY important for readability)
         # idx = np.argsort(f)
@@ -126,7 +145,7 @@ class Rx:
 
         # plt.show()
 
-        # # --------------------------------------------
+        # --------------------------------------------
 
         # a_meas_per_block = a_meas_per_block / block_index
         # self.a = 
@@ -173,7 +192,6 @@ class Rx:
         # TRY GOING EARLY
         self.synchronisation_index = self.synchronisation_index + self.cp_length - self.early_samples
 
-        # BOGDAN YOU FORGOT THIS LINE
         self.ofdm_blocks = self.signal[self.synchronisation_index:]
 
         self.extract_ofdm_blocks()

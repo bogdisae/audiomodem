@@ -2,7 +2,7 @@ from equaliser import Equaliser, RepeatedChirp, Chirp
 from tx import Tx
 from rx import Rx
 from helper import pick_text_file, csv_to_data_bytes, pick_wav_file, normalise_signal, record_audio, plot_constellation
-from helper import csv_bytes_to_binary_sequence, calculate_ber
+from helper import csv_bytes_to_binary_sequence, calculate_ber, weighted_pairwise_slope
 from pathlib import Path
 import numpy as np
 import questionary
@@ -80,46 +80,52 @@ def receiveRepeated_chirp_plus_data():
     print("First 10 estimated coefficients:\n", receiver.H[:10])
 
     # print(receiver.data_bits[:200])
-    # plot_constellation(receiver.data_symbols[:200])
-    # plot_constellation(receiver.data_symbols[0:2000])
-    # plot_constellation(receiver.data_symbols[2000:4000])
-    # plot_constellation(receiver.data_symbols[4000:6000])
-    # plot_constellation(receiver.data_symbols[6000:8000])
-    # plot_constellation(receiver.data_symbols[8000:10000])
-    # plot_constellation(receiver.data_symbols[10000:12000])
-    # plot_constellation(receiver.data_symbols[12000:14000])
-    # plot_constellation(receiver.data_symbols[14000:16000])
+    plot_constellation(receiver.data_symbols[:200], "Bits [0:200]")
+    plot_constellation(receiver.data_symbols[0:2000], "Bits [0:2000]")
+    plot_constellation(receiver.data_symbols[2000:4000], "Bits [2000:4000]")
+    plot_constellation(receiver.data_symbols[6000:8000], "Bits [6000:8000]")
+    plot_constellation(receiver.data_symbols[8000:10000], "Bits [8000:10000]")
+    plot_constellation(receiver.data_symbols[10000:12000], "Bits [10000:12000]")
+    plot_constellation(receiver.data_symbols[12000:14000], "Bits [12000:14000]")
+    plot_constellation(receiver.data_symbols[14000:16000], "Bits [14000:16000]")
+    plot_constellation(receiver.data_symbols[16000:18000], "Bits [16000:18000]")
+    plot_constellation(receiver.data_symbols[18000:20000], "Bits [18000:20000]")
     # plot_constellation(receiver.data_symbols)
     print("Number of data symbols:", len(receiver.data_symbols))
     
+    # ---------------------------------------------------------------------------------------------
+    # robust slope estimate
+    y = receiver.a_history
+    x = np.arange(len(y))
+    slope = weighted_pairwise_slope(x, y, 10, "median")
+
+    # x-axis (block index)
+    x = np.arange(len(receiver.a_history))
+
+    # fitted line through origin
+    y = slope * x
+
     plt.figure(figsize=(8, 4))
 
-    plt.plot(receiver.a_history, linewidth=2)
+    # raw data
+    plt.plot(receiver.a_history, linewidth=2, label="Raw slope estimates")
+
+    # fitted line
+    plt.plot(x, y, linewidth=2, label=f"Fit: y = {slope:.4e} x")
 
     plt.title("Frequency Offset Slope vs OFDM Block")
     plt.xlabel("OFDM Block")
     plt.ylabel("Estimated Slope")
 
     plt.grid(True, alpha=0.3)
+    plt.legend()
 
     plt.tight_layout()
     plt.show()
 
+    #-----------------------------------------------------------------------------------------
 
-    plt.figure(figsize=(8, 4))
-
-    plt.plot(receiver.a_history, 'o-', linewidth=2, markersize=4)
-
-    plt.title("Frequency Offset Slope vs OFDM Block")
-    plt.xlabel("OFDM Block")
-    plt.ylabel("Estimated Slope")
-
-    plt.grid(True, alpha=0.3)
-
-    plt.tight_layout()
-    plt.show()
-
-    shaqbits = csv_bytes_to_binary_sequence("Main Pipeline 2/Data Files/BIGSHAQ_repeated.txt")
+    shaqbits = csv_bytes_to_binary_sequence("Main Pipeline 2/Data Files/BIGSHAQ.txt")
 
     rx_bits = np.array(receiver.data_bits)
 
@@ -185,7 +191,7 @@ def receive_SingleChirp_plus_data(): # DOESNT WORK BECAUSE THE CHANNEL ESTIMATIO
     print(receiver.data_bits[:200])
     plot_constellation(receiver.data_symbols[0:2000])
 
-    shaqbits = csv_bytes_to_binary_sequence("Main Pipeline 2/Data Files/BIGSHAQ.txt")
+    shaqbits = csv_bytes_to_binary_sequence("Main Pipeline 2/Data Files/BIGSHAQ_repeated.txt")
     ber, errors, min_len = calculate_ber(shaqbits, receiver.data_bits[:5000])
 
     print("BER:", ber)

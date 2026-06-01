@@ -55,10 +55,10 @@ def synchronisation_plot(recording, correlation, windowed, h, start_index = None
 
     plt.show()
 
-def plot_constellation(symbols):
+def plot_constellation(symbols, title = "Received symbols"):
     fig, ax = plt.subplots(1, 1, constrained_layout=True)
     ax.scatter(symbols.real, symbols.imag)
-    ax.set_title("received symbols")
+    ax.set_title(title)
     plt.show()
 
 def plot_signal(title : str, signal : np.ndarray, v_line_index, abs = False):
@@ -316,3 +316,62 @@ def calculate_ber(seq1, seq2):
         raise ValueError("Sequences are empty, cannot compute BER")
 
     return ber, errors, min_len
+
+
+
+
+def weighted_pairwise_slope(x, y, decay=1.0, mode="mean"):
+    """
+    Estimate slope using weighted pairwise differences.
+
+    Parameters
+    ----------
+    x, y : array-like
+        Data points
+    decay : float
+        Exponential decay factor (higher = faster decay with distance)
+    mode : str
+        "mean" or "median"
+    """
+
+    x = np.asarray(x)
+    y = np.asarray(y)
+
+    slopes = []
+    weights = []
+
+    n = len(x)
+
+    for i in range(n):
+        for j in range(i):
+            dx = x[i] - x[j]
+            if dx == 0:
+                continue
+
+            dy = y[i] - y[j]
+
+            slope = dy / dx
+
+            # exponential decay with distance
+            w = np.exp(-decay * dx)
+
+            slopes.append(slope)
+            weights.append(w)
+
+    slopes = np.array(slopes)
+    weights = np.array(weights)
+
+    if mode == "mean":
+        return np.sum(weights * slopes) / np.sum(weights)
+
+    elif mode == "median":
+        # weighted median
+        idx = np.argsort(slopes)
+        slopes_sorted = slopes[idx]
+        weights_sorted = weights[idx]
+
+        cum_w = np.cumsum(weights_sorted)
+        return slopes_sorted[np.searchsorted(cum_w, cum_w[-1] / 2)]
+
+    else:
+        raise ValueError("mode must be 'mean' or 'median'")
