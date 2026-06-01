@@ -33,7 +33,7 @@ class Rx:
     pilot_spacing : int
 
     def __init__(self, constellation: Constellation, signal:np.ndarray, cp_length: int,
-                 block_length: int, equaliser : Equaliser, synchroniser : Synchroniser,
+                 block_length: int, equaliser : Equaliser, synchroniser : Synchroniser, pilot_type, pilot_config
                  early_samples = 30, pilot_spacing = 10, key_pilot_samples_spacing = 1024, f_low = 230, f_high = 14500):
         
         self.constellation = constellation
@@ -45,8 +45,11 @@ class Rx:
         self.f_low = f_low
         self.f_high = f_high
         self.early_samples = early_samples
+
         self.key_pilot_samples_spacing = key_pilot_samples_spacing
         self.pilot_spacing = pilot_spacing   #No. blocks between pilot symbols - set to 0 for no repeats
+        self.pilot_type = pilot_type
+        self.pilot_config = pilot_config
 
         # Calulate active subcarrier mask
         self.bin_low = int(np.ceil(f_low * block_length / synchroniser.fs))

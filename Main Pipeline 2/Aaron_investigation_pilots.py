@@ -161,11 +161,11 @@ def receiveRepeated_chirp_plus_data(standard = True):
     if standard == True:
         repeatedChirp = RepeatedChirpSync(10, 1024, 1024, 20, 20000, sampleRate)
         golayPairs = GolayPairs(1024, 10240, numPairs=1, fs=sampleRate)
-        receiver = Rx(constellation, sig, 1024, 1024, golayPairs, repeatedChirp)
+        receiver = Rx(constellation, sig, 1024, 1024, golayPairs, repeatedChirp, "Golay", "Block")
     else:
         repeatedChirp = RepeatedChirpSync(2, 1024, 1024, 0, 20000, sampleRate)
         golayPairs = GolayPairs(1024, 10240, numPairs=1, fs=sampleRate)
-        receiver = Rx(constellation, sig, 128, 1024, golayPairs, repeatedChirp)
+        receiver = Rx(constellation, sig, 128, 1024, golayPairs, repeatedChirp, "Golay", "Block")
 
     pilot_alignment_CPE_estimation(golayPairs, repeatedChirp, sig)
 
