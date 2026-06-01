@@ -167,51 +167,51 @@ def receiveRepeated_chirp_plus_data(standard = True):
         golayPairs = GolayPairs(1024, 10240, numPairs=1, fs=sampleRate)
         receiver = Rx(constellation, sig, 128, 1024, golayPairs, repeatedChirp, "Golay", "Block")
 
-    pilot_alignment_CPE_estimation(golayPairs, repeatedChirp, sig)
+    #pilot_alignment_CPE_estimation(golayPairs, repeatedChirp, sig)
 
     receiver.decode()
 
-    print(f'Symbols decoded: {receiver.data_symbols[:100]}')
+    #print(f'Symbols decoded: {receiver.data_symbols[:100]}')
     #print ("Number of coefficients:", len(receiver.H))
     #print("First 10 estimated coefficients:\n", receiver.H[:10])
 
-    print(receiver.data_bits[:100])
+    #print(receiver.data_bits[:100])
     plot_constellation(receiver.data_symbols[0:1000])
 
     print('__________________________________________________________\n_____________________________________________________________________')
 
-    text_file = pick_csv_file("Select message file:", Path("./Main Pipeline 2/Data Files"))
-    data_bytes = csv_to_data_bytes(text_file)
-    repeatedChirp = RepeatedChirpSync(10, 1024, 1024, 20, 20000, sampleRate)
-    key = repeatedChirp.generate()
-    golayPairs = GolayPairs(1024, 1024, numPairs=1, fs=sampleRate)
-    pilot_seq = golayPairs.generate()
-    transmitter = Tx(
-            constellation=constellation,
-            data_bytes=data_bytes,
-            equaliser=golayPairs,
-            synchroniser=repeatedChirp,
-            cp_length=1024,
-            block_length=1024,
-            pilot_spacing=10,
-        )
-    transmitter.encode()
+    # text_file = pick_csv_file("Select message file:", Path("./Main Pipeline 2/Data Files"))
+    # data_bytes = csv_to_data_bytes(text_file)
+    # repeatedChirp = RepeatedChirpSync(10, 1024, 1024, 20, 20000, sampleRate)
+    # key = repeatedChirp.generate()
+    # golayPairs = GolayPairs(1024, 1024, numPairs=1, fs=sampleRate)
+    # pilot_seq = golayPairs.generate()
+    # transmitter = Tx(
+    #         constellation=constellation,
+    #         data_bytes=data_bytes,
+    #         equaliser=golayPairs,
+    #         synchroniser=repeatedChirp,
+    #         cp_length=1024,
+    #         block_length=1024,
+    #         pilot_spacing=10,
+    #     )
+    # transmitter.encode()
 
-    X_tx = transmitter.data_symbols
-    X_eq = receiver.data_symbols
+    # X_tx = transmitter.data_symbols
+    # X_eq = receiver.data_symbols
 
-    pilot_sym = golayPairs.generate()
+    # pilot_sym = golayPairs.generate()
 
 
-    print("mean power TX (data):", np.mean(np.abs(X_tx)**2))
-    print("mean power RX equalised:", np.mean(np.abs(X_eq)**2))
-    #print("H mean abs:", np.mean(np.abs(H)), "min/max:", np.min(np.abs(H)), np.max(np.abs(H)))
-    # verify fft/ifft identity
-    diff = np.max(np.abs(np.fft.fft(np.fft.ifft(X_tx)) - X_tx))
-    print("fft(ifft) identity max error:", diff)
-    # pilot energy
-    if 'pilot_sym' in globals():
-        print("pilot mean power:", np.mean(np.abs(pilot_sym)**2))
+    # print("mean power TX (data):", np.mean(np.abs(X_tx)**2))
+    # print("mean power RX equalised:", np.mean(np.abs(X_eq)**2))
+    # #print("H mean abs:", np.mean(np.abs(H)), "min/max:", np.min(np.abs(H)), np.max(np.abs(H)))
+    # # verify fft/ifft identity
+    # diff = np.max(np.abs(np.fft.fft(np.fft.ifft(X_tx)) - X_tx))
+    # print("fft(ifft) identity max error:", diff)
+    # # pilot energy
+    # if 'pilot_sym' in globals():
+    #     print("pilot mean power:", np.mean(np.abs(pilot_sym)**2))
 
     text_file = pick_csv_file("Select message file:", Path("./Main Pipeline 2/Data Files"))
     known_bit_seq = csv_bytes_to_binary_sequence(text_file)
@@ -248,9 +248,9 @@ def receiveRepeated_chirp_plus_data(standard = True):
     plt.title("BER per OFDM block")
     plt.show()
 
-    print("H shape:", receiver.H.shape)
-    print("H stats: min,max,mean:", np.min(np.abs(receiver.H)), np.max(np.abs(receiver.H)), np.mean(np.abs(receiver.H)))
-    print("NaN/Inf in H:", np.sum(np.isnan(receiver.H)), np.sum(np.isinf(receiver.H)))
+    # print("H shape:", receiver.H.shape)
+    # print("H stats: min,max,mean:", np.min(np.abs(receiver.H)), np.max(np.abs(receiver.H)), np.mean(np.abs(receiver.H)))
+    # print("NaN/Inf in H:", np.sum(np.isnan(receiver.H)), np.sum(np.isinf(receiver.H)))
 
 print("Functions compiled successfully")
 

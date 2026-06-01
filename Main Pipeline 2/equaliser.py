@@ -205,7 +205,7 @@ class GolayPairs(Equaliser):
             if self.numPairs > (i+1): #Only add silence between pairs, not after final pair
                 '''Not sure if this silence is accounted for if multiple pairs - may need to be added'''
                 pair_sections.append(silence)
-        print('length of pair sections:', [len(section) for section in pair_sections])
+        #print('length of pair sections:', [len(section) for section in pair_sections])
         signal = np.concatenate(pair_sections)
         print(f'indivLength: {self.indivLength}, pairSilence: {self.pairSilence}, Length of signal: {len(signal)}')
         m = np.max(np.abs(signal))
@@ -227,14 +227,14 @@ class GolayPairs(Equaliser):
         
         
         for i in range(self.numPairs):
-            print(f'iteration {i} out of {self.numPairs}')
+            #print(f'iteration {i} out of {self.numPairs}')
             start = sync_index + i * pair_stride
 
             a_rx = rxSignal[start:start + indiv_len]
             b_rx = rxSignal[start + indiv_len + self.pairSilence : start + 2 * indiv_len + self.pairSilence]
 
-            print(f'a_rx length: {len(a_rx)}, b_rx length: {len(b_rx)}')
-            print(f'a seq idx: {start} to {start + indiv_len}, b seq idx: {start + indiv_len + self.pairSilence} to {start + 2 * indiv_len + self.pairSilence}')
+            #print(f'a_rx length: {len(a_rx)}, b_rx length: {len(b_rx)}')
+            #print(f'a seq idx: {start} to {start + indiv_len}, b seq idx: {start + indiv_len + self.pairSilence} to {start + 2 * indiv_len + self.pairSilence}')
 
             corr_a = correlate(a_rx, self.a_ref, mode='full')
             corr_b = correlate(b_rx, self.b_ref, mode='full')
@@ -247,7 +247,22 @@ class GolayPairs(Equaliser):
             #Correct normaisation for scaled pairs
             h_norm = h_est / (2*self.indivLength)
 
-            if i == 0:
+
+            #Truncate
+            #print(f'Estimated impulse response for pair {i}, h_est length: {len(h_norm)}, h_est values: {h_norm}')
+
+            H_norm = np.fft.fft(h_norm, n=self.indivLength)
+
+            #Alternative method - Actually works
+            Y_a = np.fft.fft(a_rx, n=self.indivLength)
+            Y_b = np.fft.fft(b_rx, n=self.indivLength)
+
+            A = np.fft.fft(self.a_ref, n=self.indivLength)
+            B = np.fft.fft(self.b_ref, n=self.indivLength)
+
+            H_norm_alt = (Y_a * np.conj(A) + Y_b * np.conj(B)) / (2*self.indivLength)
+            
+            if i == 0 and plot:
                 import questionary
                 plot_corr = False
                 plot_corr = questionary.select("Plot correlation results for first pair? (y/n)", choices=['y', 'n']).ask()
@@ -272,49 +287,36 @@ class GolayPairs(Equaliser):
                     ax_b.set_title('Autocorrelation of b')
                     plt.show()
 
-            #Truncate
-            print(f'Estimated impulse response for pair {i}, h_est length: {len(h_norm)}, h_est values: {h_norm}')
-
-            H_norm = np.fft.fft(h_norm, n=self.indivLength)
-
-            #Alternative method - Actually works
-            Y_a = np.fft.fft(a_rx, n=self.indivLength)
-            Y_b = np.fft.fft(b_rx, n=self.indivLength)
-
-            A = np.fft.fft(self.a_ref, n=self.indivLength)
-            B = np.fft.fft(self.b_ref, n=self.indivLength)
-
-            H_norm_alt = (Y_a * np.conj(A) + Y_b * np.conj(B)) / (2*self.indivLength)
             
 
-            fig, axes = plt.subplots(2, 2, figsize=(10, 8))
-            ax1, ax2, ax3, ax4 = axes.flatten()
-            ax1.plot(np.abs(H_norm), label='H from time-domain correlation')
-            ax1.set_title('H from time-domain correlation')
-            ax1.set_xlabel('Subcarrier index')
-            ax1.set_ylabel('Magnitude')
-            ax1.legend()
+                    fig, axes = plt.subplots(2, 2, figsize=(10, 8))
+                    ax1, ax2, ax3, ax4 = axes.flatten()
+                    ax1.plot(np.abs(H_norm), label='H from time-domain correlation')
+                    ax1.set_title('H from time-domain correlation')
+                    ax1.set_xlabel('Subcarrier index')
+                    ax1.set_ylabel('Magnitude')
+                    ax1.legend()
 
-            ax2.plot(np.abs(H_norm_alt), label='H from FFT method')
-            ax2.set_title('H from FFT method')
-            ax2.set_xlabel('Subcarrier index')
-            ax2.set_ylabel('Magnitude')
-            ax2.legend()
+                    ax2.plot(np.abs(H_norm_alt), label='H from FFT method')
+                    ax2.set_title('H from FFT method')
+                    ax2.set_xlabel('Subcarrier index')
+                    ax2.set_ylabel('Magnitude')
+                    ax2.legend()
 
-            ax3.plot(np.angle(H_norm), label='H from time-domain correlation')
-            ax3.set_title('H from time-domain correlation')
-            ax3.set_xlabel('Subcarrier index')
-            ax3.set_ylabel('Phase')
-            ax3.legend()
+                    ax3.plot(np.angle(H_norm), label='H from time-domain correlation')
+                    ax3.set_title('H from time-domain correlation')
+                    ax3.set_xlabel('Subcarrier index')
+                    ax3.set_ylabel('Phase')
+                    ax3.legend()
 
-            ax4.plot(np.angle(H_norm_alt), label='H from FFT method')
-            ax4.set_title('H from FFT method')
-            ax4.set_xlabel('Subcarrier index')
-            ax4.set_ylabel('Phase')
-            ax4.legend()
+                    ax4.plot(np.angle(H_norm_alt), label='H from FFT method')
+                    ax4.set_title('H from FFT method')
+                    ax4.set_xlabel('Subcarrier index')
+                    ax4.set_ylabel('Phase')
+                    ax4.legend()
 
-            plt.tight_layout(pad=2.0)
-            plt.show()
+                    plt.tight_layout(pad=2.0)
+                    plt.show()
 
             H_list.append(H_norm_alt)
 

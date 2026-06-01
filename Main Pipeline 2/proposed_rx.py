@@ -50,6 +50,7 @@ class Rx:
         self.pilot_spacing = pilot_spacing   #No. blocks between pilot symbols - set to 0 for no repeats
         self.pilot_type = pilot_type
         self.pilot_config = pilot_config
+        self.pair_count = 1 #Not supported yet for multi Golay pairs
 
         # Calulate active subcarrier mask
         self.bin_low = int(np.ceil(f_low * block_length / synchroniser.fs))
@@ -122,14 +123,14 @@ class Rx:
         '''CFO NOT NEEDED'''
         #self.signal_corrected = self.synchroniser.Coarse_CFO_correction(self.signal, key_start_index, second_peak_index)
         self.signal_corrected = self.signal
-        print(f'Starting from sync index {self.synchronisation_index}')
+        #print(f'Starting from sync index {self.synchronisation_index}')
         
 
 
         if self.pilot_spacing == 0:
             current_pilot_start = self.pilot_start_index #CP length zeros transmitted after sync signal
             #print("Estimating channel using pilot 1/1")
-            self.H = self.equaliser.estimate(self.signal_corrected, current_pilot_start, True)
+            self.H = self.equaliser.estimate(self.signal_corrected, current_pilot_start, self.pair_count,  False)
 
             data_start_index = current_pilot_start + self.equaliser.lengthInSamples
             decoded_symbols.extend(self._decode_ofdm_region(data_start_index, len(self.signal_corrected))) #No more pilots in signal
@@ -141,7 +142,7 @@ class Rx:
             while current_pilot_start + self.equaliser.lengthInSamples <= len(self.signal_corrected):
                 
                 
-                self.H = self.equaliser.estimate(self.signal_corrected, current_pilot_start, True)
+                self.H = self.equaliser.estimate(self.signal_corrected, current_pilot_start, self.pair_count,  False)
 
                 section_data_start = current_pilot_start + self.equaliser.lengthInSamples
                 section_data_end = min(
