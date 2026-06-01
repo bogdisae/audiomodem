@@ -6,3 +6,4 @@ questionary
 importlib
 pathlib
 plotly
+pandas

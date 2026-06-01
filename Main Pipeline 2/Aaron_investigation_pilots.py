@@ -13,6 +13,7 @@ from scipy.io.wavfile import read, write
 from constellation import Constellation
 from equaliser import *
 from proposed_synchroniser import *
+from testing_backend import create_test_run_record, append_test_run
 print("Modules imported successfully")
 
 sampleRate = 48000
@@ -158,11 +159,15 @@ def receiveRepeated_chirp_plus_data(standard = True):
         selected_path = pick_wav_file("Select a WAV file:", Path("./Main Pipeline 2/Audio Files/Aaron_Recordings/"))
         fs_rx, sig = wavfile.read(selected_path)
         sig = normalise_signal(sig)
+        rx_log_name = Path(selected_path).stem
 
     elif mode == "Record audio":
         print("Recording mode selected")
         sig = record_audio(sampleRate)
         sig = normalise_signal(sig)
+        rx_log_name = questionary.text("Enter RX test name for logging (not the saved filename):").ask()
+        if rx_log_name is None:
+            rx_log_name = "recorded_audio"
     
     if standard == True:
         repeatedChirp = RepeatedChirpSync(10, 1024, 1024, 20, 20000, sampleRate)
@@ -220,6 +225,7 @@ def receiveRepeated_chirp_plus_data(standard = True):
 
     text_file = pick_csv_file("Select message file:", Path("./Main Pipeline 2/Data Files"))
     known_bit_seq = csv_bytes_to_binary_sequence(text_file)
+    tx_log_name = Path(text_file).stem
 
     colour_seq = gen_colour_seq(known_bit_seq, constellation)
     plot_constellation(receiver.data_symbols[0:2000], colour_seq[0:2000], "Received Constellation with Known Bit Stream Colouring")
@@ -258,11 +264,35 @@ def receiveRepeated_chirp_plus_data(standard = True):
             print(f'Disregarding final bits in partial block - Partial block BER not supported. Block index: {i}, Block start bit index: {start}, Block end bit index: {end}')
     
     print(f"BER variance: {np.var(blocks_ber)}")
-    print(f"BER trend: {np.polyfit(range(len(blocks_ber)), blocks_ber, 1)}")
+    ber_trend = np.polyfit(range(len(blocks_ber)), blocks_ber, 1) if len(blocks_ber) > 1 else np.array([np.nan, np.nan])
+    print(f"BER trend: {ber_trend}")
 
     plt.plot(blocks_ber)
     plt.title("BER per OFDM block")
     plt.show()
+
+    cfo_sfo_estimates = list(getattr(receiver, "a_history", []))
+    h_values = getattr(receiver, "H", None)
+    record = create_test_run_record(
+        tx_name=tx_log_name,
+        rx_name=rx_log_name,
+        mode=f"{'standard' if standard else 'non-standard'} / {mode}",
+        sample_rate=sampleRate,
+        block_length=receiver.block_length,
+        cp_length=receiver.cp_length,
+        active_bins=len(receiver.active_bins),
+        ber_overall=ber,
+        errors=errors,
+        min_len=min_len,
+        blocks_ber=blocks_ber,
+        cfo_sfo_estimates=cfo_sfo_estimates,
+        h_values=h_values,
+        ber_variance=float(np.var(blocks_ber)) if len(blocks_ber) else np.nan,
+        ber_trend_slope=float(ber_trend[0]) if np.ndim(ber_trend) and len(ber_trend) > 0 else np.nan,
+        notes="main pipeline 2 receive test",
+    )
+    log_path = append_test_run(record)
+    print(f"Saved test record to {log_path}")
 
     # print("H shape:", receiver.H.shape)
     # print("H stats: min,max,mean:", np.min(np.abs(receiver.H)), np.max(np.abs(receiver.H)), np.mean(np.abs(receiver.H)))
