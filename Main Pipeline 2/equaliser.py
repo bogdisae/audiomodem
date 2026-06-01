@@ -2,7 +2,7 @@ import numpy as np
 
 from scipy.signal import chirp, correlate
 import matplotlib.pyplot as plt
-from helper import plot_signal, plot_multiple_channel_estimates
+from helper import plot_signal, plot_multiple_channel_estimates, plot_Golay_diagnostics
 
 
 class Equaliser:
@@ -263,61 +263,7 @@ class GolayPairs(Equaliser):
             H_norm_alt = (Y_a * np.conj(A) + Y_b * np.conj(B)) / (2*self.indivLength)
             
             if i == 0 and plot:
-                import questionary
-                plot_corr = False
-                plot_corr = questionary.select("Plot correlation results for first pair? (y/n)", choices=['y', 'n']).ask()
-                if plot_corr == 'y':
-                    plt.plot(h_norm)
-                    plt.title('Combined correlation of received a and b with reference sequences')
-                    plt.xlabel('Lag')
-                    plt.ylabel('Correlation')
-                    plt.show()
-                    fig_a, ax_a = plt.subplots()
-                    ax_a.stem(corr_a, label='C_aa', basefmt=' ')
-                    ax_a.set_xlabel('Lag')
-                    ax_a.set_ylabel('Correlation')
-                    ax_a.legend()
-                    ax_a.set_title('Autocorrelation of a')
-
-                    fig_b, ax_b = plt.subplots()
-                    ax_b.stem(corr_b, label='C_bb', basefmt=' ')
-                    ax_b.set_xlabel('Lag')
-                    ax_b.set_ylabel('Correlation')
-                    ax_b.legend()
-                    ax_b.set_title('Autocorrelation of b')
-                    plt.show()
-
-            
-
-                    fig, axes = plt.subplots(2, 2, figsize=(10, 8))
-                    ax1, ax2, ax3, ax4 = axes.flatten()
-                    ax1.plot(np.abs(H_norm), label='H from time-domain correlation')
-                    ax1.set_title('H from time-domain correlation')
-                    ax1.set_xlabel('Subcarrier index')
-                    ax1.set_ylabel('Magnitude')
-                    ax1.legend()
-
-                    ax2.plot(np.abs(H_norm_alt), label='H from FFT method')
-                    ax2.set_title('H from FFT method')
-                    ax2.set_xlabel('Subcarrier index')
-                    ax2.set_ylabel('Magnitude')
-                    ax2.legend()
-
-                    ax3.plot(np.angle(H_norm), label='H from time-domain correlation')
-                    ax3.set_title('H from time-domain correlation')
-                    ax3.set_xlabel('Subcarrier index')
-                    ax3.set_ylabel('Phase')
-                    ax3.legend()
-
-                    ax4.plot(np.angle(H_norm_alt), label='H from FFT method')
-                    ax4.set_title('H from FFT method')
-                    ax4.set_xlabel('Subcarrier index')
-                    ax4.set_ylabel('Phase')
-                    ax4.legend()
-
-                    plt.tight_layout(pad=2.0)
-                    plt.show()
-
+                plot_Golay_diagnostics(h_norm, corr_a, corr_b, H_norm, H_norm_alt)
             H_list.append(H_norm_alt)
 
 

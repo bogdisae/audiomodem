@@ -182,9 +182,7 @@ def receiveRepeated_chirp_plus_data(standard = True):
     #print("First 10 estimated coefficients:\n", receiver.H[0][:10])
 
     #print(receiver.data_bits[:100])
-    colour_seq = gen_colour_seq(known_bit_seq)
-    plot_constellation(receiver.data_symbols[0:2000])
-
+    
     print('__________________________________________________________\n_____________________________________________________________________')
 
     # text_file = pick_csv_file("Select message file:", Path("./Main Pipeline 2/Data Files"))
@@ -222,6 +220,10 @@ def receiveRepeated_chirp_plus_data(standard = True):
 
     text_file = pick_csv_file("Select message file:", Path("./Main Pipeline 2/Data Files"))
     known_bit_seq = csv_bytes_to_binary_sequence(text_file)
+
+    colour_seq = gen_colour_seq(known_bit_seq, constellation)
+    plot_constellation(receiver.data_symbols[0:2000], colour_seq[0:2000], "Received Constellation with Known Bit Stream Colouring")
+
 
     bit_check = np.linspace(0, len(known_bit_seq)-1, 5000, dtype=int)
     ber, errors, min_len = calculate_ber(known_bit_seq, receiver.data_bits[:5000])

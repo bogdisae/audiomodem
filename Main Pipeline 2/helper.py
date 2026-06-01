@@ -4,6 +4,7 @@ import numpy as np
 from scipy.io.wavfile import write
 import matplotlib.pyplot as plt
 import questionary
+from constellation import Constellation
 from pathlib import Path
 
 
@@ -55,10 +56,15 @@ def synchronisation_plot(recording, correlation, windowed, h, start_index = None
 
     plt.show()
 
-def plot_constellation(symbols):
+def plot_constellation(symbols, colour_seq=None, title="Received Constellation"):
     fig, ax = plt.subplots(1, 1, constrained_layout=True)
-    ax.scatter(symbols.real, symbols.imag)
-    ax.set_title("received symbols")
+
+    if colour_seq is not None:
+        scatter = ax.scatter(symbols.real, symbols.imag, c=colour_seq)
+    else:
+        scatter = ax.scatter(symbols.real, symbols.imag)
+
+    ax.set_title(title)
     plt.show()
 
 def plot_signal(title : str, signal : np.ndarray, v_line_index, second_v_line_index=None, abs = False):
@@ -240,28 +246,53 @@ def save_wav_file(signal, fs):
 
 
 
-def plot_constellation(symbols, title="Constellation Diagram", show=True):
+def plot_constellation(symbols, colour_seq_or_title=None, title="Constellation Diagram", show=True):
     """
-    Plots complex data symbols on the IQ plane.
+    Flexible constellation plot. Accepts either:
+      - plot_constellation(symbols, title_string)
+      - plot_constellation(symbols, colour_seq, title_string)
 
-    Parameters:
-        symbols (np.ndarray): Array of complex symbols
-        title (str): Plot title
-        show (bool): Whether to call plt.show()
+    `colour_seq` should be a list/array of matplotlib colour specifiers
+    with the same length as `symbols`.
     """
     symbols = np.asarray(symbols)
 
-    plt.figure(figsize=(6, 6))
-    plt.scatter(symbols.real, symbols.imag, s=10)
+    # Determine whether second arg is title or colour sequence
+    if isinstance(colour_seq_or_title, str):
+        title = colour_seq_or_title
+        colour_seq = None
+    else:
+        colour_seq = colour_seq_or_title
 
-    plt.axhline(0, color='black', linewidth=0.5)
-    plt.axvline(0, color='black', linewidth=0.5)
+    fig, ax = plt.subplots(1, 1, constrained_layout=True, figsize=(6, 6))
 
-    plt.xlabel("In-phase (I)")
-    plt.ylabel("Quadrature (Q)")
-    plt.title(title)
-    plt.grid(True)
-    plt.axis("equal")
+    if colour_seq is None:
+        ax.scatter(symbols.real, symbols.imag, s=10)
+    else:
+        # If lengths mismatch, fall back to single-colour scatter
+        if len(colour_seq) != len(symbols):
+            import warnings
+            warnings.warn("colour_seq length does not match symbols; ignoring colours")
+            ax.scatter(symbols.real, symbols.imag, s=10)
+        else:
+            # Plot points grouped by colour and add legend entries
+            unique_cols = []
+            for c in colour_seq:
+                if c not in unique_cols:
+                    unique_cols.append(c)
+            for c in unique_cols:
+                idx = [i for i, col in enumerate(colour_seq) if col == c]
+                pts = symbols[idx]
+                ax.scatter(pts.real, pts.imag, c=c, s=10, label=c)
+            ax.legend(title='Colour')
+
+    ax.axhline(0, color='black', linewidth=0.5)
+    ax.axvline(0, color='black', linewidth=0.5)
+    ax.set_xlabel("In-phase (I)")
+    ax.set_ylabel("Quadrature (Q)")
+    ax.set_title(title)
+    ax.grid(True)
+    ax.axis("equal")
 
     if show:
         plt.show()
@@ -370,5 +401,100 @@ def plot_pilot_phase(H1, H2, plotting_mask, section_index,f,a_meas, phase_diff):
     plt.tight_layout(pad=2.0)
     plt.show()
 
-    def gen_colour_seq(known_bit_stream, constellation):
-        
+def gen_colour_seq(known_bit_stream, constellation):
+    """
+    Generate a colour sequence for a known bit stream given a `Constellation`.
+
+    This maps each symbol (from groups of bits) to a fixed colour. Accepts
+    bit values as strings ('0'/'1') or integers (0/1). If the bit-stream
+    length is not divisible by `bits_per_symbol` the final incomplete group
+    is ignored.
+    """
+    # Normalize bits to strings '0'/'1'
+    bit_strs = [str(b) for b in known_bit_stream]
+    bps = constellation.bits_per_symbol
+
+    # Truncate to whole symbols
+    n_groups = len(bit_strs) // bps
+    groups = [tuple(bit_strs[i * bps:(i + 1) * bps]) for i in range(n_groups)]
+
+    # Colour map per bit-tuple (extendable)
+    if bps == 1:
+        colour_map = {
+            ('0',): 'blue',
+            ('1',): 'red',
+        }
+    elif bps == 2:
+        colour_map = {
+            ('0', '0'): 'blue',
+            ('0', '1'): 'orange',
+            ('1', '0'): 'green',
+            ('1', '1'): 'red',
+        }
+    else:
+        # Generic mapping: convert tuple to integer and map to a colour cycle
+        base_cols = ['blue', 'orange', 'green', 'red', 'purple', 'brown', 'grey']
+        colour_map = {}
+        for i, g in enumerate(sorted(constellation.constellation.keys())):
+            colour_map[g] = base_cols[i % len(base_cols)]
+
+    colour_seq = [colour_map.get(g, 'grey') for g in groups]
+    return colour_seq
+
+
+    
+def plot_Golay_diagnostics(h_norm, corr_a, corr_b, H_norm, H_norm_alt):
+    import questionary
+    plot_corr = False
+    plot_corr = questionary.select("Plot correlation results for first pair? (y/n)", choices=['y', 'n']).ask()
+    if plot_corr == 'y':
+        plt.plot(h_norm)
+        plt.title('Combined correlation of received a and b with reference sequences')
+        plt.xlabel('Lag')
+        plt.ylabel('Correlation')
+        plt.show()
+        fig_a, ax_a = plt.subplots()
+        ax_a.stem(corr_a, label='C_aa', basefmt=' ')
+        ax_a.set_xlabel('Lag')
+        ax_a.set_ylabel('Correlation')
+        ax_a.legend()
+        ax_a.set_title('Autocorrelation of a')
+
+        fig_b, ax_b = plt.subplots()
+        ax_b.stem(corr_b, label='C_bb', basefmt=' ')
+        ax_b.set_xlabel('Lag')
+        ax_b.set_ylabel('Correlation')
+        ax_b.legend()
+        ax_b.set_title('Autocorrelation of b')
+        plt.show()
+
+
+
+        fig, axes = plt.subplots(2, 2, figsize=(10, 8))
+        ax1, ax2, ax3, ax4 = axes.flatten()
+        ax1.plot(np.abs(H_norm), label='H from time-domain correlation')
+        ax1.set_title('H from time-domain correlation')
+        ax1.set_xlabel('Subcarrier index')
+        ax1.set_ylabel('Magnitude')
+        ax1.legend()
+
+        ax2.plot(np.abs(H_norm_alt), label='H from FFT method')
+        ax2.set_title('H from FFT method')
+        ax2.set_xlabel('Subcarrier index')
+        ax2.set_ylabel('Magnitude')
+        ax2.legend()
+
+        ax3.plot(np.angle(H_norm), label='H from time-domain correlation')
+        ax3.set_title('H from time-domain correlation')
+        ax3.set_xlabel('Subcarrier index')
+        ax3.set_ylabel('Phase')
+        ax3.legend()
+
+        ax4.plot(np.angle(H_norm_alt), label='H from FFT method')
+        ax4.set_title('H from FFT method')
+        ax4.set_xlabel('Subcarrier index')
+        ax4.set_ylabel('Phase')
+        ax4.legend()
+
+        plt.tight_layout(pad=2.0)
+        plt.show()

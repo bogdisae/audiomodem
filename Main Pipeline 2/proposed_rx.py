@@ -90,57 +90,10 @@ class Rx:
         a_meas = np.sum((f[plotting_mask > 0] - np.mean(f[plotting_mask > 0])) * (y[plotting_mask > 0] - np.mean(y[plotting_mask > 0]))) / np.sum((f[plotting_mask > 0] - np.mean(f[plotting_mask > 0]))**2)
         self.a_history.append(a_meas)      
 
-        from matplotlib import pyplot as plt
-        
 
-        import matplotlib.gridspec as gridspec
-
-        fig = plt.figure(figsize=(9, 10))
-        gs = gridspec.GridSpec(3, 2, figure=fig)
-        ax1 = fig.add_subplot(gs[0, 0])
-        ax2 = fig.add_subplot(gs[0, 1])
-        ax3 = fig.add_subplot(gs[1, 0])
-        ax4 = fig.add_subplot(gs[1, 1])
-        ax5 = fig.add_subplot(gs[2, :])
-
-        # Magnitude of channel estimate for current section
-        ax1.plot(np.abs(self.H[section_index])*plotting_mask)
-        ax1.set_title(f'H magnitude (idx {section_index})')
-        ax1.set_xlabel('Frequency Bin')
-        ax1.set_ylabel('Magnitude')
-
-        # Magnitude of channel estimate for next section
-        ax2.plot(np.abs(self.H[section_index+1])*plotting_mask)
-        ax2.set_title(f'H magnitude (idx {section_index + 1})')
-        ax2.set_xlabel('Frequency Bin')
-        ax2.set_ylabel('Magnitude')
-
-        # Phase of channel estimate for current section
-        ax3.plot(np.angle(self.H[section_index])*plotting_mask)
-        ax3.set_title(f'H phase (idx {section_index})')
-        ax3.set_xlabel('Frequency Bin')
-        ax3.set_ylabel('Phase (rad)')
-
-        # Phase of channel estimate for next section
-        ax4.plot(np.angle(self.H[section_index+1])*plotting_mask)
-        ax4.set_title(f'H phase (idx {section_index + 1})')
-        ax4.set_xlabel('Frequency Bin')
-        ax4.set_ylabel('Phase (rad)')
-
-        # Phase difference between successive channel estimates
-        ax5.plot(self.phase_diff[section_index]*plotting_mask)
-        ax5.plot(f, a_meas * f *plotting_mask, 'r--', label=f'Linear fit: a={a_meas:.2e} rad/Hz')
-        ax5.plot(f, a_meas * f *plotting_mask +np.pi, 'g--', label=f'Linear fit: a={a_meas:.2e} rad/Hz')
-        ax5.plot(f, a_meas * f *plotting_mask -np.pi, 'g--', label=f'Linear fit: a={a_meas:.2e} rad/Hz')
-        ax5.set_title(f'Phase difference (idx {section_index + 1} / idx {section_index})')
-        ax5.set_xlabel('Frequency Bin')
-        ax5.set_ylabel('Phase (rad)')
-
-        fig.subplots_adjust(hspace=0.55, wspace=0.35)
-        plt.tight_layout(pad=2.0)
-        plt.show()
-
-        plot_pilot_phase(self.H[section_index],self.H[section_index+1], plotting_mask, section_index, f, a_meas, self.phase_diff[section_index])
+        plot=False
+        if plot == True:
+            plot_pilot_phase(self.H[section_index],self.H[section_index+1], plotting_mask, section_index, f, a_meas, self.phase_diff[section_index])
         pass
 
     def decode_ofdm_block(self, block, section_index = 0): #if using COMB - H only stored in index 0
@@ -236,10 +189,15 @@ class Rx:
                     
                     
                     self.H[section_index] = self.equaliser.estimate(self.signal, current_pilot_start, self.pair_count,  False)
-                    samples_to_next_pilot = self.pilot_spacing * symbol_length 
-                    self.H[section_index + 1] = self.equaliser.estimate(self.signal, current_pilot_start + self.equaliser.lengthInSamples + samples_to_next_pilot, self.pair_count,  False)
-                    print(f'CE idx:{section_index}, current pilot start: {current_pilot_start}, next pilot start: {current_pilot_start + samples_to_next_pilot}')
-                    self.block_SFO_correction(section_index)
+                    samples_to_next_pilot = self.pilot_spacing * symbol_length
+                     
+                    try:
+                        self.H[section_index + 1] = self.equaliser.estimate(self.signal, current_pilot_start + self.equaliser.lengthInSamples + samples_to_next_pilot, self.pair_count,  False)
+                        print(f'CE idx:{section_index}, current pilot start: {current_pilot_start}, next pilot start: {current_pilot_start + samples_to_next_pilot}')
+                        self.block_SFO_correction(section_index)
+                    except:
+
+                        print(f'Failed on end blocks region - not implemented correction yet. Still tries one too many block at the end')
 
                     section_data_start = current_pilot_start + self.equaliser.lengthInSamples
                     section_data_end = min(
