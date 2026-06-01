@@ -200,8 +200,8 @@ def receive_SingleChirp_plus_data(): # DOESNT WORK BECAUSE THE CHANNEL ESTIMATIO
     print(receiver.data_bytes)
 
 
-#receiveRepeated_chirp_plus_data()
-generateRepeatedChirp_plus_data()
+receiveRepeated_chirp_plus_data()
+#generateRepeatedChirp_plus_data()
 
 #generateSingleChirp_plus_data()
 #receive_SingleChirp_plus_data()
