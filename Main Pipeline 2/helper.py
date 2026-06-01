@@ -498,3 +498,19 @@ def plot_Golay_diagnostics(h_norm, corr_a, corr_b, H_norm, H_norm_alt):
 
         plt.tight_layout(pad=2.0)
         plt.show()
+
+def estimate_delay_spread(h_est, fs):
+    # h_est is the estimated impulse response (time-domain)
+    # fs is the sampling frequency
+
+    power = np.abs(h_est)**2
+    power /= np.sum(power)  # Normalize to get power distribution
+
+    delay_indices = np.arange(len(h_est))
+    mean_delay = np.sum(delay_indices * power)
+    mean_delay_squared = np.sum((delay_indices**2) * power)
+
+    rms_delay_spread = np.sqrt(mean_delay_squared - mean_delay**2)
+
+    delay_spread_seconds = rms_delay_spread / fs
+    return delay_spread_seconds

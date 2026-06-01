@@ -2,7 +2,7 @@ import numpy as np
 
 from scipy.signal import chirp, correlate
 import matplotlib.pyplot as plt
-from helper import plot_signal, plot_multiple_channel_estimates, plot_Golay_diagnostics
+from helper import plot_signal, plot_multiple_channel_estimates, plot_Golay_diagnostics, estimate_delay_spread
 
 
 class Equaliser:
@@ -275,4 +275,9 @@ class GolayPairs(Equaliser):
 
         #print(f'H values: {np.mean(np.abs(H_est_avg))}, {np.mean(np.abs(H_est_avg))}')
         
+        #Estimate delay spread
+        h_norm_avg = np.fft.ifft(H_norm_avg)
+        delay_spread = estimate_delay_spread(h_norm_avg, self.fs)
+        print(f'Estimated delay spread: {delay_spread*1e3:.2f} milliseconds. CP time should be at least this long to avoid ISI. CP length in ms: {self.indivLength/self.fs*1e3:.2f} ms')
+
         return H_norm_avg
