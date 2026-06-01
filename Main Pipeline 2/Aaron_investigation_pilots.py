@@ -178,8 +178,8 @@ def receiveRepeated_chirp_plus_data(standard = True):
     receiver.decode()
 
     #print(f'Symbols decoded: {receiver.data_symbols[:100]}')
-    #print ("Number of coefficients:", len(receiver.H))
-    #print("First 10 estimated coefficients:\n", receiver.H[:10])
+    #print ("Number of coefficients:", len(receiver.H[0]))
+    #print("First 10 estimated coefficients:\n", receiver.H[0][:10])
 
     #print(receiver.data_bits[:100])
     plot_constellation(receiver.data_symbols[0:100])
