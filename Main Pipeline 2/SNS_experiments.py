@@ -41,10 +41,11 @@ def generateRepeatedChirp_plus_data():
     text_file = pick_text_file("Select message file:", Path("./Main Pipeline 2/Data Files"))
     data_bytes = csv_to_data_bytes(text_file)
 
-    repeatedChirp = RepeatedChirp(10, 1024, 0, 20, 20000, sampleRate)
-    key = repeatedChirp.generate()
+    repeatedChirpEstim = RepeatedChirp(10, 1024, 0, 20, 20000, sampleRate)
+    repeatedChirpSync = RepeatedChirpSync(10, 1024, 0, 20, 20000, sampleRate)
+    key = repeatedChirpSync.generate()
 
-    transmitter = Tx(constellation, data_bytes, repeatedChirp, 'Block', 1024, 1024)
+    transmitter = Tx(constellation, data_bytes, repeatedChirpEstim, repeatedChirpSync, 'COMB', 1024, 1024)
     transmitter.encode()
 
     sig = transmitter.transmitted_signal
@@ -54,6 +55,7 @@ def generateRepeatedChirp_plus_data():
     if filename is None:
         raise SystemExit("No filename provided")
     write(f"Main Pipeline 2/Audio Files/{filename}.wav", sampleRate, combined_int16)
+    print(len(sig))
     
 def receiveRepeated_chirp_plus_data():
 
@@ -159,6 +161,8 @@ def generateSingleChirp_plus_data():
         raise SystemExit("No filename provided")
     write(f"Main Pipeline 2/Audio Files/{filename}.wav", sampleRate, combined_int16)
 
+    print(len(sig))
+
 def receive_SingleChirp_plus_data(): # DOESNT WORK BECAUSE THE CHANNEL ESTIMATION IS FUCKED!
 
     mode = questionary.select("Do you want to record audio or select an existing file?",
@@ -196,8 +200,8 @@ def receive_SingleChirp_plus_data(): # DOESNT WORK BECAUSE THE CHANNEL ESTIMATIO
     print(receiver.data_bytes)
 
 
-receiveRepeated_chirp_plus_data()
-#generateRepeatedChirp_plus_data()
+#receiveRepeated_chirp_plus_data()
+generateRepeatedChirp_plus_data()
 
 #generateSingleChirp_plus_data()
 #receive_SingleChirp_plus_data()
