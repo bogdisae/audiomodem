@@ -277,7 +277,7 @@ class GolayPairs(Equaliser):
 
             H_norm = np.fft.fft(h_norm, n=self.indivLength)
 
-            #Alternative method
+            #Alternative method - Actually works
             Y_a = np.fft.fft(a_rx, n=self.indivLength)
             Y_b = np.fft.fft(b_rx, n=self.indivLength)
 
