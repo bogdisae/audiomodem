@@ -26,8 +26,13 @@ def _jsonify(value: Any) -> Any:
 @dataclass
 class TestRunRecord:
     timestamp: str
+    sweep_name: str
+    sweep_value: str
+    sweep_index: int
     tx_name: str
     rx_name: str
+    tx_file: str
+    rx_file: str
     mode: str
     sample_rate: int
     block_length: int
@@ -56,8 +61,13 @@ class TestRunRecord:
 
 def create_test_run_record(
     *,
+    sweep_name: str,
+    sweep_value: str,
+    sweep_index: int,
     tx_name: str,
     rx_name: str,
+    tx_file: str,
+    rx_file: str,
     mode: str,
     sample_rate: int,
     block_length: int,
@@ -91,8 +101,13 @@ def create_test_run_record(
 
     return TestRunRecord(
         timestamp=datetime.now().isoformat(timespec="seconds"),
+        sweep_name=sweep_name,
+        sweep_value=sweep_value,
+        sweep_index=int(sweep_index),
         tx_name=tx_name,
         rx_name=rx_name,
+        tx_file=tx_file,
+        rx_file=rx_file,
         mode=mode,
         sample_rate=sample_rate,
         block_length=block_length,
