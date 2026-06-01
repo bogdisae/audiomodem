@@ -31,6 +31,15 @@ class Rx:
 
     #AM additions
     pilot_spacing : int
+    key_pilot_samples_spacing : int
+    pilot_type : str
+    pilot_config : str
+    pair_count : int
+
+    #SNS
+    pilot_bins : np.ndarray
+    a_history : list
+    
 
     def __init__(self, constellation: Constellation, signal:np.ndarray, cp_length: int,
                  block_length: int, equaliser : Equaliser, synchroniser : Synchroniser, pilot_type, pilot_config,

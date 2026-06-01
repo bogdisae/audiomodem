@@ -30,7 +30,13 @@ class Tx:
     bin_high : int
     active_bins : np.ndarray
 
-    def __init__(self, constellation: Constellation, data_bytes: np.ndarray, equaliser : Equaliser, synchroniser: Synchroniser,  cp_length: int, block_length: int,
+    pilot_spacing : int
+    key_pilot_samples_spacing : int
+    pilot_type : str
+    pilot_config : str
+
+
+    def __init__(self, constellation: Constellation, data_bytes: np.ndarray, equaliser : Equaliser, synchroniser: Synchroniser, pilot_type, pilot_config,  cp_length: int, block_length: int,
                 pilot_spacing = 10, key_pilot_samples_spacing = 1024, f_low = 230, f_high = 14500):
         
         self.constellation = constellation
@@ -39,14 +45,27 @@ class Tx:
         self.synchroniser = synchroniser
         self.cp_length = cp_length
         self.block_length = block_length
-        self.pilot_spacing = pilot_spacing
-        self.key_pilot_samples_spacing = key_pilot_samples_spacing
+
+        #Global pilot assignments
+        self.pilot_type = pilot_type
+        self.pilot_config = pilot_config
+
+        
 
         # Calulate active subcarrier mask
         self.bin_low = int(np.ceil(f_low * block_length / equaliser.fs))
         self.bin_high = int(np.floor(f_high * block_length / equaliser.fs))
         # Using the equaliser fs feels messy but will do
         self.active_bins = np.arange(self.bin_low, self.bin_high + 1)
+
+        #PILOT SETUP
+        if pilot_config == "Block":    
+            self.pilot_spacing = pilot_spacing
+            self.key_pilot_samples_spacing = key_pilot_samples_spacing
+
+        else: #COMB
+            self.pilot_bins = self.active_bins[::pilot_spacing]
+            self.data_bins = np.array([k for k in self.active_bins if k not in self.pilot_bins])
 
 
     def create_noise_key(noise_samples, n_taps):
@@ -73,6 +92,12 @@ class Tx:
         # Hermitian symmetry
         X[-self.active_bins] = np.conj(block)
 
+        #IF COMB PILOT
+        if self.pilot_config == "COMB":
+            X[self.pilot_bins] = self.constellation.default_pilot
+            #Hermitian symmetry
+            X[-self.pilot_bins] = np.conj(X[self.pilot_bins])
+
         ofdm_block = np.fft.ifft(X).real
         return np.concatenate([ofdm_block[-self.cp_length:], ofdm_block])
 
@@ -98,17 +123,21 @@ class Tx:
     def assemble_signal(self):
         ofdm_blocks = np.copy(self.ofdm_symbol_blocks)
         ofdm_blocks = ofdm_blocks / np.abs(np.max(ofdm_blocks))
-        if self.pilot_spacing == 0:
-            self.transmitted_signal = np.concatenate([self.synchroniser.generate(), np.zeros(self.key_pilot_samples_spacing), self.equaliser.generate(), np.concatenate(ofdm_blocks)]) #Removed before equaliser.generate()
-        else:
-            pilot_signal = self.equaliser.generate()
-            sections = []
-            for i, block in enumerate(ofdm_blocks):
-                if i % self.pilot_spacing == 0:
-                    sections.append(pilot_signal)
-                    print(f'Pilot inserted before block {i}')
-                sections.append(block)
-            self.transmitted_signal = np.concatenate([self.synchroniser.generate(), np.zeros(self.key_pilot_samples_spacing), np.concatenate(sections)])
+        if self.pilot_config == "Block":
+            if self.pilot_spacing == 0:
+                self.transmitted_signal = np.concatenate([self.synchroniser.generate(), np.zeros(self.key_pilot_samples_spacing), self.equaliser.generate(), np.concatenate(ofdm_blocks)]) #Removed before equaliser.generate()
+            else:
+                pilot_signal = self.equaliser.generate()
+                sections = []
+                for i, block in enumerate(ofdm_blocks):
+                    if i % self.pilot_spacing == 0:
+                        sections.append(pilot_signal)
+                        print(f'Pilot inserted before block {i}')
+                    sections.append(block)
+                self.transmitted_signal = np.concatenate([self.synchroniser.generate(), np.zeros(self.key_pilot_samples_spacing), np.concatenate(sections)])
+        else: 
+            #Pilot config is COMB
+            self.transmitted_signal = np.concatenate([self.synchroniser.generate(), np.zeros(self.cp_length), np.concatenate(ofdm_blocks)])
     def encode(self):
         self.encode_symbols()
         self.prep_ofdm_blocks()
