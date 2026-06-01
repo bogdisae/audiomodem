@@ -4,11 +4,13 @@ class Constellation:
     bits_per_symbol: int
     constellation: dict
     constellation_inequalities: dict 
+    default_pilot: complex
 
-    def __init__(self, bits_per_symbol, constellation, constellation_inequalities):
+    def __init__(self, bits_per_symbol, constellation, constellation_inequalities, default_pilot=1+0j):
         self.bits_per_symbol = bits_per_symbol
         self.constellation = constellation
         self.constellation_inequalities = constellation_inequalities
+        self.default_pilot = default_pilot
     
     def bits_to_symbols(self, bits):
         if len(bits)%self.bits_per_symbol!=0:

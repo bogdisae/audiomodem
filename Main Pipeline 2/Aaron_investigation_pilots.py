@@ -36,7 +36,9 @@ constellation = Constellation(1, {
 }, {
     ('0',): lambda s: s.real >= 0,
     ('1',): lambda s: s.real < 0
-})
+}, default_pilot=1+0j)
+
+
 def m4a_to_wav():
     selected_path = pick_m4a_file("Select an M4A file:", Path("./Main Pipeline 2/Audio Files/Aaron_Recordings/Phone_rec"))
     # Use ffmpeg to convert the selected M4A file to WAV format
