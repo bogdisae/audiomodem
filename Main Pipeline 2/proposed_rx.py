@@ -91,9 +91,12 @@ class Rx:
         self.a_history.append(a_meas)      
 
 
-        plot=False
+        plot=True
         if plot == True:
             plot_pilot_phase(self.H[section_index],self.H[section_index+1], plotting_mask, section_index, f, a_meas, self.phase_diff[section_index])
+            print("Drift per sample (a_meas): ", a_meas, "radians/bin. Should be close to zero for good synchronisation.")
+            time_drift_per_sec = (-a_meas * self.block_length / (2*np.pi)) / (self.synchroniser.fs*self.symbol_length * self.pilot_spacing)
+            print(f"Corresponds to {time_drift_per_sec:.6g} s drift at sample rate {self.synchroniser.fs} Hz.")
         pass
 
     def decode_ofdm_block(self, block, section_index = 0): #if using COMB - H only stored in index 0
