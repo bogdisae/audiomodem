@@ -318,3 +318,54 @@ def calculate_ber(seq1, seq2):
         raise ValueError("Sequences are empty, cannot compute BER")
 
     return ber, errors, min_len
+
+def plot_pilot_phase(H1, H2, plotting_mask, section_index,f,a_meas, phase_diff):
+    from matplotlib import pyplot as plt
+        
+
+    import matplotlib.gridspec as gridspec
+
+    fig = plt.figure(figsize=(9, 10))
+    gs = gridspec.GridSpec(3, 2, figure=fig)
+    ax1 = fig.add_subplot(gs[0, 0])
+    ax2 = fig.add_subplot(gs[0, 1])
+    ax3 = fig.add_subplot(gs[1, 0])
+    ax4 = fig.add_subplot(gs[1, 1])
+    ax5 = fig.add_subplot(gs[2, :])
+
+    # Magnitude of channel estimate for current section
+    ax1.plot(np.abs(H1*plotting_mask))
+    ax1.set_title(f'H magnitude (idx {section_index})')
+    ax1.set_xlabel('Frequency Bin')
+    ax1.set_ylabel('Magnitude')
+
+    # Magnitude of channel estimate for next section
+    ax2.plot(np.abs(H2*plotting_mask))
+    ax2.set_title(f'H magnitude (idx {section_index + 1})')
+    ax2.set_xlabel('Frequency Bin')
+    ax2.set_ylabel('Magnitude')
+
+    # Phase of channel estimate for current section
+    ax3.plot(np.angle(H1*plotting_mask))
+    ax3.set_title(f'H phase (idx {section_index})')
+    ax3.set_xlabel('Frequency Bin')
+    ax3.set_ylabel('Phase (rad)')
+
+    # Phase of channel estimate for next section
+    ax4.plot(np.angle(H2*plotting_mask))
+    ax4.set_title(f'H phase (idx {section_index + 1})')
+    ax4.set_xlabel('Frequency Bin')
+    ax4.set_ylabel('Phase (rad)')
+
+    # Phase difference between successive channel estimates
+    ax5.plot(phase_diff*plotting_mask)
+    ax5.plot(f, a_meas * f *plotting_mask, 'r--', label=f'Linear fit: a={a_meas:.2e} rad/Hz')
+    ax5.plot(f, a_meas * f *plotting_mask +np.pi, 'g--', label=f'Linear fit: a={a_meas:.2e} rad/Hz')
+    ax5.plot(f, a_meas * f *plotting_mask -np.pi, 'g--', label=f'Linear fit: a={a_meas:.2e} rad/Hz')
+    ax5.set_title(f'Phase difference (idx {section_index + 1} / idx {section_index})')
+    ax5.set_xlabel('Frequency Bin')
+    ax5.set_ylabel('Phase (rad)')
+
+    fig.subplots_adjust(hspace=0.55, wspace=0.35)
+    plt.tight_layout(pad=2.0)
+    plt.show()

@@ -2,6 +2,7 @@ import numpy as np
 from constellation import Constellation
 from equaliser import Equaliser, GolayPairs
 from proposed_synchroniser import Synchroniser, RepeatedChirpSync
+from helper import plot_pilot_phase
 
 class Rx:
     signal: np.ndarray
@@ -138,6 +139,8 @@ class Rx:
         fig.subplots_adjust(hspace=0.55, wspace=0.35)
         plt.tight_layout(pad=2.0)
         plt.show()
+
+        plot_pilot_phase(self.H[section_index],self.H[section_index+1], plotting_mask, section_index, f, a_meas, self.phase_diff[section_index])
         pass
 
     def decode_ofdm_block(self, block, section_index = 0): #if using COMB - H only stored in index 0
