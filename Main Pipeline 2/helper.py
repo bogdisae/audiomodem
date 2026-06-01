@@ -369,3 +369,6 @@ def plot_pilot_phase(H1, H2, plotting_mask, section_index,f,a_meas, phase_diff):
     fig.subplots_adjust(hspace=0.55, wspace=0.35)
     plt.tight_layout(pad=2.0)
     plt.show()
+
+    def gen_colour_seq(known_bit_stream, constellation):
+        

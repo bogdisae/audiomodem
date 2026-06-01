@@ -182,7 +182,8 @@ def receiveRepeated_chirp_plus_data(standard = True):
     #print("First 10 estimated coefficients:\n", receiver.H[0][:10])
 
     #print(receiver.data_bits[:100])
-    plot_constellation(receiver.data_symbols[0:100])
+    colour_seq = gen_colour_seq(known_bit_seq)
+    plot_constellation(receiver.data_symbols[0:2000])
 
     print('__________________________________________________________\n_____________________________________________________________________')
 
