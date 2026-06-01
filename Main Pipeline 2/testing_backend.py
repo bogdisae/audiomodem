@@ -15,11 +15,13 @@ DEFAULT_LOG_PATH = Path(__file__).resolve().parent / "Data Files" / "test_runs.c
 
 def _jsonify(value: Any) -> Any:
     if isinstance(value, np.ndarray):
-        return json.dumps(value.tolist())
+        return json.dumps(_jsonify(value.tolist()))
     if isinstance(value, (list, tuple)):
-        return json.dumps(list(value))
+        return [_jsonify(item) for item in value]
     if isinstance(value, (np.integer, np.floating)):
         return value.item()
+    if isinstance(value, (complex, np.complexfloating)):
+        return {"real": float(np.real(value)), "imag": float(np.imag(value))}
     return value
 
 
