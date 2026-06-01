@@ -1,6 +1,7 @@
 from equaliser import Equaliser, RepeatedChirp, Chirp
-from tx import Tx
-from rx import Rx
+from proposed_synchroniser import RepeatedChirpSync
+from proposed_tx import Tx
+from proposed_rx import Rx
 from helper import pick_text_file, csv_to_data_bytes, pick_wav_file, normalise_signal, record_audio, plot_constellation
 from helper import csv_bytes_to_binary_sequence, calculate_ber
 from pathlib import Path
