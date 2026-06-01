@@ -91,6 +91,7 @@ def generateChirp_plus_data(standard = True):
 
     #STANDARD CHIRP PARAMETERS
     if standard == True:
+        print("Using standard chirp parameters for testing")
         repeatedChirp = RepeatedChirpSync(10, 1024, 1024, 20, 20000, sampleRate)
         key = repeatedChirp.generate()
         golayPairs = GolayPairs(1024, 10240, numPairs=1, fs=sampleRate)
@@ -105,6 +106,7 @@ def generateChirp_plus_data(standard = True):
             pilot_spacing=10,
         )
     else:
+        print("Using non-standard chirp parameters for testing - expect worse performance")
         #Experimental CHIRP PARAMETERS
         repeatedChirp = RepeatedChirpSync(2, 1024, 1024, 0, 20000, sampleRate)
         key = repeatedChirp.generate()
@@ -117,7 +119,7 @@ def generateChirp_plus_data(standard = True):
             synchroniser=repeatedChirp,
             cp_length=1024,
             block_length=1024,
-            pilot_spacing=10,
+            pilot_spacing=0,
         )
 
     transmitter.encode()
@@ -165,7 +167,7 @@ def receiveRepeated_chirp_plus_data(standard = True):
     else:
         repeatedChirp = RepeatedChirpSync(2, 1024, 1024, 0, 20000, sampleRate)
         golayPairs = GolayPairs(1024, 10240, numPairs=1, fs=sampleRate)
-        receiver = Rx(constellation, sig, 128, 1024, golayPairs, repeatedChirp, "Golay", "Block")
+        receiver = Rx(constellation, sig, 1024, 1024, golayPairs, repeatedChirp, "Golay", "Block", pilot_spacing=0)
 
     #pilot_alignment_CPE_estimation(golayPairs, repeatedChirp, sig)
 
@@ -176,7 +178,7 @@ def receiveRepeated_chirp_plus_data(standard = True):
     #print("First 10 estimated coefficients:\n", receiver.H[:10])
 
     #print(receiver.data_bits[:100])
-    plot_constellation(receiver.data_symbols[0:1000])
+    plot_constellation(receiver.data_symbols[0:100])
 
     print('__________________________________________________________\n_____________________________________________________________________')
 
@@ -226,12 +228,19 @@ def receiveRepeated_chirp_plus_data(standard = True):
     blocks_ber = []
     bits_per_symbol = constellation.bits_per_symbol
     bits_per_block = len(receiver.active_bins) * bits_per_symbol
-    print(f"No. Blocks expected: {len(known_bit_seq) / bits_per_block}")
+    expected_blocks = len(known_bit_seq) / bits_per_block
+    print(f"No. Blocks expected: {expected_blocks}")
 
-    for i in range(len(receiver.ofdm_blocks)):
-        
-        start = i * bits_per_block
-        end = (i + 1) * bits_per_block
+    for i in range(int(expected_blocks)+1): #Cover partial block case. Not implemented yet to handle properly. (0 indexing)
+        if i != int(expected_blocks):
+            
+            start = i * bits_per_block
+            end = (i + 1) * bits_per_block
+
+        else:
+            #Truncating the funcal block
+            start = i * bits_per_block
+            end = len(known_bit_seq) #Truncate to actual length of known bit seq for final partial block - not supported yet to calculate BER for this partial block, so will be disregarded in BER calc.
         try:
             ber_i, errors_i, min_len_i = calculate_ber(
                 known_bit_seq[start:end],
@@ -239,7 +248,7 @@ def receiveRepeated_chirp_plus_data(standard = True):
             )
             blocks_ber.append(ber_i)
         except:
-            print(f'Disregarding final bits in partial block - Partial block BER not supported')
+            print(f'Disregarding final bits in partial block - Partial block BER not supported. Block index: {i}, Block start bit index: {start}, Block end bit index: {end}')
     
     print(f"BER variance: {np.var(blocks_ber)}")
     print(f"BER trend: {np.polyfit(range(len(blocks_ber)), blocks_ber, 1)}")
@@ -255,6 +264,7 @@ def receiveRepeated_chirp_plus_data(standard = True):
 print("Functions compiled successfully")
 
 def main():
+    standard = questionary.confirm("Use standard chirp parameters?").ask()
     mode = questionary.select("Which function do you want to run?", choices=[
         "Convert M4A to WAV and run","Laptop rec and run",'Create and save']).ask()
 
@@ -262,9 +272,9 @@ def main():
         m4a_to_wav()
         receiveRepeated_chirp_plus_data()
     elif mode == "Laptop rec and run":
-        receiveRepeated_chirp_plus_data()
+        receiveRepeated_chirp_plus_data(standard)
     else:
-        generateChirp_plus_data()
+        generateChirp_plus_data(standard)
 
 main()
 

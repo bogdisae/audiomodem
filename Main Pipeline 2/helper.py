@@ -314,7 +314,7 @@ def calculate_ber(seq1, seq2):
     if min_len != 0:
         ber = errors / min_len
     else:
-        print(f'Squence with zero length is: {1 if len(seq1) == 0 else 2}')
+        print(f'Sequence with zero length is: {1 if len(seq1) == 0 else 2}')
         raise ValueError("Sequences are empty, cannot compute BER")
 
     return ber, errors, min_len

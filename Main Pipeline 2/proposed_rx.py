@@ -129,8 +129,8 @@ class Rx:
 
         if self.pilot_spacing == 0:
             current_pilot_start = self.pilot_start_index #CP length zeros transmitted after sync signal
-            #print("Estimating channel using pilot 1/1")
-            self.H = self.equaliser.estimate(self.signal_corrected, current_pilot_start, self.pair_count,  False)
+            print("Estimating channel using pilot 1/1")
+            self.H = self.equaliser.estimate(self.signal_corrected, current_pilot_start, self.pair_count,  True)
 
             data_start_index = current_pilot_start + self.equaliser.lengthInSamples
             decoded_symbols.extend(self._decode_ofdm_region(data_start_index, len(self.signal_corrected))) #No more pilots in signal
