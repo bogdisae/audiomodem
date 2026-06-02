@@ -21,12 +21,12 @@ def load_dict(filename):
     with open(filename, 'rb') as f:
         return pickle.load(f)
     
-def record(t=3, savefile = False, filedir='bogdan/recordings/', fs=44100):
+def record(t=3, savefile = False, filedir='bogdan/recordings/', fs=48000):
     recording = sd.rec(int(t * fs), samplerate=fs, channels=1).reshape(int(t*fs))
     sd.wait()
     if savefile:
-        write(filedir+"output.wav", fs, recording) 
-        np.savetxt(filedir+"output.txt", recording, delimiter="\n") 
+        write(filedir+"_output.wav", fs, recording) 
+        # np.savetxt(filedir+"output.txt", recording, delimiter="\n") 
     return recording
     
 # def write_csv(filename, data, headers=None):
@@ -238,7 +238,7 @@ def save_wav_file(signal, fs):
 
 
 
-def plot_constellation(symbols, title="Constellation Diagram", show=True):
+def plot_constellation(symbols, title="Constellation Diagram", show=True, index_colour=False):
     """
     Plots complex data symbols on the IQ plane.
 
@@ -250,7 +250,11 @@ def plot_constellation(symbols, title="Constellation Diagram", show=True):
     symbols = np.asarray(symbols)
 
     plt.figure(figsize=(6, 6))
-    plt.scatter(symbols.real, symbols.imag, s=10)
+    if index_colour:
+        sc = plt.scatter(symbols.real, symbols.imag, c=np.arange(len(symbols)), cmap='viridis', s=10)
+        plt.colorbar(sc, label='Sample index')
+    else:
+        plt.scatter(symbols.real, symbols.imag, s=10)
 
     plt.axhline(0, color='black', linewidth=0.5)
     plt.axvline(0, color='black', linewidth=0.5)
@@ -264,6 +268,29 @@ def plot_constellation(symbols, title="Constellation Diagram", show=True):
     if show:
         plt.show()
 
+# def plot_constellation_with_second(symbols, second, title="Constellation Diagram", show=True, index_colour=False):
+#     symbols = np.asarray(symbols)
+
+#     fig, ax = plt.subplots(1, 2, figsize=(12, 6))
+#     if index_colour:
+#         ax[0].scatter(symbols.real, symbols.imag, c=np.arange(len(symbols)), cmap='viridis', s=10)
+#         ax[0].colorbar(label='Sample index')
+#     else:
+#         ax[0].scatter(symbols.real, symbols.imag, s=10)
+
+#     ax[0].axhline(0, color='black', linewidth=0.5)
+#     ax[0].axvline(0, color='black', linewidth=0.5)
+
+#     ax[0].xlabel("In-phase (I)")
+#     ax[0].ylabel("Quadrature (Q)")
+#     ax[0].title(title)
+#     ax[0].grid(True)
+#     ax[0].axis("equal")
+
+#     ax[1].plot(second)
+
+#     if show:
+#         plt.show()
 
 
 #------------------------------------------------------------------------------------------------
