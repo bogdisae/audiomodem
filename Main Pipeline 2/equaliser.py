@@ -239,3 +239,85 @@ class GolayPairs(Equaliser):
 
         H_est_avg = np.mean(H_list, axis=0)
         return H_est_avg
+    
+# class Noise(Equaliser):
+#     def __init__(self, length_with_prefix, seed=123813242, fs=48000):
+#         self.fs = fs
+#         self.seed = seed
+#         self.length = length_with_prefix
+#         if self.length %2 != 0:
+#             Exception("Noise Equaliser length should be even")
+
+#     def generate(self) -> np.ndarray:
+#         bit_gen = np.random.MT19937(self.seed) 
+#         gen = np.random.Generator(bit_gen)
+#         n = gen.standard_normal(self.length //2)
+#         self.n = n
+#         return np.concat([n, n])
+
+#     def estimate(self, signal: np.ndarray, sync_index, plot = True):
+#         bit_gen = np.random.MT19937(self.seed) 
+#         gen = np.random.Generator(bit_gen)
+#         n = gen.standard_normal(self.length //2)
+#         self.n = n
+#         y = signal[sync_index+self.length//2: sync_index+self.length]
+#         Y = np.fft.fft(y)
+#         X = np.fft.fft(n)
+#         eps = 1e-12
+#         H = Y / (X + eps)
+#         return H
+    
+class ZadoffChu(Equaliser):
+    def __init__(self, N, q, fs=48000):
+        self.fs = fs
+        self.N = N
+        self.block = ZadoffChu.zadoff_chu(N, q)
+
+    def generate(self) -> np.ndarray:
+        return np.concat([self.block, self.block])
+
+    def estimate(self, signal: np.ndarray, sync_index, plot = True):
+        y = signal[sync_index+self.N: sync_index+self.N*2]
+        Y = np.fft.fft(y)
+        X = np.fft.fft(self.block)
+        eps = 1e-12
+        H = Y / (X + eps)
+        return H
+
+    def zadoff_chu(N, q):
+        """
+        Generate a Zadoff-Chu sequence.
+        
+        N : sequence length (prime recommended)
+        u : root index (1 <= u <= N-1, coprime with N)
+        """
+        n = np.arange(N)
+        return np.exp(-1j * np.pi * q * n * (n + 1) / N)
+    
+class GaussianPulse(Equaliser):
+    def __init__(self, N, sig, fs=48000):
+        self.fs = fs
+        self.N = N
+        self.sig = sig
+        self.block = GaussianPulse.gaussian_pulse(np.linspace(-5, 5, N), sig)
+
+    def generate(self) -> np.ndarray:
+        return np.concat([self.block, self.block])
+
+    def estimate(self, signal: np.ndarray, sync_index, plot = True):
+        y = signal[sync_index+self.N: sync_index+self.N*2]
+        Y = np.fft.fft(y)
+        X = np.fft.fft(self.block)
+        eps = 1e-12
+        H = Y / (X + eps)
+        return H
+
+    def gaussian_pulse(t, sigma):
+        """
+        Gaussian pulse in time domain.
+
+        t     : time array
+        sigma : width parameter (larger = wider in time, narrower in frequency)
+        """
+        return np.exp(-t**2 / (2 * sigma**2))
+    

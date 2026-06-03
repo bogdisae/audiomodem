@@ -90,7 +90,7 @@ def simulated_channel_phase_offset():
 
     channel = Channel(tx.transmitted_signal)
     # h = np.sinc(np.linspace(0, 6*np.pi, 2000))
-    h = [1]
+    h = np.ones(200)
     received = channel.apply_default_channel(h,r=0,sfo_ppm=0)
 
     rx = Rx(constellation, received, 1024, 1024, repeated_chirp_equaliser, 0)
@@ -108,4 +108,101 @@ def symbol_offset_calc(C: Constellation, symbols):
     # plot_constellation_with_second(symbols, phase_offset, "Constellation diagram with phase offset", index_colour=True)
     plot_constellation(symbols,index_colour=True)
 
-simulated_channel_phase_offset()
+# simulated_channel_phase_offset()
+
+def channel_estimates_chirp():
+    repeated_chirp_equaliser = RepeatedChirp(2, 1024, 0, 0, 20_000)
+
+    H = np.load("Main Pipeline 2/Data Files/example_channel.pickle", allow_pickle=True)
+    h = np.fft.ifft(H)
+
+    estimates = [H]
+    labels = ["Ref."]
+    snrs = [-1000, -100, -10, -3]
+
+    for snr in snrs:
+        chirp = repeated_chirp_equaliser.generate()
+        channel = Channel(chirp)
+        received = channel.apply_default_channel(h,sfo_ppm=0,snr=snr, n=0)
+        estimates.append(repeated_chirp_equaliser.estimate(received, 0, plot=False)) # Edit Repeated Chirp to only return first
+        labels.append(f"snr:{snr}")
+
+    plot_complex_arrays_separate(estimates, labels)
+
+# channel_estimates_chirp()
+
+# def channel_estimates_noise():
+#     repeated_chirp_equaliser = Noise(2048, seed= 98723495827909234345)
+
+#     H = np.load("Main Pipeline 2/Data Files/example_channel.pickle", allow_pickle=True)
+#     h = np.fft.ifft(H)
+
+#     estimates = [H]
+#     labels = ["Ref."]
+#     snrs = [-1000, -100, -10, -3]
+
+#     for snr in snrs:
+#         chirp = repeated_chirp_equaliser.generate()
+#         channel = Channel(chirp)
+#         received = channel.apply_default_channel(h,sfo_ppm=0,snr=snr, n=0)
+#         estimates.append(repeated_chirp_equaliser.estimate(received, 0, plot=False))
+#         labels.append(f"snr:{snr}")
+
+#     plot_complex_arrays_separate(estimates, labels)
+
+# channel_estimates_noise()
+
+def channel_estiamtes_zadoffchu():
+    flatofdm_equaliser = ZadoffChu(1024,1023)
+
+    H = np.load("Main Pipeline 2/Data Files/example_channel.pickle", allow_pickle=True)
+    h = np.fft.ifft(H)
+
+    estimates = [H]
+    labels = ["Ref."]
+    snrs = [-1000, -100, -10, -3]
+
+    for snr in snrs:
+        chirp = flatofdm_equaliser.generate()
+        channel = Channel(chirp)
+        received = channel.apply_default_channel(h,sfo_ppm=0,snr=snr, n=0)
+        estimates.append(flatofdm_equaliser.estimate(received, 0, plot=False))
+        labels.append(f"snr:{snr}")
+
+    plot_complex_arrays_separate(estimates, labels)
+
+# channel_estiamtes_zadoffchu()
+
+def zadoff_chu_characteristics():
+    flatofdm_equaliser = ZadoffChu(1024,1023)
+    plot_complex_arrays([flatofdm_equaliser.block, np.fft.fft(flatofdm_equaliser.block)], ["Time Domain", "Frequency Domain"])
+
+# zadoff_chu_characteristics()
+
+def channel_estiamtes_gaussian():
+    flatofdm_equaliser = GaussianPulse(1024, .5)
+
+    H = np.load("Main Pipeline 2/Data Files/example_channel.pickle", allow_pickle=True)
+    h = np.fft.ifft(H)
+
+    estimates = [H]
+    labels = ["Ref."]
+    snrs = [-1000, -100, -10, -3]
+
+    for snr in snrs:
+        chirp = flatofdm_equaliser.generate()
+        channel = Channel(chirp)
+        received = channel.apply_default_channel(h,sfo_ppm=0,snr=snr, n=0)
+        estimates.append(flatofdm_equaliser.estimate(received, 0, plot=False))
+        labels.append(f"snr:{snr}")
+
+    plot_complex_arrays_separate(estimates, labels)
+
+channel_estiamtes_gaussian()
+
+def gaussian_pulse_characteristics():
+    flatofdm_equaliser = GaussianPulse(1024, 1)
+    # plot_signal("",flatofdm_equaliser.block,-1)
+    plot_complex_arrays([flatofdm_equaliser.block, np.fft.fft(flatofdm_equaliser.block)], ["Time Domain", "Frequency Domain"])
+
+# gaussian_pulse_characteristics()
