@@ -459,6 +459,10 @@ def gen_colour_seq(known_bit_stream, constellation):
 
     
 def plot_Golay_diagnostics(h_norm, h_norm_alt, corr_a, corr_b, H_norm, H_norm_alt):
+
+    #Make all just the useful bins
+    H_norm = H_norm[0:len(H_norm)//2]
+    H_norm_alt = H_norm_alt[0:len(H_norm_alt)//2]
     import questionary
     plot_corr = False
     plot_corr = questionary.select("Plot correlation results for first pair? (y/n)", choices=['y', 'n']).ask()
