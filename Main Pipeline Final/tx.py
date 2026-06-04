@@ -31,8 +31,7 @@ class Tx:
 
     pilot_spacing : int
     key_pilot_samples_spacing : int
-    pilot_type : str
-    pilot_config
+
 
     def __init__(self, constellation: Constellation, 
                  data_bytes: np.ndarray, 
@@ -41,10 +40,9 @@ class Tx:
                  equaliser3 : Equaliser, 
                  cp_length: int, 
                  block_length: int, 
-                 pilot_spacing = 10, 
-                 key_pilot_samples_spacing = 1024, 
-                 f_low = 230, 
-                 f_high = 14500):
+                 pilot_spacing = int, 
+                 f_low = int, 
+                 f_high = int):
         
         self.constellation = constellation
         self.data_bytes = data_bytes

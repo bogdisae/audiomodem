@@ -7,6 +7,21 @@ import questionary
 from constellation import Constellation
 from pathlib import Path
 
+def convert_text_to_utf8_bytes():
+    text_file = Path(pick_text_file("Select message file:", Path("./Main Pipeline 2/Data Files")))
+    # Read the selected text file as text, then encode it to UTF-8 bytes.
+    text = text_file.read_text(encoding="utf-8")
+    data_bytes = text.encode("utf-8")
+    csv_data = ",".join(str(byte) for byte in data_bytes)
+
+    # Save file as a .csv of comma-separated byte values for future use.
+    filename = questionary.text("Enter output filename (without extension):").ask()
+    if filename is None:
+        raise SystemExit("No filename provided")
+    with open(f"Main Pipeline 2/Data Files/{filename}.csv", "w", encoding="utf-8", newline="") as f:
+        f.write(csv_data)
+    print(data_bytes[:100])
+
 
 def auto_correlation(x, k):
     y = []

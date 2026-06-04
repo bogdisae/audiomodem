@@ -113,7 +113,7 @@ class RepeatedChirp(Equaliser):
     
 
 class GolayPairs(Equaliser):
-    def __init__(self, golay_order, silence, numPairs=1, seed=(1,1), sync=False, est=False, fs=48000):
+    def __init__(self, golay_order, silence, numPairs=4, seed=(1,1), sync=False, est=False, fs=48000):
         super().__init__(fs, sync, est)
 
         self.golay_order = golay_order
@@ -129,10 +129,13 @@ class GolayPairs(Equaliser):
 
     def generate_pair(self, seed):
 
-        a, b = np.array(seed[0]), np.array(seed[1])
-
+        a, b = np.atleast_1d(seed[0]), np.atleast_1d(seed[1])
+        print(a,"\n",b)
         for _ in range(self.golay_order):
-            a, b = np.concatenate([a, b]), np.concatenate([a, -b])
+            a_next = np.concatenate([a, b])
+            b_next =np.concatenate([a, -b])
+
+            a, b = a_next, b_next
 
         assert len(a) == self.indivLength
         assert len(b) == self.indivLength
@@ -140,11 +143,11 @@ class GolayPairs(Equaliser):
 
 
     def generate(self) -> np.ndarray: #Expecting np.darray
-        silence = np.zeros(self.silence)
-        pair_sections = np.concatenate([self.a_ref, silence, self.b_ref])
+        silence_arr = np.zeros(self.silence)
+        pair_sections = np.concatenate([self.a_ref, silence_arr, self.b_ref])
         pair_rep = ["A", "silence", "B"]   
         
-        signal = np.concatenate([self.silence, np.tile(pair_sections, self.numPairs)])
+        signal = np.concatenate([silence_arr, np.tile(pair_sections, self.numPairs)])
         signal_rep = np.concatenate([["silence"], np.tile(pair_rep, self.numPairs)])
         print(signal_rep)
         m = np.max(np.abs(signal))
