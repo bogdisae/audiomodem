@@ -1,6 +1,7 @@
 import numpy as np
 from constellation import Constellation
 from equaliser import Equaliser, RepeatedChirp, GolayPairs
+from helper import plot_complex_arrays_separate
 
 class Rx:
     signal: np.ndarray
@@ -128,9 +129,13 @@ class Rx:
         for idx, equaliser in enumerate(self.equalisers):    
             if equaliser.est:
                 key_start_index = self.key_start_estimates[idx]
-                channel_estimates.append(equaliser.estimate(self.signal, key_start_index, False))
+                channel_estimates.append(equaliser.estimate(self.signal, key_start_index))
             else:
                 channel_estimates.append(None)
+
+        ## DEBUGGING:::
+
+        plot_complex_arrays_separate(channel_estimates, ["Chirp", "Golay"])
 
         # Logic to choose which channel estimate to use (e.g just use the second. Could break if None)
         self.H = channel_estimates[1]
@@ -147,8 +152,8 @@ class Rx:
     def decode(self):
 
         self.sync_and_estimate()
-        self.initial_SFO_estimate()
-        self.SFO_correct()
+        #self.initial_SFO_estimate()
+        #self.SFO_correct()
         self.extract_ofdm_blocks()
         self.decode_symbols()
         self.bits_to_bytes()

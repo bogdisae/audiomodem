@@ -175,7 +175,7 @@ class GolayPairs(Equaliser):
         indiv_len = self.indivLength
         pair_stride = self.blockLength
 
-        self.a_ref, self.b_ref = self.generate_pair(seed=0) # Generate a reference pair for diagnostic plots
+        self.a_ref, self.b_ref = self.generate_pair(seed=(0, 0)) # Generate a reference pair for diagnostic plots
         
         
         for i in range(self.numPairs):

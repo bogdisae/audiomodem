@@ -529,3 +529,40 @@ def estimate_delay_spread(h_est, fs):
 
     delay_spread_seconds = rms_delay_spread / fs
     return delay_spread_seconds
+
+
+def plot_complex_arrays_separate(arrays, labels, figsize=None):
+    n = len(arrays)
+    fig, axes = plt.subplots(n, 2, figsize=figsize or (10, 1 * n))
+    
+    if n == 1:
+        axes = axes[np.newaxis, :]  # ensure 2D
+
+    row_label_x = 0.02
+    for i, (arr, label) in enumerate(zip(arrays, labels)):
+        magnitude_db = 20 * np.log10(np.abs(arr) + 1e-12)
+        phase_deg = np.angle(arr, deg=True)
+
+        ax_mag, ax_phase = axes[i]
+
+        ax_mag.plot(magnitude_db)
+        ax_mag.set_ylabel("dB")
+        ax_mag.grid(True)
+
+        ax_phase.plot(phase_deg, color="tab:orange")
+        ax_phase.set_ylabel("degrees")
+        ax_phase.grid(True)
+
+        # row label on the left
+        mid = axes[i, 0].get_position()
+        row_center = (mid.y0 + mid.y1) / 2
+        fig.text(row_label_x, row_center, label,
+                 va="center", ha="center", rotation=90,
+                 fontsize=11, fontweight="bold")
+
+    axes[0, 0].set_title("Magnitude (dB)")
+    axes[0, 1].set_title("Phase (degrees)")
+
+    fig.subplots_adjust(left=0.1, hspace=0.4)
+    
+    plt.show()
