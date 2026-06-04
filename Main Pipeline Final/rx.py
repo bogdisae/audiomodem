@@ -11,7 +11,6 @@ class Rx:
     equalisers : list[Equaliser]
     sfoEqualiser: Equaliser
 
-    synchronisation_index: int
     H: np.ndarray
     h: np.ndarray
     ofdm_blocks: np.ndarray
@@ -19,7 +18,6 @@ class Rx:
     data_bits: np.ndarray
     data_bytes: np.ndarray
 
-    # SNS ADDITIONS xx
     f_low : int
     f_high : int
     bin_low : int
@@ -91,23 +89,56 @@ class Rx:
 
     def bits_to_bytes(self):
         self.data_bytes = np.packbits(np.array(self.data_bits).astype(np.uint8))
+
+    def sync_and_estimate(self):
+        # Calculate offsests of each equaliser to the data
+        offset = 0
+        for equaliser in self.equalisers:
+            equaliser.preambleStartOffset = offset
+            offset += equaliser.lengthInSamples
+        preambleTotalLength = offset
+        
+        preamble_start_estimates = [] # Stores where each synchroniser thinks the WHOLE preamble starts
+
+        # Synchronise
+        for equaliser in self.equalisers:
+            if equaliser.sync:  
+                local_start = equaliser.synchronise(self.signal, False)
+                preamble_start_estimate = local_start - equaliser.preambleStartOffset
+                preamble_start_estimates.append(preamble_start_estimate)
+
+            else:
+                preamble_start_estimates.append(None)
+
+        # Logic to choose sync estimate (e.g just use the first sync estimate. Could break if None)
+        preamble_start = preamble_start_estimates[0]
+        data_start = preamble_start + preambleTotalLength
+        # Account for cyclic prefix and going early. 
+        decode_start = data_start + self.cp_length - self.early_samples
+
+        # Use the sync estimate to find where you think EVERY equaliser starts
+        key_start_estimates = []
+        for equaliser in self.equalisers:
+            key_start_estimates.append(preamble_start + equaliser.preambleStartOffset)
+
+        # Estimate
+        channel_estimates = [] # Will be a list of np.ndarray corresponding to each estimate
+        for idx, equaliser in enumerate(self.equalisers):    
+            if equaliser.est:
+                key_start_index = key_start_estimates[idx]
+                channel_estimates.append(equaliser.estimate(self.signal, key_start_index, False))
+            else:
+                channel_estimates.append(None)
+
+        # Logic to choose which channel estimate to use (e.g just use the second. Could break if None)
+        self.H = channel_estimates[1]
+
+        # BOGDAN YOU FORGOT THIS LINE AGAIN FFS
+        self.ofdm_blocks = self.signal[decode_start:]
     
     def decode(self):
-        
-        # Synchronise 
-        key_start_index, self.synchronisation_index = self.equaliser.synchronise(self.signal, True)
-        self.H = self.equaliser.estimate(self.signal, key_start_index, True)
 
-        #Diagnostic prints
-        #print(f"NaN in H: {np.sum(np.isnan(self.H))}, Inf in H: {np.sum(np.isinf(self.H))}")
-        #print(f"sync_index: {self.synchronisation_index}, signal length: {len(self.signal)}")
-
-        # TRY GOING EARLY
-        self.synchronisation_index = self.synchronisation_index + self.cp_length - self.early_samples
-
-        # BOGDAN YOU FORGOT THIS LINE
-        self.ofdm_blocks = self.signal[self.synchronisation_index:]
-
+        self.sync_and_estimate()
         self.extract_ofdm_blocks()
         self.decode_symbols()
         self.bits_to_bytes()
