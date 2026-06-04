@@ -167,47 +167,75 @@ class GolayPairs(Equaliser):
     def synchronise(self, signal: np.ndarray, plot = True):
         raise NotImplementedError
 
-    def estimate(self, a_rx, b_rx, plot = True):
+    def estimate(self, rxSignal: np.ndarray, sync_index, plot = True):
         
-        '''Maybe following silences must be correlated?'''
-        corr_a = correlate(a_rx, self.a_ref, mode='full')
-        corr_b = correlate(b_rx, self.b_ref, mode='full')
+        #If pair is in middle of data -> Sync idx is the start of the pair? Would this be accurate?
 
-        #Extract causal part starting at zero lag
+        H_list = []
 
-        h_est = corr_a[self.indivLength-1:2*self.indivLength-1] + corr_b[self.indivLength-1:2*self.indivLength-1]
+        indiv_len = self.indivLength
+        pair_stride = self.blockLength
 
-        #C_aa[n] + C_bb[n] = 2N*delta[n] -> Normalise by 2N to get actual impulse response estimate
-
-        #Correct normaisation for scaled pairs
-        h_norm = h_est / (2*self.indivLength)
-
-
-        #Truncate
-        #print(f'Estimated impulse response for pair {i}, h_est length: {len(h_norm)}, h_est values: {h_norm}')
-
-        H_norm = np.fft.fft(h_norm, n=self.indivLength)
-
-        #Alternative method - Actually works
-        Y_a = np.fft.fft(a_rx, n=self.indivLength)
-        Y_b = np.fft.fft(b_rx, n=self.indivLength)
-
-        A = np.fft.fft(self.a_ref, n=self.indivLength)
-        B = np.fft.fft(self.b_ref, n=self.indivLength)
-
-        H_norm_alt = (Y_a * np.conj(A) + Y_b * np.conj(B)) / (2*self.indivLength)
+        #self.a_ref, self.b_ref = self.generate_pair(seed=0) # Generate a reference pair for diagnostic plots
         
-        if self.est and plot:
-            h_norm_alt = np.fft.ifft(H_norm_alt)
-            plot_Golay_diagnostics(h_norm, h_norm_alt, corr_a, corr_b, H_norm, H_norm_alt)      
+        
+        for i in range(self.numPairs):
+            #print(f'iteration {i} out of {self.numPairs}')
+            start = sync_index + self.silence + i * pair_stride #1 silence before a
+
+            a_rx = rxSignal[start:start + indiv_len + self.silence]
+            b_rx = rxSignal[start + indiv_len + self.silence : start + 2 * indiv_len + self.silence + self.silence]
+
+            #print(f'a_rx length: {len(a_rx)}, b_rx length: {len(b_rx)}')
+            #print(f'a seq idx: {start} to {start + indiv_len}, b seq idx: {start + indiv_len + self.silence} to {start + 2 * indiv_len + self.silence}')
+
+            '''Maybe following silences must be correlated?'''
+            corr_a = correlate(np.concatenate([a_rx, np.zeros(self.silence)]), self.a_ref, mode='full')
+            corr_b = correlate(np.concatenate([b_rx, np.zeros(self.silence)]), self.b_ref, mode='full')
+
+            #Extract causal part starting at zero lag
+            h_est = corr_a[indiv_len-1:2*indiv_len-1] + corr_b[indiv_len-1:2*indiv_len-1]
+
+            #C_aa[n] + C_bb[n] = 2N*delta[n] -> Normalise by 2N to get actual impulse response estimate
+
+            #Correct normaisation for scaled pairs
+            h_norm = h_est / (2*self.indivLength)
+
+
+            #Truncate
+            #print(f'Estimated impulse response for pair {i}, h_est length: {len(h_norm)}, h_est values: {h_norm}')
+
+            H_norm = np.fft.fft(h_norm, n=self.indivLength)
+
+            #Alternative method - Actually works
+            Y_a = np.fft.fft(a_rx, n=self.indivLength)
+            Y_b = np.fft.fft(b_rx, n=self.indivLength)
+
+            A = np.fft.fft(self.a_ref, n=self.indivLength)
+            B = np.fft.fft(self.b_ref, n=self.indivLength)
+
+            H_norm_alt = (Y_a * np.conj(A) + Y_b * np.conj(B)) / (2*self.indivLength)
+            
+            if i == 0 and plot:
+                h_norm_alt = np.fft.ifft(H_norm_alt)
+                plot_Golay_diagnostics(h_norm, h_norm_alt, corr_a, corr_b, H_norm, H_norm_alt)
+            H_list.append(H_norm_alt)
+
+
+
+
+        #print(f'H: {H_list}')
+        H_norm_avg = np.mean(H_list, axis=0)
+        
 
         #print(f'H values: {np.mean(np.abs(H_est_avg))}, {np.mean(np.abs(H_est_avg))}')
         
         #Estimate delay spread
-        delay_spread = estimate_delay_spread(h_norm_alt, self.fs)
+        h_norm_avg = np.fft.ifft(H_norm_avg)
+        delay_spread = estimate_delay_spread(h_norm_avg, self.fs)
         print(f'Estimated delay spread: {delay_spread*1e3:.2f} milliseconds. CP time should be at least this long to avoid ISI. CP length in ms: {self.indivLength/self.fs*1e3:.2f} ms')
 
-        return H_norm_alt
+        return H_norm_avg
         
     def block_SFO_detection(self, section_index):
 
