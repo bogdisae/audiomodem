@@ -120,7 +120,7 @@ class Tx:
         sections.append(chirp_seq)
         sections.append(Golay_seq)
         for i, block in enumerate(ofdm_blocks):
-            if i % self.pilot_spacing == 0:
+            if i % self.pilot_spacing == 0 and i != 0:
                 sections.append(pilot_symbol)
                 print(f'Pilot inserted before block {i}')
             sections.append(block)

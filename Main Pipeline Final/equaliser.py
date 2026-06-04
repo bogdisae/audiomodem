@@ -1,6 +1,9 @@
+from pathlib import Path
+
 import numpy as np
 from scipy.signal import chirp, correlate
 import matplotlib.pyplot as plt
+from constellation import Constellation
 from helper import plot_signal, plot_multiple_channel_estimates, plot_Golay_diagnostics, estimate_delay_spread
 from scipy.linalg import solve_toeplitz
 
@@ -150,8 +153,8 @@ class GolayPairs(Equaliser):
 
     def generate(self) -> np.ndarray: #Expecting np.darray
         silence_arr = np.zeros(self.silence)
-        pair_sections = np.concatenate([self.a_ref, silence_arr, self.b_ref])
-        pair_rep = ["A", "silence", "B"]   
+        pair_sections = np.concatenate([self.a_ref, silence_arr, self.b_ref, silence_arr])
+        pair_rep = ["A", "silence", "B", "silence"]   
         
         signal = np.concatenate([silence_arr, np.tile(pair_sections, self.numPairs)])
         signal_rep = np.concatenate([["silence"], np.tile(pair_rep, self.numPairs)])
@@ -252,3 +255,44 @@ class GolayPairs(Equaliser):
 
             A_blocks.append(A_i)
             B_blocks.append(B_i)
+    
+class WhiteNoise(Equaliser):
+    def __init__(self, lengthInSamples, constellation, sync=False, est=False, fs=48000):
+        super().__init__(fs, sync, est)
+        self.lengthInSamples = lengthInSamples
+        self.lengthInSeconds = lengthInSamples / fs
+        self.constellation = constellation
+
+    def extract_noise_stream(self):
+        #Read the file named WN_symbol.txt which contains the 4096 WN.
+        base = Path(__file__).parent
+        with open(base / "WN_symbol.txt", "r") as f:
+            noise = np.fromstring(f.read(), sep=',')
+
+        print(f'Generated white noise of length {len(noise)} samples, duration {self.lengthInSeconds:.2f} seconds')
+
+        self.noise_bit_stream = noise.astype(int)
+        print(len(noise))
+        print(self.lengthInSamples)
+        assert len(noise) == self.lengthInSamples
+        #No normalisation needed since 1s and 0s rn
+        
+    def make_OFDM_block(self, symbols):
+        X = np.zeros(self.lengthInSamples, dtype=complex)
+
+        # Positive-frequency active bins
+        X[:self.lengthInSamples//2] = symbols
+
+        # Hermitian symmetry
+        X[-self.lengthInSamples//2:] = np.conj(symbols)
+
+        ofdm_block = np.fft.ifft(X).real
+        return ofdm_block
+
+    def generate(self):
+        self.extract_noise_stream()
+
+        self.symbols = self.constellation.bits_to_symbols(self.noise_bit_stream.astype(str))
+
+        OFDM_block = self.make_OFDM_block(self.symbols)
+        return OFDM_block
