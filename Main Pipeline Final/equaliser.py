@@ -5,8 +5,16 @@ from helper import plot_signal, plot_multiple_channel_estimates
 from scipy.linalg import solve_toeplitz
 
 class Equaliser:
+
+    lengthInSamples : int
+    lengthInSeconds : int
+    preambleStartOffset : int
+
     def __init__(self, fs=48000):
         self.fs = fs
+        # Variable that knows where it is in the whole preamble (relative to preamble start)
+        self.preambleStartOffset = None 
+        
 
     def generate(self) -> np.ndarray: 
         raise NotImplementedError
@@ -32,6 +40,7 @@ class RepeatedChirp(Equaliser):
 
         self.lengthInSamples = numRepeats * (chirpLength + silenceLength)
         self.lengthInSeconds = self.lengthInSamples / self.fs
+        
 
 
     def generate(self):
@@ -67,12 +76,9 @@ class RepeatedChirp(Equaliser):
             plot_signal("Received signal", signal, -1)
             plot_signal("Correlation plot", corr, key_start_index, True)
 
-        return key_start_index, key_start_index + self.lengthInSamples
+        return key_start_index
     
     def estimate(self, rxSignal: np.ndarray, sync_index, plot = True):
-
-        # Find the estimated sample index where the data starts
-        dataStartIdx = sync_index + self.lengthInSamples
         
         t = np.arange(self.chirpLength) / self.fs
         singleChirp = chirp(t, f0=self.f0, t1=self.chirpLength / self.fs, f1=self.f1, method='linear')
