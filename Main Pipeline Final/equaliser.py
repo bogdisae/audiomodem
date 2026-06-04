@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.signal import chirp, correlate
 import matplotlib.pyplot as plt
-from helper import plot_signal, plot_multiple_channel_estimates
+from helper import plot_signal, plot_multiple_channel_estimates, plot_Golay_diagnostics, estimate_delay_spread
 from scipy.linalg import solve_toeplitz
 
 class Equaliser:
@@ -10,8 +10,10 @@ class Equaliser:
     lengthInSeconds : int
     preambleStartOffset : int
 
-    def __init__(self, fs=48000):
+    def __init__(self, fs=48000, sync = False, est = False):
         self.fs = fs
+        self.sync = sync
+        self.est = est
         # Variable that knows where it is in the whole preamble (relative to preamble start)
         self.preambleStartOffset = None 
         
@@ -28,8 +30,8 @@ class Equaliser:
 
 
 class RepeatedChirp(Equaliser):
-    def __init__(self, numRepeats, chirpLength, silenceLength, f0, f1, fs=48000):
-        super().__init__(fs)
+    def __init__(self, numRepeats, chirpLength, silenceLength, f0, f1, sync = False, est = False, fs=48000):
+        super().__init__(fs, sync, est)
 
         self.numRepeats = numRepeats
         self.chirpLength = chirpLength
@@ -117,48 +119,42 @@ class RepeatedChirp(Equaliser):
     
 
 class GolayPairs(Equaliser):
-    def __init__(self, indivLength, pairSilence, numPairs=1, fs=48000):
-        super().__init__(fs)
+    def __init__(self, golay_order, silence, numPairs=1, seed=(1,1), sync=False, est=False, fs=48000):
+        super().__init__(fs, sync, est)
 
-        self.indivLength = indivLength #Pairs are the same length - same as OFDM block length assumed (correct? - may not have to be)
-        self.pairSilence = pairSilence #Should be longer than the channel impulse response to avoid inter-pair interference
+        self.golay_order = golay_order
+        self.indivLength = 2**self.golay_order #Pairs are the same length - same as OFDM block length assumed (correct? - may not have to be)
+        self.silence = silence #Should be longer than the channel impulse response to avoid inter-pair interference
         self.numPairs = numPairs
 
-        self.blockLength = 2 * indivLength + pairSilence
-        self.lengthInSamples = self.blockLength * numPairs
+        self.blockLength = 2 * self.indivLength + self.silence #A, silence, B counted as a block
+        self.lengthInSamples = self.silence +self.blockLength * numPairs 
         self.lengthInSeconds = self.lengthInSamples / self.fs
 
-        self.a_ref, self.b_ref = self.generate_pair(seed=0) # Generate a reference pair for diagnostic plots
+        self.a_ref, self.b_ref = self.generate_pair(seed) # Generate a reference pair for diagnostic plots
 
     def generate_pair(self, seed):
-        rng = np.random.default_rng(seed)
 
-        a = np.array([rng.choice([-1, 1])], dtype=int)
-        b = np.array([a[0]], dtype=int)
+        a, b = np.array(seed[0]), np.array(seed[1])
 
-        for _ in range(int(np.log2(self.indivLength)) - 1):
-            a_next = np.concatenate([a, b])
-            b_next = np.concatenate([a, -b])
-            a, b = a_next, b_next
+        for _ in range(self.golay_order):
+            a, b = np.concatenate([a, b]), np.concatenate([a, -b])
 
+        assert len(a) == self.indivLength
+        assert len(b) == self.indivLength
         return a, b
 
 
     def generate(self) -> np.ndarray: #Expecting np.darray
-        silence = np.zeros(self.pairSilence)
-        pair_sections = []
-
-        for i in range(self.numPairs):
-            pair_sections.append(self.a_ref)
-            if self.pairSilence > 0:
-                pair_sections.append(silence)
-            pair_sections.append(self.b_ref)
-            if self.numPairs > i: #Only add silence between pairs, not after final pair
-                pair_sections.append(silence)
-
-        signal = np.concatenate(pair_sections)
-
+        silence = np.zeros(self.silence)
+        pair_sections = np.concatenate([self.a_ref, silence, self.b_ref])
+        pair_rep = ["A", "silence", "B"]   
+        
+        signal = np.concatenate([self.silence, np.tile(pair_sections, self.numPairs)])
+        signal_rep = np.concatenate([["silence"], np.tile(pair_rep, self.numPairs)])
+        print(signal_rep)
         m = np.max(np.abs(signal))
+        
         return signal / m if m != 0 else signal
 
     def synchronise(self, signal: np.ndarray, plot = True):
@@ -171,24 +167,63 @@ class GolayPairs(Equaliser):
         H_list = []
 
         indiv_len = self.indivLength
-        pair_stride = self.block_length
+        pair_stride = self.blockLength
 
+        self.a_ref, self.b_ref = self.generate_pair(seed=0) # Generate a reference pair for diagnostic plots
+        
+        
         for i in range(self.numPairs):
-            
+            #print(f'iteration {i} out of {self.numPairs}')
             start = sync_index + i * pair_stride
 
             a_rx = rxSignal[start:start + indiv_len]
-            b_rx = rxSignal[start + indiv_len + self.pairSilence : start + 2 * indiv_len + self.pairSilence]
+            b_rx = rxSignal[start + indiv_len + self.silence : start + 2 * indiv_len + self.silence]
 
-            corr_a = correlate(a_rx, self.a_ref, mode='valid')
-            corr_b = correlate(b_rx, self.b_ref, mode='valid')
+            #print(f'a_rx length: {len(a_rx)}, b_rx length: {len(b_rx)}')
+            #print(f'a seq idx: {start} to {start + indiv_len}, b seq idx: {start + indiv_len + self.silence} to {start + 2 * indiv_len + self.silence}')
 
-            h_est = corr_a + corr_b
+            corr_a = correlate(a_rx, self.a_ref, mode='full')
+            corr_b = correlate(b_rx, self.b_ref, mode='full')
 
-            h_est.truncate(self.indivLength)
+            #Extract causal part starting at zero lag
+            h_est = corr_a[indiv_len-1:2*indiv_len-1] + corr_b[indiv_len-1:2*indiv_len-1]
 
-            H_est = np.fft.fft(h_est, n=self.indivLength)
-            H_list.append(H_est)
+            #C_aa[n] + C_bb[n] = 2N*delta[n] -> Normalise by 2N to get actual impulse response estimate
 
-        H_est_avg = np.mean(H_list, axis=0)
-        return H_est_avg
+            #Correct normaisation for scaled pairs
+            h_norm = h_est / (2*self.indivLength)
+
+
+            #Truncate
+            #print(f'Estimated impulse response for pair {i}, h_est length: {len(h_norm)}, h_est values: {h_norm}')
+
+            H_norm = np.fft.fft(h_norm, n=self.indivLength)
+
+            #Alternative method - Actually works
+            Y_a = np.fft.fft(a_rx, n=self.indivLength)
+            Y_b = np.fft.fft(b_rx, n=self.indivLength)
+
+            A = np.fft.fft(self.a_ref, n=self.indivLength)
+            B = np.fft.fft(self.b_ref, n=self.indivLength)
+
+            H_norm_alt = (Y_a * np.conj(A) + Y_b * np.conj(B)) / (2*self.indivLength)
+            
+            if i == 0 and plot:
+                plot_Golay_diagnostics(h_norm, corr_a, corr_b, H_norm, H_norm_alt)
+            H_list.append(H_norm_alt)
+
+
+
+
+        #print(f'H: {H_list}')
+        H_norm_avg = np.mean(H_list, axis=0)
+        
+
+        #print(f'H values: {np.mean(np.abs(H_est_avg))}, {np.mean(np.abs(H_est_avg))}')
+        
+        #Estimate delay spread
+        h_norm_avg = np.fft.ifft(H_norm_avg)
+        delay_spread = estimate_delay_spread(h_norm_avg, self.fs)
+        print(f'Estimated delay spread: {delay_spread*1e3:.2f} milliseconds. CP time should be at least this long to avoid ISI. CP length in ms: {self.indivLength/self.fs*1e3:.2f} ms')
+
+        return H_norm_avg
