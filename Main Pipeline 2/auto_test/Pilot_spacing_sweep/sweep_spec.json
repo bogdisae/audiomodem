@@ -1,0 +1,27 @@
+{
+  "fixed": {
+    "block_length": 1024,
+    "chirp_gap": 1024,
+    "chirp_length": 1024,
+    "chirp_repeats": 10,
+    "cp_length": 1024,
+    "data_csv": "Main Pipeline 2\\Data Files\\Shakespeare_utf.csv",
+    "f0": 20,
+    "f1": 20000,
+    "golay_gap": 10240,
+    "golay_indiv_length": 1024,
+    "golay_pair_count": 1,
+    "key_pilot_samples_spacing": 1024,
+    "output_root": "C:\\Users\\aaron\\Documents\\Cambridge\\IIA\\Projects\\GF3\\audiomodem\\Main Pipeline 2\\auto_test",
+    "pilot_spacing": 10,
+    "sample_rate": 48000
+  },
+  "sweep_name": "Pilot_spacing_sweep",
+  "sweep_param": "Pilot spacing",
+  "sweep_values": [
+    5,
+    10,
+    15,
+    20
+  ]
+}

@@ -1,0 +1,2 @@
+Play the TX files in manifest order, one at a time.
+Then run record mode and record them in the same order.
