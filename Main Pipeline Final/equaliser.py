@@ -5,8 +5,10 @@ from helper import plot_signal, plot_multiple_channel_estimates
 from scipy.linalg import solve_toeplitz
 
 class Equaliser:
-    def __init__(self, fs=48000):
+    def __init__(self, fs=48000, sync = False, est = False):
         self.fs = fs
+        self.syc = sync
+        self.est = est
 
     def generate(self) -> np.ndarray: 
         raise NotImplementedError

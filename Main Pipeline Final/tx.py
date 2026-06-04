@@ -12,7 +12,9 @@ class Tx:
     constellation: Constellation
     cp_length: int
     block_length: int
-    equaliser: Equaliser
+    equaliser1: Equaliser
+    equaliser2: Equaliser
+    equalisere3: Equaliser
 
     data_bits: np.ndarray
     data_symbols: np.ndarray
@@ -27,29 +29,47 @@ class Tx:
     bin_high : int
     active_bins : np.ndarray
 
-    def __init__(self, constellation: Constellation, data_bytes: np.ndarray, equaliser : Equaliser, cp_length: int, block_length: int,
-                 f_low = 4000, f_high = 13000):
+    pilot_spacing : int
+    key_pilot_samples_spacing : int
+    pilot_type : str
+    pilot_config
+
+    def __init__(self, constellation: Constellation, 
+                 data_bytes: np.ndarray, 
+                 equaliser1 : Equaliser, 
+                 equaliser2 : Equaliser, 
+                 equaliser3 : Equaliser, 
+                 cp_length: int, 
+                 block_length: int, 
+                 pilot_spacing = 10, 
+                 key_pilot_samples_spacing = 1024, 
+                 f_low = 230, 
+                 f_high = 14500):
         
         self.constellation = constellation
         self.data_bytes = data_bytes
-        self.equaliser = equaliser
+        self.equaliser1 = equaliser1
+        self.equaliser2 = equaliser2
+        self.equaliser3 = equaliser3
         self.cp_length = cp_length
         self.block_length = block_length
 
         # Calulate active subcarrier mask
-        self.bin_low = int(np.ceil(f_low * block_length / equaliser.fs))
-        self.bin_high = int(np.floor(f_high * block_length / equaliser.fs))
+        self.bin_low = int(np.ceil(f_low * block_length / equaliser1.fs))
+        self.bin_high = int(np.floor(f_high * block_length / equaliser1.fs))
         # Using the equaliser fs feels messy but will do
         self.active_bins = np.arange(self.bin_low, self.bin_high + 1)
 
+        self.pilot_spacing = pilot_spacing
 
-    def create_noise_key(noise_samples, n_taps):
-        n = np.random.uniform(-1.0, 1.0, noise_samples)
-        n[1::2] = 0.0
-        key = np.zeros(2*noise_samples + n_taps)
-        key[0:noise_samples] = n
-        key[-noise_samples:] = n
-        return n, key
+
+    # def create_noise_key(noise_samples, n_taps):
+    #     n = np.random.uniform(-1.0, 1.0, noise_samples)
+    #     n[1::2] = 0.0
+    #     key = np.zeros(2*noise_samples + n_taps)
+    #     key[0:noise_samples] = n
+    #     key[-noise_samples:] = n
+    #     return n, key
     
     def bytes_to_bits(self):
         self.data_bits = np.unpackbits(self.data_bytes).astype(str)
@@ -92,8 +112,22 @@ class Tx:
     def assemble_signal(self):
         ofdm_blocks = np.copy(self.ofdm_symbol_blocks)
         ofdm_blocks = ofdm_blocks / np.abs(np.max(ofdm_blocks))
-        self.transmitted_signal = np.concatenate([self.equaliser.generate(), np.zeros(self.cp_length), np.concatenate(ofdm_blocks)])
+        
+        
+        chirp_seq = self.equaliser1.generate()
+        Golay_seq = self.equaliser2.generate()
+        pilot_symbol = self.equaliser3.generate()
 
+        sections = []
+        sections.append(chirp_seq)
+        sections.append(Golay_seq)
+        for i, block in enumerate(ofdm_blocks):
+            if i % self.pilot_spacing == 0:
+                sections.append(pilot_symbol)
+                print(f'Pilot inserted before block {i}')
+            sections.append(block)
+        self.transmitted_signal = np.concatenate(sections)
+    
     def encode(self):
         self.encode_symbols()
         self.prep_ofdm_blocks()
