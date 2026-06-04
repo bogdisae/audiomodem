@@ -119,7 +119,7 @@ class RepeatedChirp(Equaliser):
     
 
 class GolayPairs(Equaliser):
-    def __init__(self, golay_order, silence, numPairs=4, seed=(1,1), sync=False, est=False, fs=48000):
+    def __init__(self, golay_order = 12, silence = 2048, numPairs=4, seed=(1,1), sync=False, est=False, fs=48000):
         super().__init__(fs, sync, est)
 
         self.golay_order = golay_order
@@ -230,3 +230,25 @@ class GolayPairs(Equaliser):
         print(f'Estimated delay spread: {delay_spread*1e3:.2f} milliseconds. CP time should be at least this long to avoid ISI. CP length in ms: {self.indivLength/self.fs*1e3:.2f} ms')
 
         return H_norm_avg
+        
+    def initial_SFO_estimate(self, rxSignal: np.ndarray, key_start_index : int):
+
+        N = self.indivLength
+        S = self.silence
+        T = 2*N + 2*S
+
+        # Stores the lists of samples corresponding to A and B
+        A_blocks = []
+        B_blocks = []
+
+        # skip INITIAL SILENCE
+        base0 = key_start_index + S
+
+        for i in range(self.numPairs):
+            base = base0 + i * T
+
+            A_i = rxSignal[base : base + N]
+            B_i = rxSignal[base + N + S : base + 2*N + S]
+
+            A_blocks.append(A_i)
+            B_blocks.append(B_i)

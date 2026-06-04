@@ -1,6 +1,6 @@
 import numpy as np
 from constellation import Constellation
-from equaliser import Equaliser, RepeatedChirp
+from equaliser import Equaliser, RepeatedChirp, GolayPairs
 
 class Rx:
     signal: np.ndarray
@@ -25,6 +25,8 @@ class Rx:
     active_bins : np.ndarray
     early_samples : int
 
+    key_start_estimates : list # A list of when each equaliser key starts (predicted from sync logic)
+    data_start_estimate : int  # Sync logic predicts when the data block begins
 
     def __init__(self, constellation: Constellation, signal:np.ndarray, cp_length: int,
                  block_length: int, equalisers : list[Equaliser], sfoEqualiser : Equaliser,
@@ -112,20 +114,20 @@ class Rx:
 
         # Logic to choose sync estimate (e.g just use the first sync estimate. Could break if None)
         preamble_start = preamble_start_estimates[0]
-        data_start = preamble_start + preambleTotalLength
+        self.data_start_estimate = preamble_start + preambleTotalLength
         # Account for cyclic prefix and going early. 
-        decode_start = data_start + self.cp_length - self.early_samples
+        decode_start = self.data_start_estimate + self.cp_length - self.early_samples
 
         # Use the sync estimate to find where you think EVERY equaliser starts
-        key_start_estimates = []
+        self.key_start_estimates = []
         for equaliser in self.equalisers:
-            key_start_estimates.append(preamble_start + equaliser.preambleStartOffset)
+            self.key_start_estimates.append(preamble_start + equaliser.preambleStartOffset)
 
         # Estimate
         channel_estimates = [] # Will be a list of np.ndarray corresponding to each estimate
         for idx, equaliser in enumerate(self.equalisers):    
             if equaliser.est:
-                key_start_index = key_start_estimates[idx]
+                key_start_index = self.key_start_estimates[idx]
                 channel_estimates.append(equaliser.estimate(self.signal, key_start_index, False))
             else:
                 channel_estimates.append(None)
@@ -135,10 +137,18 @@ class Rx:
 
         # BOGDAN YOU FORGOT THIS LINE AGAIN FFS
         self.ofdm_blocks = self.signal[decode_start:]
+
+    def initial_SFO_estimate(self):
+        for idx, equaliser in enumerate(self.equalisers):
+            if type(equaliser) is GolayPairs:
+                key_start_idx = self.key_start_estimates[idx]
+                equaliser.initial_SFO_estimate(self.signal, key_start_idx, False)
     
     def decode(self):
 
         self.sync_and_estimate()
+        self.initial_SFO_estimate()
+        self.SFO_correct()
         self.extract_ofdm_blocks()
         self.decode_symbols()
         self.bits_to_bytes()
