@@ -104,24 +104,70 @@ def plot_multiple_channel_estimates(H_list):
     H_avg = np.mean(H_list, axis=0)
 
     H_sorted = np.sort(H_list, axis=0)
-    H_trimmed = H_sorted[1:-1]   # drop min/max
+    H_trimmed = H_sorted[1:-1]
     H_trimmed_avg = np.mean(H_trimmed, axis=0)
 
     num = len(H_list)
 
-    plt.figure(figsize=(12, 6))
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
 
+    # Magnitude
     for i in range(num):
-        plt.plot(20*np.log10(np.abs(H_list[i]) + 1e-12), alpha=0.5, label=f"chirp {i}" if i < 5 else None)
+        ax1.plot(
+            20 * np.log10(np.abs(H_list[i]) + 1e-12),
+            alpha=0.5,
+            label=f"chirp {i+1}" if i < 5 else None
+        )
 
-    plt.plot(20*np.log10(np.abs(H_avg) + 1e-12), color='black', linewidth=2, label="AVERAGE")
-    plt.plot(20*np.log10(np.abs(H_trimmed_avg) + 1e-12), color='grey', linewidth=2, label="AVERAGE - TRIMMED")
+    ax1.plot(
+        20 * np.log10(np.abs(H_avg) + 1e-12),
+        color='black',
+        linewidth=2,
+        label="AVERAGE"
+    )
 
-    plt.title("Channel Estimates per Chirp + Average")
-    plt.xlabel("Subcarrier index")
-    plt.ylabel("Magnitude (dB)")
-    plt.grid()
-    plt.legend()
+    ax1.plot(
+        20 * np.log10(np.abs(H_trimmed_avg) + 1e-12),
+        color='grey',
+        linewidth=2,
+        label="AVERAGE - TRIMMED"
+    )
+
+    ax1.set_title("Channel Estimate Magnitude")
+    ax1.set_xlabel("Subcarrier index")
+    ax1.set_ylabel("Magnitude (dB)")
+    ax1.grid()
+    ax1.legend()
+
+    # Phase
+    for i in range(num):
+        ax2.plot(
+            np.unwrap(np.angle(H_list[i])),
+            alpha=0.5,
+            label=f"chirp {i+1}" if i < 5 else None
+        )
+
+    ax2.plot(
+        np.unwrap(np.angle(H_avg)),
+        color='black',
+        linewidth=2,
+        label="AVERAGE"
+    )
+
+    ax2.plot(
+        np.unwrap(np.angle(H_trimmed_avg)),
+        color='grey',
+        linewidth=2,
+        label="AVERAGE - TRIMMED"
+    )
+
+    ax2.set_title("Channel Estimate Phase")
+    ax2.set_xlabel("Subcarrier index")
+    ax2.set_ylabel("Phase (rad)")
+    ax2.grid()
+    ax2.legend()
+
+    plt.tight_layout()
     plt.show()
 
 

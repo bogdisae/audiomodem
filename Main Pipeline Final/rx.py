@@ -129,6 +129,7 @@ class Rx:
         for idx, equaliser in enumerate(self.equalisers):    
             if equaliser.est:
                 key_start_index = self.key_start_estimates[idx]
+                print("Key start index for golay", key_start_index)
                 channel_estimates.append(equaliser.estimate(self.signal, key_start_index))
             else:
                 channel_estimates.append(None)

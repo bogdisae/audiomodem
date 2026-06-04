@@ -92,7 +92,8 @@ class RepeatedChirp(Equaliser):
         X = np.fft.fft(singleChirp, n=self.chirpLength)
         H_list = []
 
-        for i in range(self.numRepeats):
+        # SKIP THE FIRST CHIRP AS IT DOES NOT HAVE CYCLIC PREFIX EFFECT
+        for i in range(1, self.numRepeats):
 
             start = sync_index + i * self.blockLength
             segment = rxSignal[start:start + self.chirpLength]
@@ -131,7 +132,7 @@ class GolayPairs(Equaliser):
         self.numPairs = numPairs
 
         self.blockLength = 2 * self.indivLength + self.silence #A, silence, B counted as a block
-        self.lengthInSamples = self.silence +self.blockLength * numPairs 
+        self.lengthInSamples = self.silence + self.blockLength * numPairs 
         self.lengthInSeconds = self.lengthInSamples / self.fs
 
         self.a_ref, self.b_ref = self.generate_pair(seed) # Generate a reference pair for diagnostic plots
