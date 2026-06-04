@@ -458,11 +458,27 @@ def gen_colour_seq(known_bit_stream, constellation):
 
 
     
-def plot_Golay_diagnostics(h_norm, corr_a, corr_b, H_norm, H_norm_alt):
+def plot_Golay_diagnostics(h_norm, h_norm_alt, corr_a, corr_b, H_norm, H_norm_alt):
     import questionary
     plot_corr = False
     plot_corr = questionary.select("Plot correlation results for first pair? (y/n)", choices=['y', 'n']).ask()
     if plot_corr == 'y':
+        
+        fig_norm, ax_alt = plt.subplots()
+        ax_alt.stem(h_norm, label='h_norm', basefmt=' ')
+        ax_alt.set_xlabel('Lag')
+        ax_alt.set_ylabel('Impulse Response')
+        ax_alt.legend()
+        ax_alt.set_title('Impulse response from time-domain correlation')
+
+        fig_b, ax_blt = plt.subplots()
+        ax_blt.stem(h_norm_alt, label='h_norm_alt', basefmt=' ')
+        ax_blt.set_xlabel('Lag')
+        ax_blt.set_ylabel('Impulse Response')
+        ax_blt.legend()
+        ax_blt.set_title('Impulse response from FFT method')
+        plt.show()
+        
         plt.plot(h_norm)
         plt.title('Combined correlation of received a and b with reference sequences')
         plt.xlabel('Lag')

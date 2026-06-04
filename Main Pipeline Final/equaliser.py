@@ -1,11 +1,11 @@
+from itertools import combinations
 from pathlib import Path
 
 import numpy as np
 from scipy.signal import chirp, correlate
 import matplotlib.pyplot as plt
 from constellation import Constellation
-from helper import plot_signal, plot_multiple_channel_estimates, plot_Golay_diagnostics, estimate_delay_spread
-from scipy.linalg import solve_toeplitz
+from helper import plot_signal, plot_multiple_channel_estimates, plot_Golay_diagnostics, estimate_delay_spread, plot_pilot_phase
 
 class Equaliser:
 
@@ -166,74 +166,86 @@ class GolayPairs(Equaliser):
     def synchronise(self, signal: np.ndarray, plot = True):
         raise NotImplementedError
 
-    def estimate(self, rxSignal: np.ndarray, sync_index, pair_counter = 1, plot = True):
+    def estimate(self, a_rx, b_rx, plot = True):
         
-        #If pair is in middle of data -> Sync idx is the start of the pair? Would this be accurate?
+        '''Maybe following silences must be correlated?'''
+        corr_a = correlate(a_rx, self.a_ref, mode='full')
+        corr_b = correlate(b_rx, self.b_ref, mode='full')
 
-        H_list = []
+        #Extract causal part starting at zero lag
 
-        indiv_len = self.indivLength
-        pair_stride = self.blockLength
+        h_est = corr_a[self.indivLength-1:2*self.indivLength-1] + corr_b[self.indivLength-1:2*self.indivLength-1]
 
-        self.a_ref, self.b_ref = self.generate_pair(seed=0) # Generate a reference pair for diagnostic plots
+        #C_aa[n] + C_bb[n] = 2N*delta[n] -> Normalise by 2N to get actual impulse response estimate
+
+        #Correct normaisation for scaled pairs
+        h_norm = h_est / (2*self.indivLength)
+
+
+        #Truncate
+        #print(f'Estimated impulse response for pair {i}, h_est length: {len(h_norm)}, h_est values: {h_norm}')
+
+        H_norm = np.fft.fft(h_norm, n=self.indivLength)
+
+        #Alternative method - Actually works
+        Y_a = np.fft.fft(a_rx, n=self.indivLength)
+        Y_b = np.fft.fft(b_rx, n=self.indivLength)
+
+        A = np.fft.fft(self.a_ref, n=self.indivLength)
+        B = np.fft.fft(self.b_ref, n=self.indivLength)
+
+        H_norm_alt = (Y_a * np.conj(A) + Y_b * np.conj(B)) / (2*self.indivLength)
         
-        
-        for i in range(self.numPairs):
-            #print(f'iteration {i} out of {self.numPairs}')
-            start = sync_index + i * pair_stride
-
-            a_rx = rxSignal[start:start + indiv_len]
-            b_rx = rxSignal[start + indiv_len + self.silence : start + 2 * indiv_len + self.silence]
-
-            #print(f'a_rx length: {len(a_rx)}, b_rx length: {len(b_rx)}')
-            #print(f'a seq idx: {start} to {start + indiv_len}, b seq idx: {start + indiv_len + self.silence} to {start + 2 * indiv_len + self.silence}')
-
-            corr_a = correlate(a_rx, self.a_ref, mode='full')
-            corr_b = correlate(b_rx, self.b_ref, mode='full')
-
-            #Extract causal part starting at zero lag
-            h_est = corr_a[indiv_len-1:2*indiv_len-1] + corr_b[indiv_len-1:2*indiv_len-1]
-
-            #C_aa[n] + C_bb[n] = 2N*delta[n] -> Normalise by 2N to get actual impulse response estimate
-
-            #Correct normaisation for scaled pairs
-            h_norm = h_est / (2*self.indivLength)
-
-
-            #Truncate
-            #print(f'Estimated impulse response for pair {i}, h_est length: {len(h_norm)}, h_est values: {h_norm}')
-
-            H_norm = np.fft.fft(h_norm, n=self.indivLength)
-
-            #Alternative method - Actually works
-            Y_a = np.fft.fft(a_rx, n=self.indivLength)
-            Y_b = np.fft.fft(b_rx, n=self.indivLength)
-
-            A = np.fft.fft(self.a_ref, n=self.indivLength)
-            B = np.fft.fft(self.b_ref, n=self.indivLength)
-
-            H_norm_alt = (Y_a * np.conj(A) + Y_b * np.conj(B)) / (2*self.indivLength)
-            
-            if i == 0 and plot:
-                plot_Golay_diagnostics(h_norm, corr_a, corr_b, H_norm, H_norm_alt)
-            H_list.append(H_norm_alt)
-
-
-
-
-        #print(f'H: {H_list}')
-        H_norm_avg = np.mean(H_list, axis=0)
-        
+        if self.est and plot:
+            h_norm_alt = np.fft.ifft(H_norm_alt)
+            plot_Golay_diagnostics(h_norm, h_norm_alt, corr_a, corr_b, H_norm, H_norm_alt)      
 
         #print(f'H values: {np.mean(np.abs(H_est_avg))}, {np.mean(np.abs(H_est_avg))}')
         
         #Estimate delay spread
-        h_norm_avg = np.fft.ifft(H_norm_avg)
-        delay_spread = estimate_delay_spread(h_norm_avg, self.fs)
+        delay_spread = estimate_delay_spread(h_norm_alt, self.fs)
         print(f'Estimated delay spread: {delay_spread*1e3:.2f} milliseconds. CP time should be at least this long to avoid ISI. CP length in ms: {self.indivLength/self.fs*1e3:.2f} ms')
 
-        return H_norm_avg
+        return H_norm_alt
         
+    def block_SFO_detection(self, section_index):
+
+        #permutation combinations:
+        #Work out for all combinations
+        for i, j in combinations(range(4), 2): #(0,1), (0,2), (0,3), (1,2), (1,3), (2,3)
+            self.phase_diff[i,j] = np.angle(self.H[j] / self.H[i])
+
+            plotting_mask = np.zeros(self.block_length, dtype=float)
+            plotting_mask[self.active_bins] = 1.0
+
+            active = self.active_bins
+            f_active = np.arange(self.block_length)[active]
+            y_active = self.phase_diff[i,j]
+
+            # Outlier rejection: keep points within 2 std of median
+            median = np.median(y_active)
+            std = np.std(y_active)
+            mask = np.abs(y_active - median) < 2 * std
+            f_fit = f_active[mask]
+            y_fit = y_active[mask]
+
+            # Linear regression on inliers
+            f_mean = np.mean(f_fit)
+            y_mean = np.mean(y_fit)
+            a_meas = np.sum((f_fit - f_mean) * (y_fit - y_mean)) / np.sum((f_fit - f_mean)**2)
+            self.a_history.append(a_meas)
+
+            plot=True
+            print(plot)
+            if plot == True:
+                f = np.arange(self.block_length)
+                plot_pilot_phase(self.H[i],self.H[j], plotting_mask, section_index, f, a_meas, self.phase_diff[i,j])
+                print("Drift per sample (a_meas): ", a_meas, "radians/bin. Should be close to zero for good synchronisation.")
+                time_drift_per_sec = (-a_meas * self.block_length / (2*np.pi)) / (self.synchroniser.fs*self.symbol_length * self.pilot_spacing)
+                print(f"Corresponds to {time_drift_per_sec:.6g} s drift at sample rate {self.synchroniser.fs} Hz.")
+
+        #apply the correction to the rest of the data stream by rotating the OFDM symbols in the next section by the negative of the measured phase drift with interpolated in time
+
     def initial_SFO_estimate(self, rxSignal: np.ndarray, key_start_index : int):
 
         N = self.indivLength
@@ -255,6 +267,10 @@ class GolayPairs(Equaliser):
 
             A_blocks.append(A_i)
             B_blocks.append(B_i)
+
+        H = []
+        for i in range(self.numPairs):
+            H = self.estimate()
     
 class WhiteNoise(Equaliser):
     def __init__(self, lengthInSamples, constellation, sync=False, est=False, fs=48000):
