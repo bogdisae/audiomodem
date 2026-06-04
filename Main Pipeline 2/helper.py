@@ -21,12 +21,12 @@ def load_dict(filename):
     with open(filename, 'rb') as f:
         return pickle.load(f)
     
-def record(t=3, savefile = False, filedir='bogdan/recordings/', fs=44100):
+def record(t=3, savefile = False, filedir='bogdan/recordings/', fs=48000):
     recording = sd.rec(int(t * fs), samplerate=fs, channels=1).reshape(int(t*fs))
     sd.wait()
     if savefile:
-        write(filedir+"output.wav", fs, recording) 
-        np.savetxt(filedir+"output.txt", recording, delimiter="\n") 
+        write(filedir+"_output.wav", fs, recording) 
+        # np.savetxt(filedir+"output.txt", recording, delimiter="\n") 
     return recording
     
 # def write_csv(filename, data, headers=None):
@@ -238,7 +238,7 @@ def save_wav_file(signal, fs):
 
 
 
-def plot_constellation(symbols, title="Constellation Diagram", show=True):
+def plot_constellation(symbols, title="Constellation Diagram", show=True, index_colour=False):
     """
     Plots complex data symbols on the IQ plane.
 
@@ -250,7 +250,11 @@ def plot_constellation(symbols, title="Constellation Diagram", show=True):
     symbols = np.asarray(symbols)
 
     plt.figure(figsize=(6, 6))
-    plt.scatter(symbols.real, symbols.imag, s=10)
+    if index_colour:
+        sc = plt.scatter(symbols.real, symbols.imag, c=np.arange(len(symbols)), cmap='viridis', s=10)
+        plt.colorbar(sc, label='Sample index')
+    else:
+        plt.scatter(symbols.real, symbols.imag, s=10)
 
     plt.axhline(0, color='black', linewidth=0.5)
     plt.axvline(0, color='black', linewidth=0.5)
@@ -264,6 +268,29 @@ def plot_constellation(symbols, title="Constellation Diagram", show=True):
     if show:
         plt.show()
 
+# def plot_constellation_with_second(symbols, second, title="Constellation Diagram", show=True, index_colour=False):
+#     symbols = np.asarray(symbols)
+
+#     fig, ax = plt.subplots(1, 2, figsize=(12, 6))
+#     if index_colour:
+#         ax[0].scatter(symbols.real, symbols.imag, c=np.arange(len(symbols)), cmap='viridis', s=10)
+#         ax[0].colorbar(label='Sample index')
+#     else:
+#         ax[0].scatter(symbols.real, symbols.imag, s=10)
+
+#     ax[0].axhline(0, color='black', linewidth=0.5)
+#     ax[0].axvline(0, color='black', linewidth=0.5)
+
+#     ax[0].xlabel("In-phase (I)")
+#     ax[0].ylabel("Quadrature (Q)")
+#     ax[0].title(title)
+#     ax[0].grid(True)
+#     ax[0].axis("equal")
+
+#     ax[1].plot(second)
+
+#     if show:
+#         plt.show()
 
 
 #------------------------------------------------------------------------------------------------
@@ -316,3 +343,62 @@ def calculate_ber(seq1, seq2):
         raise ValueError("Sequences are empty, cannot compute BER")
 
     return ber, errors, min_len
+
+def plot_complex_arrays_separate(arrays, labels, figsize=None):
+    n = len(arrays)
+    fig, axes = plt.subplots(n, 2, figsize=figsize or (10, 1 * n))
+    
+    if n == 1:
+        axes = axes[np.newaxis, :]  # ensure 2D
+
+    row_label_x = 0.02
+    for i, (arr, label) in enumerate(zip(arrays, labels)):
+        magnitude_db = 20 * np.log10(np.abs(arr) + 1e-12)
+        phase_deg = np.angle(arr, deg=True)
+
+        ax_mag, ax_phase = axes[i]
+
+        ax_mag.plot(magnitude_db)
+        ax_mag.set_ylabel("dB")
+        ax_mag.grid(True)
+
+        ax_phase.plot(phase_deg, color="tab:orange")
+        ax_phase.set_ylabel("degrees")
+        ax_phase.grid(True)
+
+        # row label on the left
+        mid = axes[i, 0].get_position()
+        row_center = (mid.y0 + mid.y1) / 2
+        fig.text(row_label_x, row_center, label,
+                 va="center", ha="center", rotation=90,
+                 fontsize=11, fontweight="bold")
+
+    axes[0, 0].set_title("Magnitude (dB)")
+    axes[0, 1].set_title("Phase (degrees)")
+
+    fig.subplots_adjust(left=0.1, hspace=0.4)
+    
+    plt.show()
+
+def plot_complex_arrays(arrays, labels, figsize=None):
+    fig, (ax_mag, ax_phase) = plt.subplots(1, 2, figsize=figsize or (10, 4))
+
+    for arr, label in zip(arrays, labels):
+        magnitude_db = 20 * np.log10(np.abs(arr) + 1e-12)
+        phase_deg = np.angle(arr, deg=True)
+
+        ax_mag.plot(magnitude_db, label=label)
+        ax_phase.plot(phase_deg, label=label)
+
+    ax_mag.set_title("Magnitude (dB)")
+    ax_mag.set_ylabel("dB")
+    ax_mag.grid(True)
+    ax_mag.legend()
+
+    ax_phase.set_title("Phase (degrees)")
+    ax_phase.set_ylabel("degrees")
+    ax_phase.grid(True)
+    ax_phase.legend()
+
+    fig.tight_layout()
+    plt.show()

@@ -50,7 +50,9 @@ class Rx:
     def decode_ofdm_block(self, block):
         cp_discarded = block[-self.block_length:]
         Y = np.fft.fft(cp_discarded)
-        X = Y / self.H[0:len(Y)] # Zero-forcing
+        # X = Y / self.H[0:len(Y)] # Zero-forcing
+        H = self.H[0:len(Y)]
+        X = np.conjugate(H) * Y / (np.abs(H) ** 2 + 0.0005) #mmse np.
 
         # Phase correction for FFT window offset
         k = np.arange(len(X))
