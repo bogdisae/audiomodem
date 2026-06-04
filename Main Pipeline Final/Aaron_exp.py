@@ -14,26 +14,26 @@ from scipy.io import wavfile
 
 sampleRate = 48000
 
-# constellation = Constellation(2, {
-#     ('0', '0'): (1+1j)/np.sqrt(2),
-#     ('0', '1'): (-1+1j)/np.sqrt(2),
-#     ('1', '0'): (1-1j)/np.sqrt(2),
-#     ('1', '1'): (-1-1j)/np.sqrt(2)
-# }, {
-#     ('0', '0'): lambda s: (s.real >= 0) & (s.imag >= 0),
-#     ('0', '1'): lambda s: (s.real < 0) & (s.imag >=  0),
-#     ('1', '0'): lambda s: (s.real >=  0) & (s.imag < 0),
-#     ('1', '1'): lambda s: (s.real <  0) & (s.imag <  0),
-# })
-
-
-constellation = Constellation(1, {
-    ('0',): 1,
-    ('1',): -1
+constellation = Constellation(2, {
+    ('0', '0'): (1+1j)/np.sqrt(2),
+    ('0', '1'): (-1+1j)/np.sqrt(2),
+    ('1', '0'): (1-1j)/np.sqrt(2),
+    ('1', '1'): (-1-1j)/np.sqrt(2)
 }, {
-    ('0',): lambda s: s.real >= 0,
-    ('1',): lambda s: s.real < 0
+    ('0', '0'): lambda s: (s.real >= 0) & (s.imag >= 0),
+    ('0', '1'): lambda s: (s.real < 0) & (s.imag >=  0),
+    ('1', '0'): lambda s: (s.real >=  0) & (s.imag < 0),
+    ('1', '1'): lambda s: (s.real <  0) & (s.imag <  0),
 })
+
+
+# constellation = Constellation(1, {
+#     ('0',): 1,
+#     ('1',): -1
+# }, {
+#     ('0',): lambda s: s.real >= 0,
+#     ('1',): lambda s: s.real < 0
+# })
 
 def generate_sig(standard = True):
     text_file = pick_csv_file("Select message file:", Path("./Main Pipeline 2/Data Files"))
@@ -46,14 +46,14 @@ def generate_sig(standard = True):
         print("Using standard chirp parameters for testing")
         repeatedChirp = RepeatedChirp(10, 4096, 0, 750, 18000, sync = True, fs = sampleRate)
         golayPairs = GolayPairs(12, silence = 2048, numPairs=4, seed = (1,1), est = True, fs = 48000) #2**12 = 4096
-        WN = np.zeros(4096)
-
+        whiteNoise = WhiteNoise(4096, constellation, sync = False, est = True, fs = sampleRate)
+        print(type(whiteNoise))
         transmitter = Tx(
             constellation=constellation,
             data_bytes=data_bytes,
             equaliser1 = repeatedChirp,
             equaliser2 = golayPairs,
-            equaliser3 = WN,
+            equaliser3 = whiteNoise,
             cp_length = 2048,
             block_length = 4096,
             pilot_spacing = 20,
@@ -73,5 +73,8 @@ def generate_sig(standard = True):
         raise SystemExit("No filename provided")
     write(f"Main Pipeline Final/Audio Files/{filename}.wav", sampleRate, combined_int16)
     print(f'Saved in dir: Main Pipeline Final/Audio Files/{filename}.wav')
+
+    
+    idx = repeatedChirp.synchronise(sig, plot=True)
 
 generate_sig()
