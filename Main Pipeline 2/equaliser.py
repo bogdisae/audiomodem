@@ -2,7 +2,7 @@ import numpy as np
 from scipy.signal import chirp, correlate
 import matplotlib.pyplot as plt
 from helper import plot_signal, plot_multiple_channel_estimates
-from scipy.linalg import solve_toeplitz
+from scipy.linalg import solve_toeplitz, toeplitz
 
 class Equaliser:
     def __init__(self, fs=48000):
@@ -17,7 +17,24 @@ class Equaliser:
 
     def estimate(self, signal: np.ndarray, sync_index, plot = True):
         raise NotImplementedError
+    
+    def _wiener_estimate_general(self, signal: np.ndarray, pilot: np.ndarray):
+        # h_{opt} = R_{xx}^{-1}r_{yx}
+        rxx = np.correlate(pilot, pilot, mode="full")
+        rxx = rxx[len(rxx)//2:]
+        rxx = rxx/len(rxx)
+        Rxx = toeplitz(rxx, rxx)
 
+        ryx = np.correlate(signal, pilot, mode="full")
+        ryx = ryx[len(ryx)//2:]
+        ryx = ryx/len(ryx)
+
+        w = np.matmul(np.linalg.inv(Rxx), ryx)
+        return w
+
+
+e = Equaliser()
+e._wiener_estimate_general([1, 2, 3], [1, 2, 3])
 
 class Chirp(Equaliser):
     def __init__(self, f0, f1, chirpLength, fs=48000):
@@ -306,11 +323,8 @@ class GaussianPulse(Equaliser):
 
     def estimate(self, signal: np.ndarray, sync_index, plot = True):
         y = signal[sync_index+self.N: sync_index+self.N*2]
-        Y = np.fft.fft(y)
-        X = np.fft.fft(self.block)
-        eps = 1e-12
-        H = Y / (X + eps)
-        return H
+        h = self._wiener_estimate_general(y, self.block)
+        return np.fft.fft(h)
 
     def gaussian_pulse(t, sigma):
         """
