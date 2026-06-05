@@ -141,21 +141,23 @@ def plot_multiple_channel_estimates(H_list):
 
     # Phase
     for i in range(num):
+        phase = np.mod(np.angle(H_list[i]), np.pi)
         ax2.plot(
-            np.unwrap(np.angle(H_list[i])),
+            phase,
             alpha=0.5,
             label=f"chirp {i+1}" if i < 5 else None
         )
 
+    phase = np.mod(np.angle(H_avg), np.pi)
     ax2.plot(
-        np.unwrap(np.angle(H_avg)),
+        phase,
         color='black',
         linewidth=2,
         label="AVERAGE"
     )
-
+    phase = np.mod(np.angle(H_trimmed_avg), np.pi)
     ax2.plot(
-        np.unwrap(np.angle(H_trimmed_avg)),
+        np.angle(phase),
         color='grey',
         linewidth=2,
         label="AVERAGE - TRIMMED"
@@ -303,7 +305,7 @@ def save_wav_file(signal, fs):
     filename = questionary.text("Enter filename (without extension):").ask()
     if filename is None:
         raise SystemExit("No filename provided")
-    write(f"Main Pipeline 2/Audio Files/{filename}.wav", fs, combined_int16)
+    write(f"Main Pipeline Final/Audio Files/{filename}.wav", fs, combined_int16)
 
 
 

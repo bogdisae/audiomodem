@@ -117,6 +117,9 @@ class Tx:
         pilot_symbol = self.equaliser3.generate()
 
         sections = []
+
+        # 1000 samples of silence at the start - helps with clear transmission (first chirp cuts off)
+        sections.append(np.zeros(1000))
         sections.append(chirp_seq)
         sections.append(Golay_seq)
         for i, block in enumerate(ofdm_blocks):

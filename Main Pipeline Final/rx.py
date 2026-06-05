@@ -146,14 +146,21 @@ class Rx:
 
     def initial_SFO_estimate(self):
         for idx, equaliser in enumerate(self.equalisers):
+            key_start_idx = self.key_start_estimates[idx]
+
             if type(equaliser) is GolayPairs:
-                key_start_idx = self.key_start_estimates[idx]
-                equaliser.initial_SFO_estimate(self.signal, key_start_idx, False)
+                #equaliser.initial_SFO_estimate(self.signal, key_start_idx, False)
+                pass
+
+            if type(equaliser) is RepeatedChirp:
+                print("Using chirps to estimate SFO...")
+                print("Repeated chirps key starts at sample:", key_start_idx)
+                equaliser.initial_SFO_estimate(self.signal, key_start_idx, self.bin_low, self.bin_high, True)
     
     def decode(self):
 
         self.sync_and_estimate()
-        #self.initial_SFO_estimate()
+        self.initial_SFO_estimate()
         #self.SFO_correct()
         self.extract_ofdm_blocks()
         self.decode_symbols()

@@ -82,6 +82,7 @@ def receive_standard_sig():
         print("Recording mode selected")
         sig = record_audio(sampleRate)
         sig = normalise_signal(sig)
+        
     
     repeatedChirp = RepeatedChirp(10, 4096, 0, 750, 18000, sync = True, est = True, fs = sampleRate)
     golayPairs = GolayPairs(12, silence = 2048, numPairs=4, seed = (1,1), est = True, fs = 48000) #2**12 = 4096
