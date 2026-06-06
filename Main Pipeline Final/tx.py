@@ -66,7 +66,7 @@ class Tx:
 
         self.pilot_spacing = pilot_spacing
         
-        self.c = ldpc.code('802.16', z=61)
+        #self.c = ldpc.code('802.16', z=61)
         self.use_ldpc = use_ldpc
 
 
