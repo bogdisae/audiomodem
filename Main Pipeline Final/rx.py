@@ -47,7 +47,7 @@ class Rx:
                  block_length: int, 
                  equalisers : list[Equaliser], 
                  sfoEqualiser : Equaliser,
-                early_samples = 30, 
+                early_samples = 0, 
                  f_low = 2000,
                  f_high = 12000, 
                  fs: int = 48_000, 
@@ -159,7 +159,7 @@ class Rx:
 
         for equaliser in self.equalisers:
             if equaliser.sync:
-                local_start = equaliser.synchronise(self.signal, False)
+                local_start = equaliser.synchronise(self.signal, True)
                 local_preamble_start_estimate = local_start - equaliser.preambleStartOffset
                 self.preamble_start_estimates.append(local_preamble_start_estimate)
             else:

@@ -96,16 +96,6 @@ def receive_standard_sig():
     receiver = Rx(constellation, sig, 2048, 4096, equaliserList, None)
     receiver.decode()
 
-    # DEBUGGING - plot received signal
-    t = np.arange(len(sig))
-    plt.figure()
-    plt.plot(t, sig)
-    plt.title("Received signal")
-    plt.xlabel("Sample index")
-    plt.ylabel("Amplitude")
-    plt.tight_layout()
-    plt.show()
-
     print("Receiver preamble start estimates:", receiver.preamble_start_estimates)
     print("Receiver key start estimates:", receiver.key_start_estimates)
     print("Data start estimate:" , receiver.data_start_estimate)
@@ -118,8 +108,8 @@ def receive_standard_sig():
     # print("First 10 estimated coefficients:\n", receiver.H[:10])
 
     # print(receiver.data_bits[:200])
-    # plot_constellation(receiver.data_symbols[:200])
-    # plot_constellation(receiver.data_symbols[0:2000])
+    plot_constellation(receiver.data_symbols[:200])
+    plot_constellation(receiver.data_symbols[0:4000])
     # plot_constellation(receiver.data_symbols[2000:4000])
     # plot_constellation(receiver.data_symbols[4000:6000])
     # plot_constellation(receiver.data_symbols[6000:8000])
@@ -131,12 +121,12 @@ def receive_standard_sig():
 
 
 
-    # shaqbits = csv_bytes_to_binary_sequence("Main Pipeline 2/Data Files/BIGSHAQ.txt")
-    # ber, errors, min_len = calculate_ber(shaqbits, receiver.data_bits[:2000])
+    shaqbits = csv_bytes_to_binary_sequence("Main Pipeline Final/Data Files/BIGSHAQ.txt")
+    ber, errors, min_len = calculate_ber(shaqbits, receiver.data_bits[:200])
 
-    # print("BER:", ber)
-    # print("Errors:", errors)
-    # print("Min Len", min_len)
+    print("BER:", ber)
+    print("Errors:", errors)
+    print("Min Len", min_len)
 
     # print(receiver.data_bytes)
 
