@@ -71,7 +71,7 @@ class Rx:
         self.active_bins = np.arange(self.bin_low, self.bin_high + 1)
 
         #self.c = ldpc.code('802.16', z=61)
-        #self.use_ldpc = use_ldpc
+        self.use_ldpc = use_ldpc
         self.preamble_start_estimates = []
         self.key_start_estimates = []
 
@@ -190,7 +190,8 @@ class Rx:
 
         # Logic to choose which channel estimate to use (e.g just use the second. Could break if None)
         # Use the repeated chirp estimate for now
-        self.H = channel_estimates[0]
+        
+        self.H = channel_estimates[1]
 
 
 
@@ -202,7 +203,8 @@ class Rx:
             key_start_idx = self.key_start_estimates[idx]
 
             if type(equaliser) is GolayPairs:
-                equaliser.initial_SFO_estimate(self.signal, key_start_idx, self.bin_low, self.bin_high, True)
+                self.sfo_rad_per_index_per_block = equaliser.initial_SFO_estimate(self.signal, key_start_idx, self.bin_low, self.bin_high, True)
+                
                 pass
 
             if type(equaliser) is RepeatedChirp:
@@ -223,9 +225,9 @@ class Rx:
         self.estimate()
         #self.initial_SFO_estimate()
         #self.SFO_correct()
-        #self.extract_ofdm_blocks()
-        #self.decode_symbols()
+        self.extract_ofdm_blocks()
+        self.decode_symbols()
         #self.ldpc()
-        #self.bits_to_bytes()
+        self.bits_to_bytes()
 
 

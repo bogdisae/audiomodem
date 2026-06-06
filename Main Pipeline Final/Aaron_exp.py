@@ -3,7 +3,7 @@ print("Importing modules...")
 from equaliser import Equaliser, RepeatedChirp, GolayPairs, WhiteNoise
 from tx import Tx
 from rx import Rx
-from helper import pick_text_file, csv_to_data_bytes, pick_wav_file, normalise_signal, record_audio, plot_constellation
+from helper import gen_colour_seq, pick_text_file, csv_to_data_bytes, pick_wav_file, normalise_signal, record_audio, plot_constellation, pick_csv_file
 from helper import csv_bytes_to_binary_sequence, calculate_ber
 from pathlib import Path
 import numpy as np
@@ -95,7 +95,7 @@ def receive_standard_sig():
     equaliserList = [repeatedChirp, golayPairs]
 
     # DON'T KNOW WHAT SFO EQUALISER ACTUALLY IS YET
-    receiver = Rx(constellation, sig, 2048, 4096, equaliserList, None)
+    receiver = Rx(constellation, sig, 2048, 4096, equaliserList, None, early_samples = 300, use_ldpc = False)
     receiver.decode()
 
     # DEBUGGING - plot received signal
@@ -120,8 +120,8 @@ def receive_standard_sig():
     # print("First 10 estimated coefficients:\n", receiver.H[:10])
 
     # print(receiver.data_bits[:200])
-    # plot_constellation(receiver.data_symbols[:200])
-    # plot_constellation(receiver.data_symbols[0:2000])
+    plot_constellation(receiver.data_symbols[:200])
+    plot_constellation(receiver.data_symbols[0:2000])
     # plot_constellation(receiver.data_symbols[2000:4000])
     # plot_constellation(receiver.data_symbols[4000:6000])
     # plot_constellation(receiver.data_symbols[6000:8000])
@@ -130,6 +130,13 @@ def receive_standard_sig():
     # plot_constellation(receiver.data_symbols[12000:14000])
     # plot_constellation(receiver.data_symbols[14000:16000])
     # print("Number of data symbols:", len(receiver.data_symbols))
+
+    text_file = pick_csv_file("Select message file:", Path("./Main Pipeline Final/Data Files"))
+    known_bit_seq = csv_bytes_to_binary_sequence(text_file)
+    tx_log_name = Path(text_file).stem
+
+    colour_seq = gen_colour_seq(known_bit_seq, constellation)
+    plot_constellation(receiver.data_symbols[0:2000], colour_seq[0:2000], "Received Constellation with Known Bit Stream Colouring")
 
 
 
@@ -170,7 +177,7 @@ def receive_standard_sig():
     # print(receiver.data_bytes)
 
 
-#generate_standard_sig()
+generate_standard_sig()
 
 receive_standard_sig()
 
