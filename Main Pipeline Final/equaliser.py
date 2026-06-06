@@ -199,6 +199,9 @@ class GolayPairs(Equaliser):
         self.lengthInSeconds = self.lengthInSamples / self.fs
 
         self.a_ref, self.b_ref = self.generate_pair(seed) # Generate a reference pair for diagnostic plots
+        self.H_list = []
+        self.phase_diff = {}
+        self.a_history = []
 
     def generate_pair(self, seed):
 
@@ -234,8 +237,6 @@ class GolayPairs(Equaliser):
         
         #If pair is in middle of data -> Sync idx is the start of the pair? Would this be accurate?
 
-        H_list = []
-
         indiv_len = self.indivLength
         pair_stride = self.blockLength
 
@@ -247,15 +248,15 @@ class GolayPairs(Equaliser):
             start = sync_index + self.silence + i * pair_stride #1 silence before a
 
             a_rx = rxSignal[start:start + indiv_len + self.silence]
-            b_rx = rxSignal[start + indiv_len + self.silence : start + 2 * indiv_len + self.silence + self.silence]
+            b_rx = rxSignal[start + indiv_len + self.silence : start + 2 * indiv_len + self.silence * 2]
 
             #print(f'a_rx length: {len(a_rx)}, b_rx length: {len(b_rx)}')
             #print(f'a seq idx: {start} to {start + indiv_len}, b seq idx: {start + indiv_len + self.silence} to {start + 2 * indiv_len + self.silence}')
 
             '''Maybe following silences must be correlated?'''
             '''POTENTIAL ERROR HERE - np.zeros is wrong since already included in the rx sequences'''
-            corr_a = correlate(np.concatenate([a_rx, np.zeros(self.silence)]), self.a_ref, mode='full')
-            corr_b = correlate(np.concatenate([b_rx, np.zeros(self.silence)]), self.b_ref, mode='full')
+            corr_a = correlate(a_rx, self.a_ref, mode='full')
+            corr_b = correlate(b_rx, self.b_ref, mode='full')
 
             #Extract causal part starting at zero lag
             h_est = corr_a[indiv_len-1:2*indiv_len-1] + corr_b[indiv_len-1:2*indiv_len-1]
@@ -283,13 +284,13 @@ class GolayPairs(Equaliser):
             if i == 0 and plot:
                 h_norm_alt = np.fft.ifft(H_norm_alt)
                 plot_Golay_diagnostics(h_norm, h_norm_alt, corr_a, corr_b, H_norm, H_norm_alt)
-            H_list.append(H_norm_alt)
+            self.H_list.append(H_norm_alt)
 
 
 
 
         #print(f'H: {H_list}')
-        H_norm_avg = np.mean(H_list, axis=0)
+        H_norm_avg = np.mean(self.H_list, axis=0)
         
 
         #print(f'H values: {np.mean(np.abs(H_est_avg))}, {np.mean(np.abs(H_est_avg))}')
@@ -301,24 +302,27 @@ class GolayPairs(Equaliser):
 
         return H_norm_avg
         
-    def block_SFO_detection(self, section_index):
+    def initial_SFO_estimate(self, rxSignal: np.ndarray, key_start_index : int, bin_low : int, bin_high : int, plot = False):
+        
+        N_fft = 2**self.golay_order #Assuming Golay indiv is the same length as OFDM blocks - As of 06/06 this is true in JOSS-F
+        self.active_bins = np.zeros(N_fft, dtype=bool)
+        self.active_bins[bin_low:bin_high + 1] = True
 
-        #permutation combinations:
-        #Work out for all combinations
-        for i, j in combinations(range(4), 2): #(0,1), (0,2), (0,3), (1,2), (1,3), (2,3)
-            self.phase_diff[i,j] = np.angle(self.H[j] / self.H[i])
+        plotting_mask = self.active_bins.astype(float)  # no duplicate
 
-            plotting_mask = np.zeros(self.block_length, dtype=float)
-            plotting_mask[self.active_bins] = 1.0
+        active = self.active_bins
+        f_active = np.arange(N_fft)[active]  # loop-invariant, move out
 
-            active = self.active_bins
-            f_active = np.arange(self.block_length)[active]
-            y_active = self.phase_diff[i,j]
+        for i, j in combinations(range(4), 2):
+            self.phase_diff[i,j] = np.angle(self.H_list[j] / self.H_list[i])
 
-            # Outlier rejection: keep points within 2 std of median
+            y_active = self.phase_diff[i,j][active]  # fix: apply mask here
+
+            # Outlier rejection
             median = np.median(y_active)
             std = np.std(y_active)
             mask = np.abs(y_active - median) < 2 * std
+
             f_fit = f_active[mask]
             y_fit = y_active[mask]
 
@@ -327,44 +331,17 @@ class GolayPairs(Equaliser):
             y_mean = np.mean(y_fit)
             a_meas = np.sum((f_fit - f_mean) * (y_fit - y_mean)) / np.sum((f_fit - f_mean)**2)
             self.a_history.append(a_meas)
-
-            plot=True
-            print(plot)
+        
             if plot == True:
-                f = np.arange(self.block_length)
-                plot_pilot_phase(self.H[i],self.H[j], plotting_mask, section_index, f, a_meas, self.phase_diff[i,j])
-                print("Drift per sample (a_meas): ", a_meas, "radians/bin. Should be close to zero for good synchronisation.")
-                time_drift_per_sec = (-a_meas * self.block_length / (2*np.pi)) / (self.synchroniser.fs*self.symbol_length * self.pilot_spacing)
-                print(f"Corresponds to {time_drift_per_sec:.6g} s drift at sample rate {self.synchroniser.fs} Hz.")
+                f = np.arange(N_fft)
+                plot_pilot_phase(self.H_list[i],self.H_list[j], plotting_mask, i, j, f, a_meas, y_mean, f_mean, self.phase_diff[i,j])
+                #print("Drift per frequency bin between Golay pairs (a_meas): ", a_meas/(j-i), "radians/bin. Should be close to zero for good synchronisation.")
+                print("Drift per OFDM symbol: ", a_meas * N_fft / ((j - i)* (self.blockLength)), "Estimated between pairs ", i, " and ", j)
+                #time_drift_per_sec = (-a_meas * N_fft / (2*np.pi)) / (self.synchroniser.fs*self.symbol_length * self.pilot_spacing)
+                #print(f"Corresponds to {time_drift_per_sec:.6g} s drift at sample rate {self.synchroniser.fs} Hz.")
 
         #apply the correction to the rest of the data stream by rotating the OFDM symbols in the next section by the negative of the measured phase drift with interpolated in time
 
-    # def initial_SFO_estimate(self, rxSignal: np.ndarray, key_start_index : int):
-
-    #     N = self.indivLength
-    #     S = self.silence
-    #     T = 2*N + 2*S
-
-    #     # Stores the lists of samples corresponding to A and B
-    #     A_blocks = []
-    #     B_blocks = []
-
-    #     # skip INITIAL SILENCE
-    #     base0 = key_start_index + S
-
-    #     for i in range(self.numPairs):
-    #         base = base0 + i * T
-
-    #         A_i = rxSignal[base : base + N + S] #Must include silence
-    #         B_i = rxSignal[base + N + S : base + 2*N + 2*S] #Must include silence
-
-    #         A_blocks.append(A_i)
-    #         B_blocks.append(B_i)
-
-    #     H = []
-    #     for i in range(self.numPairs):
-    #         H = self.estimate()
-    
 class WhiteNoise(Equaliser):
     def __init__(self, lengthInSamples, constellation, sync=False, est=False, fs=48000):
         super().__init__(fs, sync, est)
