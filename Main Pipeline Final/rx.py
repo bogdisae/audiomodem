@@ -5,12 +5,13 @@ from helper import plot_complex_arrays_separate
 
 class Rx:
     signal: np.ndarray
-    correlation_dist: int
     cp_length: int
     block_length: int
     constellation: Constellation
     equalisers : list[Equaliser]
     sfoEqualiser: Equaliser
+    early_samples : int
+    fs : int
 
     H: np.ndarray
     h: np.ndarray
@@ -19,22 +20,25 @@ class Rx:
     data_bits: np.ndarray
     data_bytes: np.ndarray
 
+    # Variables dictating the frequencies that carry data
     f_low : int
     f_high : int
     bin_low : int
     bin_high : int
     active_bins : np.ndarray
-    early_samples : int
 
+    # Channel synchronisation, estimation and SFO estimation variables
     sfo_samples_per_second : float
     sfo_rad_per_index_per_block : float
-
-    key_start_estimates : list # A list of when each equaliser key starts (predicted from sync logic)
-    data_start_estimate : int  # Sync logic predicts when the data block begins
+    preamble_start_estimates : list[int] # Stores where each synchroniser thinks the WHOLE preamble starts
+    preamble_start_estimate : int    # Overall estimate of preamble start, based on selection logic
+    key_start_estimates : list[int]  # A list of when each equaliser key starts (predicted from sync logic)
+    data_start_estimate : int        # Sync logic predicts when the data block begins
+    decode_start : int               # This accounts for first data cyclic prefix and going early
 
     def __init__(self, constellation: Constellation, signal:np.ndarray, cp_length: int,
                  block_length: int, equalisers : list[Equaliser], sfoEqualiser : Equaliser,
-                 early_samples = 30, f_low = 2000, f_high = 12000):
+                 fs: int = 48000, early_samples = 30, f_low = 2000, f_high = 12000):
         
         self.constellation = constellation
         self.signal = signal
@@ -44,13 +48,21 @@ class Rx:
         self.sfoEqualiser = sfoEqualiser
         self.f_low = f_low
         self.f_high = f_high
+        self.fs = fs
         self.early_samples = early_samples
 
-        # Calulate active subcarrier mask
-        self.bin_low = int(np.ceil(f_low * block_length / equalisers[0].fs))
-        self.bin_high = int(np.floor(f_high * block_length / equalisers[0].fs))
-        # Using the equaliser fs feels messy but will do
+        # Calulate active subcarrier mask using receiver sample rate
+        self.bin_low = int(np.ceil(f_low * block_length / self.fs))
+        self.bin_high = int(np.floor(f_high * block_length / self.fs))
         self.active_bins = np.arange(self.bin_low, self.bin_high + 1)
+
+
+        # Initialise estimation variables
+        self.preamble_start_estimates = []
+        self.preamble_start_estimate = None
+        self.data_start_estimate = None
+        self.decode_start = None
+        self.key_start_estimates = []
 
 
     def decode_ofdm_block(self, block, block_index):
@@ -96,40 +108,38 @@ class Rx:
     def bits_to_bytes(self):
         self.data_bytes = np.packbits(np.array(self.data_bits).astype(np.uint8))
 
-    def sync_and_estimate(self):
-        # Calculate offsests of each equaliser to the data
+    def sync(self):
+        # Calculate offsets of each equaliser relative to the preamble start
         offset = 0
         for equaliser in self.equalisers:
             equaliser.preambleStartOffset = offset
             offset += equaliser.lengthInSamples
-        preambleTotalLength = offset
-        
-        preamble_start_estimates = [] # Stores where each synchroniser thinks the WHOLE preamble starts
+        preamble_total_length = offset
 
-        # Synchronise
         for equaliser in self.equalisers:
-            if equaliser.sync:  
+            if equaliser.sync:
                 local_start = equaliser.synchronise(self.signal, False)
-                preamble_start_estimate = local_start - equaliser.preambleStartOffset
-                preamble_start_estimates.append(preamble_start_estimate)
-
+                local_preamble_start_estimate = local_start - equaliser.preambleStartOffset
+                self.preamble_start_estimates.append(local_preamble_start_estimate)
             else:
-                preamble_start_estimates.append(None)
+                self.preamble_start_estimates.append(None)
 
-        # Logic to choose sync estimate (e.g just use the first sync estimate. Could break if None)
-        preamble_start = preamble_start_estimates[0]
-        self.data_start_estimate = preamble_start + preambleTotalLength
-        # Account for cyclic prefix and going early. 
-        decode_start = self.data_start_estimate + self.cp_length - self.early_samples
+        # Logic to choose sync estimate (e.g. use the first sync estimate)
+        self.preamble_start_estimate = self.preamble_start_estimates[0]
+        self.data_start_estimate = self.preamble_start_estimate + preamble_total_length
+        self.decode_start = self.data_start_estimate + self.cp_length - self.early_samples
 
-        # Use the sync estimate to find where you think EVERY equaliser starts
         self.key_start_estimates = []
         for equaliser in self.equalisers:
-            self.key_start_estimates.append(preamble_start + equaliser.preambleStartOffset)
+            self.key_start_estimates.append(self.preamble_start_estimate + equaliser.preambleStartOffset)
 
-        # Estimate
-        channel_estimates = [] # Will be a list of np.ndarray corresponding to each estimate
-        for idx, equaliser in enumerate(self.equalisers):    
+        # Let initial odfm_blocks array consist of the whole signal after decode start
+        self.ofdm_blocks = self.signal[self.decode_start:]
+
+
+    def estimate(self):
+        channel_estimates = []  # Will be a list of np.ndarray corresponding to each estimate
+        for idx, equaliser in enumerate(self.equalisers):
             if equaliser.est:
                 key_start_index = self.key_start_estimates[idx]
                 print("Key start index for golay", key_start_index)
@@ -140,11 +150,7 @@ class Rx:
         ## DEBUGGING:
         #plot_complex_arrays_separate(channel_estimates, ["Chirp", "Golay"])
 
-        # Logic to choose which channel estimate to use (e.g just use the second. Could break if None)
         self.H = channel_estimates[0]
-
-        # BOGDAN YOU FORGOT THIS LINE AGAIN FFS
-        self.ofdm_blocks = self.signal[decode_start:]
 
     def initial_SFO_estimate(self):
 
@@ -172,11 +178,12 @@ class Rx:
 
     def decode(self):
 
-        self.sync_and_estimate()
-        self.initial_SFO_estimate()
+        self.sync()
+        self.estimate()
+        #self.initial_SFO_estimate()
         #self.SFO_correct()
-        self.extract_ofdm_blocks()
-        self.decode_symbols()
-        self.bits_to_bytes()
+        #self.extract_ofdm_blocks()
+        #self.decode_symbols()
+        #self.bits_to_bytes()
 
 

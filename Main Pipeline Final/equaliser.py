@@ -194,7 +194,7 @@ class GolayPairs(Equaliser):
         self.silence = silence #Should be longer than the channel impulse response to avoid inter-pair interference
         self.numPairs = numPairs
 
-        self.blockLength = 2 * self.indivLength + self.silence #A, silence, B counted as a block
+        self.blockLength = 2 * (self.indivLength + self.silence) #A, silence, B counted as a block
         self.lengthInSamples = self.silence + self.blockLength * numPairs 
         self.lengthInSeconds = self.lengthInSamples / self.fs
 

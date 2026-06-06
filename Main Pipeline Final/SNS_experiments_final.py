@@ -5,6 +5,7 @@ from helper import pick_text_file, csv_to_data_bytes, pick_wav_file, normalise_s
 from helper import csv_bytes_to_binary_sequence, calculate_ber
 from pathlib import Path
 import numpy as np
+import matplotlib.pyplot as plt
 import questionary
 from scipy.io import wavfile
 from scipy.io.wavfile import write
@@ -12,25 +13,25 @@ from constellation import Constellation
 
 sampleRate = 48000
 
-# constellation = Constellation(2, {
-#     ('0', '0'): (1+1j)/np.sqrt(2),
-#     ('0', '1'): (-1+1j)/np.sqrt(2),
-#     ('1', '0'): (1-1j)/np.sqrt(2),
-#     ('1', '1'): (-1-1j)/np.sqrt(2)
-# }, {
-#     ('0', '0'): lambda s: (s.real >= 0) & (s.imag >= 0),
-#     ('0', '1'): lambda s: (s.real < 0) & (s.imag >=  0),
-#     ('1', '0'): lambda s: (s.real >=  0) & (s.imag < 0),
-#     ('1', '1'): lambda s: (s.real <  0) & (s.imag <  0),
-# })
-
-constellation = Constellation(1, {
-    ('0',): 1+0j,
-    ('1',): -1+0j,
+constellation = Constellation(2, {
+    ('0', '0'): (1+1j)/np.sqrt(2),
+    ('0', '1'): (-1+1j)/np.sqrt(2),
+    ('1', '0'): (1-1j)/np.sqrt(2),
+    ('1', '1'): (-1-1j)/np.sqrt(2)
 }, {
-    ('0',): lambda s: (s.real >= 0),
-    ('1',): lambda s: (s.real < 0),
+    ('0', '0'): lambda s: (s.real >= 0) & (s.imag >= 0),
+    ('0', '1'): lambda s: (s.real < 0) & (s.imag >=  0),
+    ('1', '0'): lambda s: (s.real >=  0) & (s.imag < 0),
+    ('1', '1'): lambda s: (s.real <  0) & (s.imag <  0),
 })
+
+# constellation = Constellation(1, {
+#     ('0',): 1+0j,
+#     ('1',): -1+0j,
+# }, {
+#     ('0',): lambda s: (s.real >= 0),
+#     ('1',): lambda s: (s.real < 0),
+# })
 
 
 
@@ -85,41 +86,59 @@ def receive_standard_sig():
         
     
     repeatedChirp = RepeatedChirp(10, 4096, 0, 750, 18000, sync = True, est = True, fs = sampleRate)
-    golayPairs = GolayPairs(12, silence = 2048, numPairs=4, seed = (1,1), est = False, fs = 48000) #2**12 = 4096
+    golayPairs = GolayPairs(12, silence = 2048, numPairs=4, seed = (1,1), est = False, fs = sampleRate) #2**12 = 4096
     whiteNoise = WhiteNoise(4096, constellation, sync = False, est = False, fs = sampleRate)
 
-    equaliserList = [repeatedChirp, golayPairs, whiteNoise]
+    # LIST SHOULD ONLY CONTAIN THE INITIAL REPEATED CHIRP AND GOLAY SEQUENCE!!
+    equaliserList = [repeatedChirp, golayPairs]
 
     # DON'T KNOW WHAT SFO EQUALISER ACTUALLY IS YET
     receiver = Rx(constellation, sig, 2048, 4096, equaliserList, None)
     receiver.decode()
 
+    # DEBUGGING - plot received signal
+    t = np.arange(len(sig))
+    plt.figure()
+    plt.plot(t, sig)
+    plt.title("Received signal")
+    plt.xlabel("Sample index")
+    plt.ylabel("Amplitude")
+    plt.tight_layout()
+    plt.show()
 
-    print ("Number of coefficients:", len(receiver.H))
-    print("First 10 estimated coefficients:\n", receiver.H[:10])
+    print("Receiver preamble start estimates:", receiver.preamble_start_estimates)
+    print("Receiver key start estimates:", receiver.key_start_estimates)
+    print("Data start estimate:" , receiver.data_start_estimate)
+    print("Index where decoding starts:", receiver.decode_start)
 
-    print(receiver.data_bits[:200])
-    plot_constellation(receiver.data_symbols[:200])
-    plot_constellation(receiver.data_symbols[0:2000])
-    plot_constellation(receiver.data_symbols[2000:4000])
-    plot_constellation(receiver.data_symbols[4000:6000])
-    plot_constellation(receiver.data_symbols[6000:8000])
-    plot_constellation(receiver.data_symbols[8000:10000])
-    plot_constellation(receiver.data_symbols[10000:12000])
-    plot_constellation(receiver.data_symbols[12000:14000])
-    plot_constellation(receiver.data_symbols[14000:16000])
-    print("Number of data symbols:", len(receiver.data_symbols))
+    
 
 
+    # print ("Number of coefficients:", len(receiver.H))
+    # print("First 10 estimated coefficients:\n", receiver.H[:10])
 
-    shaqbits = csv_bytes_to_binary_sequence("Main Pipeline 2/Data Files/BIGSHAQ.txt")
-    ber, errors, min_len = calculate_ber(shaqbits, receiver.data_bits[:2000])
+    # print(receiver.data_bits[:200])
+    # plot_constellation(receiver.data_symbols[:200])
+    # plot_constellation(receiver.data_symbols[0:2000])
+    # plot_constellation(receiver.data_symbols[2000:4000])
+    # plot_constellation(receiver.data_symbols[4000:6000])
+    # plot_constellation(receiver.data_symbols[6000:8000])
+    # plot_constellation(receiver.data_symbols[8000:10000])
+    # plot_constellation(receiver.data_symbols[10000:12000])
+    # plot_constellation(receiver.data_symbols[12000:14000])
+    # plot_constellation(receiver.data_symbols[14000:16000])
+    # print("Number of data symbols:", len(receiver.data_symbols))
 
-    print("BER:", ber)
-    print("Errors:", errors)
-    print("Min Len", min_len)
 
-    print(receiver.data_bytes)
+
+    # shaqbits = csv_bytes_to_binary_sequence("Main Pipeline 2/Data Files/BIGSHAQ.txt")
+    # ber, errors, min_len = calculate_ber(shaqbits, receiver.data_bits[:2000])
+
+    # print("BER:", ber)
+    # print("Errors:", errors)
+    # print("Min Len", min_len)
+
+    # print(receiver.data_bytes)
 
 
     # print ("Number of coefficients:", len(receiver.H))
