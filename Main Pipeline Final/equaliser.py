@@ -184,6 +184,7 @@ class RepeatedChirp(Equaliser):
         plt.show()
 
         print("Slope:", slope)
+        return slope
                 
 
 class GolayPairs(Equaliser):
@@ -314,8 +315,9 @@ class GolayPairs(Equaliser):
         active = self.active_bins
         f_active = np.arange(N_fft)[active]  # loop-invariant, move out
 
+        phase_accum_per_block = []
         for i, j in combinations(range(4), 2):
-            self.phase_diff[i,j] = np.angle(self.H_list[j] / self.H_list[i])
+            self.phase_diff[i,j] = np.angle(self.H_list[j] / (self.H_list[i]+1e-12))
 
             y_active = self.phase_diff[i,j][active]  # fix: apply mask here
 
@@ -333,6 +335,7 @@ class GolayPairs(Equaliser):
             a_meas = np.sum((f_fit - f_mean) * (y_fit - y_mean)) / np.sum((f_fit - f_mean)**2)
             self.a_history.append(a_meas)
         
+            #radians per bin per ofdm symbol
             if plot == True:
                 f = np.arange(N_fft)
                 plot_pilot_phase(self.H_list[i],self.H_list[j], plotting_mask, i, j, f, a_meas, y_mean, f_mean, self.phase_diff[i,j])
@@ -341,7 +344,14 @@ class GolayPairs(Equaliser):
                 #time_drift_per_sec = (-a_meas * N_fft / (2*np.pi)) / (self.synchroniser.fs*self.symbol_length * self.pilot_spacing)
                 #print(f"Corresponds to {time_drift_per_sec:.6g} s drift at sample rate {self.synchroniser.fs} Hz.")
 
+            phase_drift_per_block = a_meas * N_fft / ((j - i* self.blockLength))
+            phase_accum_per_block.append(phase_drift_per_block)
+        #calculate the average phase accumulation across all pair combinations
         #apply the correction to the rest of the data stream by rotating the OFDM symbols in the next section by the negative of the measured phase drift with interpolated in time
+
+        phase_accum_per_block_avg = np.mean(phase_accum_per_block)
+        slope = phase_accum_per_block_avg
+        return slope
 
 class WhiteNoise(Equaliser):
     def __init__(self, lengthInSamples, constellation, sync=False, est=False, fs=48000):

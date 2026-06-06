@@ -7,6 +7,7 @@ from scipy.signal import chirp
 from constellation import Constellation
 from equaliser import *
 from ldpc import ldpc
+from helper import plot_constellation
 
 class Tx:
     data_bytes: np.ndarray
@@ -168,6 +169,9 @@ class Tx:
         self.encode_symbols()
         self.prep_ofdm_blocks()
         self.assemble_signal()
+
+        plot_constellation(self.data_symbols[:200])
+        plot_constellation(self.data_symbols[0:2000])
     
 
 
