@@ -87,8 +87,7 @@ class Rx:
         )
         X *= phase_correction
 
-        sfo_correction = np.exp(-1j * self.sfo_rad_per_index_per_block * k * block_index)
-
+        #sfo_correction = np.exp(-1j * self.sfo_rad_per_index_per_block * k * block_index)
         # X *= sfo_correction
 
         data_bins = X[self.active_bins]
@@ -184,20 +183,16 @@ class Rx:
         for idx, equaliser in enumerate(self.equalisers):
             if equaliser.est:
                 key_start_index = self.key_start_estimates[idx]
-                #print("Key start index for golay", key_start_index)
+                # (Note RepeatedChirp also plots its estimate in the function)
                 channel_estimates.append(equaliser.estimate(self.signal, key_start_index))
             else:
                 channel_estimates.append(None)
 
-        ## DEBUGGING:
-        #plot_complex_arrays_separate(channel_estimates, ["Chirp", "Golay"])
-
-        self.H = channel_estimates[0]
         # Logic to choose which channel estimate to use (e.g just use the second. Could break if None)
-        self.H = channel_estimates[1]
+        # Use the repeated chirp estimate for now
+        self.H = channel_estimates[0]
 
-        # This line was never forgotten: SNS accidentally removed
-        self.ofdm_blocks = self.signal[self.decode_start:]
+
 
     def initial_SFO_estimate(self):
 
@@ -212,7 +207,6 @@ class Rx:
 
             if type(equaliser) is RepeatedChirp:
                 print("Using chirps to estimate SFO...")
-                print("Repeated chirps key starts at sample:", key_start_idx)
                 self.sfo_rad_per_index_per_block = equaliser.initial_SFO_estimate(self.signal, key_start_idx, self.bin_low, self.bin_high, True)
 
         # To convert to sample drift / sec, consider the largest carrier 4096 (48000 Hz)
@@ -227,7 +221,7 @@ class Rx:
 
         self.sync()
         self.estimate()
-        self.initial_SFO_estimate()
+        #self.initial_SFO_estimate()
         #self.SFO_correct()
         #self.extract_ofdm_blocks()
         #self.decode_symbols()
