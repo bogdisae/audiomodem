@@ -202,7 +202,7 @@ class Rx:
             key_start_idx = self.key_start_estimates[idx]
 
             if type(equaliser) is GolayPairs:
-                #equaliser.initial_SFO_estimate(self.signal, key_start_idx, self.bin_low, self.bin_high, True)
+                equaliser.initial_SFO_estimate(self.signal, key_start_idx, self.bin_low, self.bin_high, True)
                 pass
 
             if type(equaliser) is RepeatedChirp:
