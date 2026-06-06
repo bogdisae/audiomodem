@@ -72,7 +72,8 @@ class Rx:
 
         #self.c = ldpc.code('802.16', z=61)
         #self.use_ldpc = use_ldpc
-
+        self.preamble_start_estimates = []
+        self.key_start_estimates = []
 
     def decode_ofdm_block(self, block, block_index):
         cp_discarded = block[-self.block_length:]
@@ -183,6 +184,7 @@ class Rx:
         for idx, equaliser in enumerate(self.equalisers):
             if equaliser.est:
                 key_start_index = self.key_start_estimates[idx]
+                #print("Key start index for golay", key_start_index)
                 channel_estimates.append(equaliser.estimate(self.signal, key_start_index))
             else:
                 channel_estimates.append(None)
@@ -205,7 +207,7 @@ class Rx:
             key_start_idx = self.key_start_estimates[idx]
 
             if type(equaliser) is GolayPairs:
-                #equaliser.initial_SFO_estimate(self.signal, key_start_idx, False)
+                equaliser.initial_SFO_estimate(self.signal, key_start_idx, False)
                 pass
 
             if type(equaliser) is RepeatedChirp:
@@ -225,7 +227,7 @@ class Rx:
 
         self.sync()
         self.estimate()
-        #self.initial_SFO_estimate()
+        self.initial_SFO_estimate()
         #self.SFO_correct()
         #self.extract_ofdm_blocks()
         #self.decode_symbols()
