@@ -47,10 +47,10 @@ class Rx:
                  block_length: int, 
                  equalisers : list[Equaliser], 
                  sfoEqualiser : Equaliser,
-                 fs: int = 48000, early_samples = 30, 
+                early_samples = 30, 
                  f_low = 2000,
                  f_high = 12000, 
-                 f_s: int = 48_000, 
+                 fs: int = 48_000, 
                  use_ldpc: bool = False):
         
         self.constellation = constellation
@@ -63,19 +63,15 @@ class Rx:
         self.f_high = f_high
         self.fs = fs
         self.early_samples = early_samples
-        self.f_s = f_s
 
-        # Calulate active subcarrier mask
-        self.bin_low = int(np.ceil(f_low * block_length / f_s))
-        self.bin_high = int(np.floor(f_high * block_length / f_s))
-        # Using the equaliser fs feels messy but will do
+
         # Calulate active subcarrier mask using receiver sample rate
         self.bin_low = int(np.ceil(f_low * block_length / self.fs))
         self.bin_high = int(np.floor(f_high * block_length / self.fs))
         self.active_bins = np.arange(self.bin_low, self.bin_high + 1)
 
-        self.c = ldpc.code('802.16', z=61)
-        self.use_ldpc = use_ldpc
+        #self.c = ldpc.code('802.16', z=61)
+        #self.use_ldpc = use_ldpc
 
 
     def decode_ofdm_block(self, block, block_index):
@@ -129,9 +125,7 @@ class Rx:
                 decoded_symbols.extend(ldpc_block)
         else:
             self.data_symbols = decoded_symbols
-        self.data_symbols = []
-        for i, block in enumerate(self.ofdm_blocks):
-            self.data_symbols.extend(self.decode_ofdm_block(block, i))
+
 
     def decode_symbols(self):
         #Check for NaN/Inf in data symbols - give warning
@@ -189,7 +183,6 @@ class Rx:
         for idx, equaliser in enumerate(self.equalisers):
             if equaliser.est:
                 key_start_index = self.key_start_estimates[idx]
-                print("Key start index for golay", key_start_index)
                 channel_estimates.append(equaliser.estimate(self.signal, key_start_index))
             else:
                 channel_estimates.append(None)
@@ -236,7 +229,7 @@ class Rx:
         #self.SFO_correct()
         #self.extract_ofdm_blocks()
         #self.decode_symbols()
-        self.ldpc()
+        #self.ldpc()
         #self.bits_to_bytes()
 
 
