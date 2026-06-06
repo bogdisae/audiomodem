@@ -3,7 +3,6 @@ from pathlib import Path
 
 import numpy as np
 from scipy.signal import chirp, correlate
-from scipy.ndimage import gaussian_filter1d
 import matplotlib.pyplot as plt
 from constellation import Constellation
 from helper import plot_signal, plot_multiple_channel_estimates, plot_Golay_diagnostics, estimate_delay_spread, plot_pilot_phase
@@ -150,44 +149,26 @@ class RepeatedChirp(Equaliser):
 
             phase_accum = []
 
-        for i in range(len(chirp_list)):
-            for j in range(i + 1, len(chirp_list)):
+            for i in range(len(chirp_list)):
+                for j in range(i + 1, len(chirp_list)):
+                    ratio = chirp_list[j] / (chirp_list[i] + 1e-12)
 
-                ratio = chirp_list[j] / (chirp_list[i] + 1e-12)
+                    ratio = ratio[bin_low:bin_high]
 
-                ratio = ratio[bin_low:bin_high]
+                    phase = np.unwrap(np.angle(ratio))
+                    normalised = phase / (j - i)
+                    phase_accum.append(normalised)
 
-                # Smooth complex ratio BEFORE taking phase
-                ratio = gaussian_filter1d(ratio, sigma=20)
-
-                phase = np.unwrap(np.angle(ratio))
-                normalised = phase / (j - i)
-
-                phase_accum.append(normalised)
-
-                k = np.arange(bin_low, bin_high)
-
-                slope, intercept = np.polyfit(k, normalised, 1)
-                print(f"From {i} to {j}, slope = {slope}")
-
-                plt.figure(figsize=(8, 4))
-                plt.plot(k, normalised)
-                plt.title(f"{i}->{j}  (slope={slope:.3e})")
-                plt.xlabel("FFT bin")
-                plt.ylabel("Phase drift per chirp")
-                plt.grid(True)
-                plt.show()
+                    k = np.arange(bin_low, bin_high)
+                    slope, intercept = np.polyfit(k, normalised, 1)
+                    print(f"From {i} to {j}, slope = ", slope)
 
         avg_phase = np.mean(phase_accum, axis=0)
 
-        # Could do a normal regression, however I think that we should force a 0 origin
-        # k = np.arange(bin_low, bin_high)
-        # slope, intercept = np.polyfit(k, avg_phase, 1)
-        # best_fit = slope * k + intercept
-
         k = np.arange(bin_low, bin_high)
-        slope = np.sum(k * avg_phase) / np.sum(k**2)
-        best_fit = slope * k
+
+        slope, intercept = np.polyfit(k, avg_phase, 1)
+        best_fit = slope * k + intercept
 
         plt.figure(figsize=(10, 6))
 
@@ -202,9 +183,6 @@ class RepeatedChirp(Equaliser):
         plt.show()
 
         print("Slope:", slope)
-
-
-
                 
 
 class GolayPairs(Equaliser):

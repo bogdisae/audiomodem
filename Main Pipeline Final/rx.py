@@ -26,6 +26,9 @@ class Rx:
     active_bins : np.ndarray
     early_samples : int
 
+    sfo_samples_per_second : float
+    sfo_rad_per_index_per_block : float
+
     key_start_estimates : list # A list of when each equaliser key starts (predicted from sync logic)
     data_start_estimate : int  # Sync logic predicts when the data block begins
 
@@ -50,7 +53,7 @@ class Rx:
         self.active_bins = np.arange(self.bin_low, self.bin_high + 1)
 
 
-    def decode_ofdm_block(self, block):
+    def decode_ofdm_block(self, block, block_index):
         cp_discarded = block[-self.block_length:]
         Y = np.fft.fft(cp_discarded)
         X = Y / self.H[0:len(Y)] # Zero-forcing
@@ -60,11 +63,11 @@ class Rx:
         phase_correction = np.exp(
             1j * 2 * np.pi * k * self.early_samples / self.block_length
         )
-
-        TEMPOERARY_global_rotation = np.exp(1j * np.deg2rad(15))
-
         X *= phase_correction
-        # X *= TEMPOERARY_global_rotation
+
+        sfo_correction = np.exp(-1j * self.sfo_rad_per_index_per_block * k * block_index)
+
+        # X *= sfo_correction
 
         data_bins = X[self.active_bins]
         return data_bins
@@ -77,8 +80,8 @@ class Rx:
         self.ofdm_blocks = self.ofdm_blocks.reshape(-1, ofdm_symbol_length)
 
         self.data_symbols = []
-        for block in self.ofdm_blocks:
-            self.data_symbols.extend(self.decode_ofdm_block(block))
+        for i, block in enumerate(self.ofdm_blocks):
+            self.data_symbols.extend(self.decode_ofdm_block(block, i))
 
     def decode_symbols(self):
         #Check for NaN/Inf in data symbols - give warning
@@ -134,17 +137,19 @@ class Rx:
             else:
                 channel_estimates.append(None)
 
-        ## DEBUGGING:::
-
-        plot_complex_arrays_separate(channel_estimates, ["Chirp", "Golay"])
+        ## DEBUGGING:
+        #plot_complex_arrays_separate(channel_estimates, ["Chirp", "Golay"])
 
         # Logic to choose which channel estimate to use (e.g just use the second. Could break if None)
-        self.H = channel_estimates[1]
+        self.H = channel_estimates[0]
 
         # BOGDAN YOU FORGOT THIS LINE AGAIN FFS
         self.ofdm_blocks = self.signal[decode_start:]
 
     def initial_SFO_estimate(self):
+
+        slope = 0 # Slope represents the phase offset PER carrier index PER block
+
         for idx, equaliser in enumerate(self.equalisers):
             key_start_idx = self.key_start_estimates[idx]
 
@@ -155,8 +160,16 @@ class Rx:
             if type(equaliser) is RepeatedChirp:
                 print("Using chirps to estimate SFO...")
                 print("Repeated chirps key starts at sample:", key_start_idx)
-                equaliser.initial_SFO_estimate(self.signal, key_start_idx, self.bin_low, self.bin_high, True)
-    
+                self.sfo_rad_per_index_per_block = equaliser.initial_SFO_estimate(self.signal, key_start_idx, self.bin_low, self.bin_high, True)
+
+        # To convert to sample drift / sec, consider the largest carrier 4096 (48000 Hz)
+        # Multiplying the slope by 4096 leaves phase offset per block for 48000
+        # At 48000 hz, if SFO = 1 sample/sec, this will correspond to a phase offset of 4096/48000 per block at the 4096 index
+        # Therefore, SFO (in sample drift / sec) = slope * 4096 * 48000/4096 = slope * 48000
+
+        self.sfo_samples_per_second = self.sfo_rad_per_index_per_block * 48000
+        print("SFO in samples per second: ", self.sfo_samples_per_second)
+
     def decode(self):
 
         self.sync_and_estimate()
