@@ -253,6 +253,7 @@ class GolayPairs(Equaliser):
             #print(f'a seq idx: {start} to {start + indiv_len}, b seq idx: {start + indiv_len + self.silence} to {start + 2 * indiv_len + self.silence}')
 
             '''Maybe following silences must be correlated?'''
+            '''POTENTIAL ERROR HERE - np.zeros is wrong since already included in the rx sequences'''
             corr_a = correlate(np.concatenate([a_rx, np.zeros(self.silence)]), self.a_ref, mode='full')
             corr_b = correlate(np.concatenate([b_rx, np.zeros(self.silence)]), self.b_ref, mode='full')
 
@@ -338,31 +339,31 @@ class GolayPairs(Equaliser):
 
         #apply the correction to the rest of the data stream by rotating the OFDM symbols in the next section by the negative of the measured phase drift with interpolated in time
 
-    def initial_SFO_estimate(self, rxSignal: np.ndarray, key_start_index : int):
+    # def initial_SFO_estimate(self, rxSignal: np.ndarray, key_start_index : int):
 
-        N = self.indivLength
-        S = self.silence
-        T = 2*N + 2*S
+    #     N = self.indivLength
+    #     S = self.silence
+    #     T = 2*N + 2*S
 
-        # Stores the lists of samples corresponding to A and B
-        A_blocks = []
-        B_blocks = []
+    #     # Stores the lists of samples corresponding to A and B
+    #     A_blocks = []
+    #     B_blocks = []
 
-        # skip INITIAL SILENCE
-        base0 = key_start_index + S
+    #     # skip INITIAL SILENCE
+    #     base0 = key_start_index + S
 
-        for i in range(self.numPairs):
-            base = base0 + i * T
+    #     for i in range(self.numPairs):
+    #         base = base0 + i * T
 
-            A_i = rxSignal[base : base + N]
-            B_i = rxSignal[base + N + S : base + 2*N + S]
+    #         A_i = rxSignal[base : base + N + S] #Must include silence
+    #         B_i = rxSignal[base + N + S : base + 2*N + 2*S] #Must include silence
 
-            A_blocks.append(A_i)
-            B_blocks.append(B_i)
+    #         A_blocks.append(A_i)
+    #         B_blocks.append(B_i)
 
-        H = []
-        for i in range(self.numPairs):
-            H = self.estimate()
+    #     H = []
+    #     for i in range(self.numPairs):
+    #         H = self.estimate()
     
 class WhiteNoise(Equaliser):
     def __init__(self, lengthInSamples, constellation, sync=False, est=False, fs=48000):
