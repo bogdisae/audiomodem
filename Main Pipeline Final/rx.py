@@ -47,7 +47,7 @@ class Rx:
                  block_length: int, 
                  equalisers : list[Equaliser], 
                  sfoEqualiser : Equaliser,
-                early_samples = 0, 
+                early_samples = 200, 
                  f_low = 2000,
                  f_high = 12000, 
                  fs: int = 48_000, 
@@ -87,8 +87,9 @@ class Rx:
         )
         X *= phase_correction
 
-        #sfo_correction = np.exp(-1j * self.sfo_rad_per_index_per_block * k * block_index)
-        # X *= sfo_correction
+        self.sfo_rad_per_index_per_block = -1e-2
+        sfo_correction = np.exp(-1j * self.sfo_rad_per_index_per_block * k * block_index)
+        X *= sfo_correction
 
         data_bins = X[self.active_bins]
         return data_bins
@@ -168,7 +169,7 @@ class Rx:
         # Logic to choose sync estimate (e.g. use the first sync estimate)
         self.preamble_start_estimate = self.preamble_start_estimates[0]
         self.data_start_estimate = self.preamble_start_estimate + preamble_total_length
-        self.decode_start = self.data_start_estimate + self.cp_length - self.early_samples
+        self.decode_start = self.data_start_estimate - self.early_samples
 
         self.key_start_estimates = []
         for equaliser in self.equalisers:

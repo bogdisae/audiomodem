@@ -46,7 +46,7 @@ class Tx:
                  pilot_spacing: int, 
                  f_low: int, 
                  f_high: int,
-                 f_s: int = 48_000,
+                 fs: int = 48_000,
                  use_ldpc: bool = False):
         
         self.constellation = constellation
@@ -56,11 +56,11 @@ class Tx:
         self.equaliser3 = equaliser3
         self.cp_length = cp_length
         self.block_length = block_length
-        self.f_s = f_s
+        self.f_s = fs
 
         # Calulate active subcarrier mask
-        self.bin_low = int(np.ceil(f_low * block_length / f_s))
-        self.bin_high = int(np.floor(f_high * block_length / f_s))
+        self.bin_low = int(np.ceil(f_low * block_length / fs))
+        self.bin_high = int(np.floor(f_high * block_length / fs))
         # Using the equaliser fs feels messy but will do
         self.active_bins = np.arange(self.bin_low, self.bin_high + 1)
 

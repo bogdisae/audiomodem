@@ -77,8 +77,9 @@ class RepeatedChirp(Equaliser):
         key_start_index = np.argmax(np.abs(corr))
 
         if plot:
-            plot_signal("Received signal", signal, -1)
-            plot_signal("Correlation plot", corr, key_start_index, True)
+            #plot_signal("Received signal", signal, -1)
+            #plot_signal("Correlation plot", corr, key_start_index, True)
+            pass
 
         return key_start_index
     
@@ -109,7 +110,8 @@ class RepeatedChirp(Equaliser):
         H_list = np.array(H_list)
 
         if plot:
-            plot_multiple_channel_estimates(H_list)
+            #plot_multiple_channel_estimates(H_list)
+            pass
 
         # H_avg = np.mean(H_list, axis = 0)
         if len(H_list) > 2:

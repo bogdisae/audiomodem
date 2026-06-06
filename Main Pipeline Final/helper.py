@@ -634,3 +634,35 @@ def plot_complex_arrays_separate(arrays, labels, figsize=None):
     fig.subplots_adjust(left=0.1, hspace=0.4)
     
     plt.show()
+
+
+
+def plot_constellation_colour(symbols, title="Constellation Diagram", show=True, index_colour=False):
+    """
+    Plots complex data symbols on the IQ plane.
+
+    Parameters:
+        symbols (np.ndarray): Array of complex symbols
+        title (str): Plot title
+        show (bool): Whether to call plt.show()
+    """
+    symbols = np.asarray(symbols)
+
+    plt.figure(figsize=(6, 6))
+    if index_colour:
+        sc = plt.scatter(symbols.real, symbols.imag, c=np.arange(len(symbols)), cmap='viridis', s=10)
+        plt.colorbar(sc, label='Sample index')
+    else:
+        plt.scatter(symbols.real, symbols.imag, s=10)
+
+    plt.axhline(0, color='black', linewidth=0.5)
+    plt.axvline(0, color='black', linewidth=0.5)
+
+    plt.xlabel("In-phase (I)")
+    plt.ylabel("Quadrature (Q)")
+    plt.title(title)
+    plt.grid(True)
+    plt.axis("equal")
+
+    if show:
+        plt.show()

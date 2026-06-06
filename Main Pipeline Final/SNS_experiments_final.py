@@ -2,7 +2,7 @@ from equaliser import Equaliser, RepeatedChirp, GolayPairs, WhiteNoise
 from tx import Tx
 from rx import Rx
 from helper import pick_text_file, csv_to_data_bytes, pick_wav_file, normalise_signal, record_audio, plot_constellation
-from helper import csv_bytes_to_binary_sequence, calculate_ber
+from helper import csv_bytes_to_binary_sequence, calculate_ber, plot_constellation_colour
 from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
@@ -56,6 +56,8 @@ def generate_standard_sig(standard = True):
         )
 
     transmitter.encode()
+    plot_constellation(transmitter.data_symbols[:200])
+
 
     sig = transmitter.transmitted_signal
 
@@ -108,15 +110,12 @@ def receive_standard_sig():
     # print("First 10 estimated coefficients:\n", receiver.H[:10])
 
     # print(receiver.data_bits[:200])
-    plot_constellation(receiver.data_symbols[:200])
-    plot_constellation(receiver.data_symbols[0:4000])
-    # plot_constellation(receiver.data_symbols[2000:4000])
-    # plot_constellation(receiver.data_symbols[4000:6000])
-    # plot_constellation(receiver.data_symbols[6000:8000])
-    # plot_constellation(receiver.data_symbols[8000:10000])
-    # plot_constellation(receiver.data_symbols[10000:12000])
-    # plot_constellation(receiver.data_symbols[12000:14000])
-    # plot_constellation(receiver.data_symbols[14000:16000])
+    plot_constellation_colour(receiver.data_symbols[:200], "First 200", True, True)
+    plot_constellation_colour(receiver.data_symbols[0:4000], "First 4000", True, True)
+    plot_constellation_colour(receiver.data_symbols[4000:8000], "4000-8000", True, True)
+    plot_constellation_colour(receiver.data_symbols[8000:12000], "8000-12000", True, True)
+    plot_constellation_colour(receiver.data_symbols[12000:16000], "12000-16000", True, True)
+    plot_constellation_colour(receiver.data_symbols[16000:20000], "16000-20000", True, True)
     # print("Number of data symbols:", len(receiver.data_symbols))
 
 
@@ -127,35 +126,6 @@ def receive_standard_sig():
     print("BER:", ber)
     print("Errors:", errors)
     print("Min Len", min_len)
-
-    # print(receiver.data_bytes)
-
-
-    # print ("Number of coefficients:", len(receiver.H))
-    # print("First 10 estimated coefficients:\n", receiver.H[:10])
-
-    # print(receiver.data_bits[:200])
-    # plot_constellation(receiver.data_symbols[:200])
-    # plot_constellation(receiver.data_symbols[0:2000])
-    # plot_constellation(receiver.data_symbols[2000:4000])
-    # plot_constellation(receiver.data_symbols[4000:6000])
-    # plot_constellation(receiver.data_symbols[6000:8000])
-    # plot_constellation(receiver.data_symbols[8000:10000])
-    # plot_constellation(receiver.data_symbols[10000:12000])
-    # plot_constellation(receiver.data_symbols[12000:14000])
-    # plot_constellation(receiver.data_symbols[14000:16000])
-    # print("Number of data symbols:", len(receiver.data_symbols))
-
-
-
-    # shaqbits = csv_bytes_to_binary_sequence("Main Pipeline 2/Data Files/BIGSHAQ.txt")
-    # ber, errors, min_len = calculate_ber(shaqbits, receiver.data_bits[:2000])
-
-    # print("BER:", ber)
-    # print("Errors:", errors)
-    # print("Min Len", min_len)
-
-    # print(receiver.data_bytes)
 
 
 #generate_standard_sig()
