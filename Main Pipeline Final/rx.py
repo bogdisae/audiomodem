@@ -78,7 +78,7 @@ class Rx:
         self.use_ldpc = use_ldpc
 
 
-    def decode_ofdm_block(self, block):
+    def decode_ofdm_block(self, block, block_index):
         cp_discarded = block[-self.block_length:]
         Y = np.fft.fft(cp_discarded)
         X = Y / self.H[0:len(Y)] # Zero-forcing
@@ -115,8 +115,8 @@ class Rx:
         self.ofdm_blocks = self.ofdm_blocks.reshape(-1, ofdm_symbol_length)
 
         decoded_symbols = []
-        for block in self.ofdm_blocks:
-            decoded_symbols.extend(self.decode_ofdm_block(block))
+        for idx, block in enumerate(self.ofdm_blocks):
+            decoded_symbols.extend(self.decode_ofdm_block(block, idx))
 
         if self.use_ldpc:
             thirty_ofdm_block_length = 25620 # 30x854
@@ -202,7 +202,7 @@ class Rx:
         self.H = channel_estimates[1]
 
         # This line was never forgotten: SNS accidentally removed
-        self.ofdm_blocks = self.signal[decode_start:]
+        self.ofdm_blocks = self.signal[self.decode_start:]
 
     def initial_SFO_estimate(self):
 
