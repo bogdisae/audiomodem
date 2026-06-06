@@ -2,6 +2,7 @@ import numpy as np
 from constellation import Constellation
 from equaliser import Equaliser, RepeatedChirp, GolayPairs
 from helper import plot_complex_arrays_separate
+from ldpc import ldpc
 
 class Rx:
     signal: np.ndarray
@@ -16,6 +17,7 @@ class Rx:
     h: np.ndarray
     ofdm_blocks: np.ndarray
     data_symbols: np.ndarray
+    ldpc_bits: np.ndarray
     data_bits: np.ndarray
     data_bytes: np.ndarray
 
@@ -25,13 +27,24 @@ class Rx:
     bin_high : int
     active_bins : np.ndarray
     early_samples : int
+    use_ldpc: bool
+    c: ldpc.code
 
     key_start_estimates : list # A list of when each equaliser key starts (predicted from sync logic)
     data_start_estimate : int  # Sync logic predicts when the data block begins
 
-    def __init__(self, constellation: Constellation, signal:np.ndarray, cp_length: int,
-                 block_length: int, equalisers : list[Equaliser], sfoEqualiser : Equaliser,
-                 early_samples = 30, f_low = 2000, f_high = 12000):
+    def __init__(self, 
+                 constellation: Constellation, 
+                 signal:np.ndarray, 
+                 cp_length: int,
+                 block_length: int, 
+                 equalisers : list[Equaliser], 
+                 sfoEqualiser : Equaliser,
+                 early_samples = 30, 
+                 f_low = 2000,
+                 f_high = 12000, 
+                 f_s: int = 48_000, 
+                 use_ldpc: bool = False):
         
         self.constellation = constellation
         self.signal = signal
@@ -42,12 +55,16 @@ class Rx:
         self.f_low = f_low
         self.f_high = f_high
         self.early_samples = early_samples
+        self.f_s = f_s
 
         # Calulate active subcarrier mask
-        self.bin_low = int(np.ceil(f_low * block_length / equalisers[0].fs))
-        self.bin_high = int(np.floor(f_high * block_length / equalisers[0].fs))
+        self.bin_low = int(np.ceil(f_low * block_length / f_s))
+        self.bin_high = int(np.floor(f_high * block_length / f_s))
         # Using the equaliser fs feels messy but will do
         self.active_bins = np.arange(self.bin_low, self.bin_high + 1)
+
+        self.c = ldpc.code('802.16', z=61)
+        self.use_ldpc = use_ldpc
 
 
     def decode_ofdm_block(self, block):
@@ -71,14 +88,36 @@ class Rx:
 
     def extract_ofdm_blocks(self):
         ofdm_symbol_length = self.block_length + self.cp_length
-        pad_length = len(self.ofdm_blocks) % ofdm_symbol_length
+        padding_symbols = np.array(self.constellation.bits_to_symbols(('0', '0')))
+        
+        if self.use_ldpc:
+            remainder = len(self.ofdm_blocks) % (ofdm_symbol_length*30)
+            pad_length = 30*ofdm_symbol_length - remainder if remainder != 0 else 0
+        else:
+            remainder = len(self.ofdm_blocks) % ofdm_symbol_length
+            pad_length = ofdm_symbol_length - remainder if remainder != 0 else 0
+   
         if pad_length > 0:
-            self.ofdm_blocks = np.pad(self.ofdm_blocks, (0, ofdm_symbol_length - pad_length))
+            padding = np.resize(padding_symbols, pad_length)
+            self.ofdm_blocks = np.concatenate([self.ofdm_blocks, padding])
+        
         self.ofdm_blocks = self.ofdm_blocks.reshape(-1, ofdm_symbol_length)
 
-        self.data_symbols = []
+        decoded_symbols = []
         for block in self.ofdm_blocks:
-            self.data_symbols.extend(self.decode_ofdm_block(block))
+            decoded_symbols.extend(self.decode_ofdm_block(block))
+
+        if self.use_ldpc:
+            thirty_ofdm_block_length = 25620 # 30x854
+            ldpc_skip_factor = 15839
+            grouped_ofdm_blocks = np.array(decoded_symbols).reshape(-1, thirty_ofdm_block_length)
+            for interleaved_block in grouped_ofdm_blocks:
+                ldpc_block = []
+                for i in range(len(interleaved_block)):
+                    ldpc_block.append(interleaved_block[(i*ldpc_skip_factor)%thirty_ofdm_block_length])
+                decoded_symbols.extend(ldpc_block)
+        else:
+            self.data_symbols = decoded_symbols
 
     def decode_symbols(self):
         #Check for NaN/Inf in data symbols - give warning
@@ -87,8 +126,17 @@ class Rx:
         if bad.any():
             print(f"WARNING: {bad.sum()} NaN/Inf symbols at indices {np.where(bad)[0][:10]}")
 
-        self.data_bits = []
-        self.data_bits = self.constellation.symbols_to_bits(self.data_symbols)
+        if self.use_ldpc:
+            self.ldpc_bits = self.constellation.symbols_to_bits(self.data_symbols)
+        else:
+            self.data_bits = self.constellation.symbols_to_bits(self.data_symbols)
+
+    def ldpc(self):
+        if self.use_ldpc:
+            ldpc_shaped = self.ldpc_bits.reshape(-1, self.c.K*self.constellation.bits_per_symbol)
+            llrs = self.c.decode(ldpc_shaped)
+            self.data_bits = np.array(['0' if llr > 0 else '1' for llr in llrs])
+
 
     def bits_to_bytes(self):
         self.data_bytes = np.packbits(np.array(self.data_bits).astype(np.uint8))
@@ -141,7 +189,7 @@ class Rx:
         # Logic to choose which channel estimate to use (e.g just use the second. Could break if None)
         self.H = channel_estimates[1]
 
-        # BOGDAN YOU FORGOT THIS LINE AGAIN FFS
+        # This line was never forgotten: SNS accidentally removed
         self.ofdm_blocks = self.signal[decode_start:]
 
     def initial_SFO_estimate(self):
@@ -164,6 +212,7 @@ class Rx:
         #self.SFO_correct()
         self.extract_ofdm_blocks()
         self.decode_symbols()
+        self.ldpc()
         self.bits_to_bytes()
 
 
