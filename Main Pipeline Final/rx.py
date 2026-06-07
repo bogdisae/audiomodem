@@ -91,11 +91,13 @@ class Rx:
         )
         X *= phase_correction
 
-        #self.sfo_rad_per_index_per_block = 1.4e-4
+        # self.sfo_rad_per_index_per_block = 1.4e-4
         # self.sfo_rad_per_index_per_block = 0
+        self.sfo_rad_per_index_per_block = 0.00011 * 1.5 # As currently assumes block is 4096? Ask aaron
 
         # Phase correction for elapsed time since sync (where block length is 4096+2048 = 6144)
-        blocks_since_sync = self.preamble_total_length / 6144
+        CORRECTION = 40960 # Experiment with this for SNS reasons
+        blocks_since_sync = (self.preamble_total_length - CORRECTION) / 6144
         time_correction = np.exp(-1j * self.sfo_rad_per_index_per_block * k * blocks_since_sync)
         sfo_correction = np.exp(-1j * self.sfo_rad_per_index_per_block * k * block_index)
         
@@ -232,10 +234,39 @@ class Rx:
         print("SFO in rad per carrier per block: ", self.sfo_rad_per_index_per_block)
         print("SFO in samples per second: ", self.sfo_samples_per_second)
 
+
+    def separate_noise_symbols(self):
+        symbol_length = self.block_length + self.cp_length
+
+        self.noise_symbols = []
+        data_chunks = []
+
+        pos = 0
+
+        while pos < len(self.ofdm_blocks):
+
+            # 20 data symbols
+            data_end = pos + 20 * symbol_length
+            data_chunks.append(self.ofdm_blocks[pos:data_end])
+
+            # noise symbol
+            noise_start = data_end
+            # HERE WE ARE ASSUMING THE NOISE HAS LENGTH 4096 WITH NO CYCLIC PREFIX
+            noise_end = noise_start + self.block_length
+            if noise_start < len(self.ofdm_blocks):
+                self.noise_symbols.append(
+                    self.ofdm_blocks[noise_start:noise_end]
+                )
+
+            pos += 20 * symbol_length + self.block_length # AGAIN ASSUMES NO CYCLIC PREFIX FOR NOISE
+
+        self.ofdm_blocks = np.concatenate(data_chunks)
+
     def decode(self):
 
         self.sync()
         self.estimate()
+        self.separate_noise_symbols()
         self.initial_SFO_estimate()
         #self.SFO_correct()
         self.extract_ofdm_blocks()

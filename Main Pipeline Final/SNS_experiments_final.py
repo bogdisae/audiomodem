@@ -37,6 +37,7 @@ constellation = Constellation(2, {
 
 def generate_standard_sig(standard = True):
     text_file = pick_text_file("Select message file:", Path("./Main Pipeline Final/Data Files"))
+
     data_bytes = csv_to_data_bytes(text_file)
 
     repeatedChirp = RepeatedChirp(10, 4096, 0, 750, 18000, sync = True, est = True, fs = sampleRate)
@@ -107,26 +108,47 @@ def receive_standard_sig():
 
     print("Number of symbols", len(receiver.data_symbols))
 
-    # print(receiver.data_bits[:200])
-    start_symbols = 2000
-    growth_factor = 2
-    num_plots = 7
 
-    for i in range(num_plots):
-        end_idx = start_symbols * (growth_factor ** i)
-        plot_constellation_colour(
-            receiver.data_symbols[:end_idx],
-            f"First {end_idx}",
-            True,
-            True
-        )
+    plot_mode = "linear"   # "exponential" or "linear"
+    
 
+    if plot_mode == "exponential":
 
+        start_symbols = 2000
+        growth_factor = 2
+        num_plots = 7
+
+        for i in range(num_plots):
+            end_idx = start_symbols * (growth_factor ** i)
+
+            plot_constellation_colour(
+                receiver.data_symbols[:end_idx],
+                f"First {end_idx}",
+                True,
+                True
+            )
+
+    elif plot_mode == "linear":
+
+        chunk_size = 2000
+        start_idx = 0
+        num_plots = 30
+
+        for i in range(num_plots):
+            chunk_start = start_idx + i * chunk_size
+            chunk_end = chunk_start + chunk_size
+
+            plot_constellation_colour(
+                receiver.data_symbols[chunk_start:chunk_end],
+                f"Symbols {chunk_start}-{chunk_end}",
+                True,
+                True
+            )
 
 
 
     shaqbits = csv_bytes_to_binary_sequence("Main Pipeline Final/Data Files/BIGSHAQ_repeated.txt")
-    ber, errors, min_len = calculate_ber(shaqbits, receiver.data_bits[:16000])
+    ber, errors, min_len = calculate_ber(shaqbits, receiver.data_bits[:116000])
 
     print("BER:", ber)
     print("Errors:", errors)
