@@ -44,6 +44,12 @@ class Rx:
     data_start_estimate : int        # Sync logic predicts when the data block begins
     decode_start : int               # This accounts for first data cyclic prefix and going early
 
+    #Header handling
+    header_length: int
+    data_length: int
+    filename: str
+    payload: bytes
+
     def __init__(self, 
                  constellation: Constellation, 
                  signal:np.ndarray, 
@@ -208,7 +214,7 @@ class Rx:
         # Logic to choose which channel estimate to use (e.g just use the second. Could break if None)
         # Use the repeated chirp estimate for now
         
-        self.H = channel_estimates[0]
+        self.H = channel_estimates[1]
 
 
 
@@ -265,6 +271,30 @@ class Rx:
 
         self.ofdm_blocks = np.concatenate(data_chunks)
 
+    def pop_symbols_from_filename(self):
+        self.filename = ''.join(c for c in self.filename if c.isprintable())
+
+
+    def extract_header(self):
+        # A: header length (2 bytes)
+        self.header_length = int.from_bytes(self.data_bytes[:2], byteorder='big')
+
+        # B: data length (4 bytes)
+        self.data_length = int.from_bytes(self.data_bytes[2:6], byteorder='big')
+
+        # C: filename (remaining bytes of header)
+        filename_bytes = self.data_bytes[6:self.header_length]
+        self.filename = bytes(filename_bytes).decode('utf-8')
+        print(f'Uncleaned filename from header: {self.filename}')
+
+
+        #Deal with corrupting symbols in filename - more rigerious
+        self.pop_symbols_from_filename()
+        # Extract payload
+        self.payload = self.data_bytes[self.header_length:self.header_length + self.data_length]
+
+        print(f"Extracted header - filename: {self.filename}, header length: {self.header_length}, data length: {self.data_length} bytes")
+
     def decode(self):
 
         self.sync()
@@ -276,5 +306,6 @@ class Rx:
         self.decode_symbols()
         #self.ldpc()
         self.bits_to_bytes()
+        self.extract_header()
 
 

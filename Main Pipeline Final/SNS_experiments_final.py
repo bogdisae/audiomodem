@@ -1,7 +1,7 @@
 from equaliser import Equaliser, RepeatedChirp, GolayPairs, WhiteNoise
 from tx import Tx
 from rx import Rx
-from helper import pick_text_file, csv_to_data_bytes, pick_wav_file, normalise_signal, record_audio, plot_constellation
+from helper import pick_text_file, csv_to_data_bytes, pick_wav_file, normalise_signal, record_audio, plot_constellation, pick_csv_file, gen_colour_seq
 from helper import csv_bytes_to_binary_sequence, calculate_ber, plot_constellation_colour
 from pathlib import Path
 import numpy as np
@@ -163,6 +163,13 @@ def receive_standard_sig():
     print("Errors:", errors)
     print("Min Len", min_len)
 
+
+    text_file = pick_csv_file("Select message file:", Path("./Main Pipeline Final/Data Files"))
+    known_bit_seq = csv_bytes_to_binary_sequence(text_file)
+    colour_seq = gen_colour_seq(known_bit_seq, constellation)
+    plot_constellation(receiver.data_symbols[0:1000], colour_seq[0:1000], "Received Constellation with Known Bit Stream Colouring")
+    plot_constellation(receiver.data_symbols[0:2000], colour_seq[0:2000], "Received Constellation with Known Bit Stream Colouring")
+    plot_constellation(receiver.data_symbols[0:4000], colour_seq[0:4000], "Received Constellation with Known Bit Stream Colouring")
 
 #generate_standard_sig()
 receive_standard_sig()
