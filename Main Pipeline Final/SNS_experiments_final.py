@@ -109,46 +109,55 @@ def receive_standard_sig():
     print("Number of symbols", len(receiver.data_symbols))
 
 
-    plot_mode = "linear"   # "exponential" or "linear"
+    plot_mode = "exponential"   # "exponential" or "linear"
     
+
+    total_symbols = len(receiver.data_symbols)
 
     if plot_mode == "exponential":
 
         start_symbols = 2000
         growth_factor = 2
-        num_plots = 7
 
-        for i in range(num_plots):
-            end_idx = start_symbols * (growth_factor ** i)
+        end_idx = start_symbols
+
+        while True:
+
+            actual_end = min(int(end_idx), total_symbols)
 
             plot_constellation_colour(
-                receiver.data_symbols[:end_idx],
-                f"First {end_idx}",
+                receiver.data_symbols[:actual_end],
+                f"First {actual_end}",
                 True,
                 True
             )
+
+            if actual_end == total_symbols:
+                break
+
+            end_idx *= growth_factor
 
     elif plot_mode == "linear":
 
         chunk_size = 2000
         start_idx = 0
-        num_plots = 30
 
-        for i in range(num_plots):
-            chunk_start = start_idx + i * chunk_size
-            chunk_end = chunk_start + chunk_size
+        while start_idx < total_symbols:
+
+            end_idx = min(start_idx + chunk_size, total_symbols)
 
             plot_constellation_colour(
-                receiver.data_symbols[chunk_start:chunk_end],
-                f"Symbols {chunk_start}-{chunk_end}",
+                receiver.data_symbols[start_idx:end_idx],
+                f"Symbols {start_idx}-{end_idx}",
                 True,
                 True
             )
 
+            start_idx += chunk_size
 
 
     shaqbits = csv_bytes_to_binary_sequence("Main Pipeline Final/Data Files/BIGSHAQ_repeated.txt")
-    ber, errors, min_len = calculate_ber(shaqbits, receiver.data_bits[:116000])
+    ber, errors, min_len = calculate_ber(shaqbits, receiver.data_bits[:100000])
 
     print("BER:", ber)
     print("Errors:", errors)

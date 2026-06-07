@@ -91,15 +91,18 @@ class Rx:
         )
         X *= phase_correction
 
+        # Test paramaters
         # self.sfo_rad_per_index_per_block = 1.4e-4
         # self.sfo_rad_per_index_per_block = 0
-        self.sfo_rad_per_index_per_block = 0.00011 * 1.5 # As currently assumes block is 4096? Ask aaron
+
+        # Following line is neccesary to change constant for block length 4096 -> 6144 to inc cycprefix
+        rad_per_idx_per_cycblock = self.sfo_rad_per_index_per_block * 1.5 
 
         # Phase correction for elapsed time since sync (where block length is 4096+2048 = 6144)
-        CORRECTION = 40960 # Experiment with this for SNS reasons
+        CORRECTION = 0 # Experiment with this for SNS reasons
         blocks_since_sync = (self.preamble_total_length - CORRECTION) / 6144
-        time_correction = np.exp(-1j * self.sfo_rad_per_index_per_block * k * blocks_since_sync)
-        sfo_correction = np.exp(-1j * self.sfo_rad_per_index_per_block * k * block_index)
+        time_correction = np.exp(-1j * rad_per_idx_per_cycblock * k * blocks_since_sync)
+        sfo_correction = np.exp(-1j * rad_per_idx_per_cycblock * k * block_index)
         
         X *= time_correction
         X *= sfo_correction
@@ -217,7 +220,7 @@ class Rx:
             key_start_idx = self.key_start_estimates[idx]
 
             if type(equaliser) is GolayPairs:
-                self.sfo_rad_per_index_per_block = equaliser.initial_SFO_estimate(self.signal, key_start_idx, self.bin_low, self.bin_high, True)
+                self.sfo_rad_per_index_per_block = equaliser.initial_SFO_estimate(self.signal, key_start_idx, self.bin_low, self.bin_high, False)
                 pass
 
             if type(equaliser) is RepeatedChirp:
