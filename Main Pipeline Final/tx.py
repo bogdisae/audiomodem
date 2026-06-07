@@ -170,8 +170,7 @@ class Tx:
         self.prep_ofdm_blocks()
         self.assemble_signal()
 
-        plot_constellation(self.data_symbols[:200])
-        plot_constellation(self.data_symbols[0:2000])
+
     
 
 
