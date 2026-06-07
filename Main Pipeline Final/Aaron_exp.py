@@ -136,12 +136,14 @@ def receive_standard_sig():
     tx_log_name = Path(text_file).stem
 
     colour_seq = gen_colour_seq(known_bit_seq, constellation)
+    plot_constellation(receiver.data_symbols[0:1000], colour_seq[0:1000], "Received Constellation with Known Bit Stream Colouring")
     plot_constellation(receiver.data_symbols[0:2000], colour_seq[0:2000], "Received Constellation with Known Bit Stream Colouring")
+    plot_constellation(receiver.data_symbols[0:4000], colour_seq[0:4000], "Received Constellation with Known Bit Stream Colouring")
 
 
 
-    # shaqbits = csv_bytes_to_binary_sequence("Main Pipeline 2/Data Files/BIGSHAQ.txt")
-    # ber, errors, min_len = calculate_ber(shaqbits, receiver.data_bits[:2000])
+    shaqbits = csv_bytes_to_binary_sequence("Main Pipeline 2/Data Files/Shakespeare_utf copy.txt")
+    ber, errors, min_len = calculate_ber(shaqbits, receiver.data_bits[:2000])
 
     # print("BER:", ber)
     # print("Errors:", errors)
