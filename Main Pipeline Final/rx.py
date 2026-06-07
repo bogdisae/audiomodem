@@ -33,7 +33,11 @@ class Rx:
     sfo_samples_per_second : float
     sfo_rad_per_index_per_block : float
     preamble_start_estimates : list[int] # Stores where each synchroniser thinks the WHOLE preamble starts
-    preamble_start_estimate : int    # Overall estimate of preamble start, based on selection logic    use_ldpc: bool
+    preamble_start_estimate : int    # Overall estimate of preamble start, based on selection logic    
+    preamble_total_length : int
+
+    # Fuck ldpc
+    use_ldpc: bool
     c: ldpc.code
 
     key_start_estimates : list[int]  # A list of when each equaliser key starts (predicted from sync logic)
@@ -47,7 +51,7 @@ class Rx:
                  block_length: int, 
                  equalisers : list[Equaliser], 
                  sfoEqualiser : Equaliser,
-                early_samples = 200, 
+                 early_samples = 200, 
                  f_low = 2000,
                  f_high = 12000, 
                  fs: int = 48_000, 
@@ -70,7 +74,7 @@ class Rx:
         self.bin_high = int(np.floor(f_high * block_length / self.fs))
         self.active_bins = np.arange(self.bin_low, self.bin_high + 1)
 
-        #self.c = ldpc.code('802.16', z=61)
+        self.c = ldpc.code('802.16', z=61)
         self.use_ldpc = use_ldpc
         self.preamble_start_estimates = []
         self.key_start_estimates = []
@@ -80,15 +84,22 @@ class Rx:
         Y = np.fft.fft(cp_discarded)
         X = Y / self.H[0:len(Y)] # Zero-forcing
 
-        # Phase correction for FFT window offset
         k = np.arange(len(X))
+        # Phase correction for FFT window offset
         phase_correction = np.exp(
             1j * 2 * np.pi * k * self.early_samples / self.block_length
         )
         X *= phase_correction
 
-        self.sfo_rad_per_index_per_block = -1e-2
+        #self.sfo_rad_per_index_per_block = 1.4e-4
+        # self.sfo_rad_per_index_per_block = 0
+
+        # Phase correction for elapsed time since sync (where block length is 4096+2048 = 6144)
+        blocks_since_sync = self.preamble_total_length / 6144
+        time_correction = np.exp(-1j * self.sfo_rad_per_index_per_block * k * blocks_since_sync)
         sfo_correction = np.exp(-1j * self.sfo_rad_per_index_per_block * k * block_index)
+        
+        X *= time_correction
         X *= sfo_correction
 
         data_bins = X[self.active_bins]
@@ -156,7 +167,7 @@ class Rx:
         for equaliser in self.equalisers:
             equaliser.preambleStartOffset = offset
             offset += equaliser.lengthInSamples
-        preamble_total_length = offset
+        self.preamble_total_length = offset
 
         for equaliser in self.equalisers:
             if equaliser.sync:
@@ -168,7 +179,7 @@ class Rx:
 
         # Logic to choose sync estimate (e.g. use the first sync estimate)
         self.preamble_start_estimate = self.preamble_start_estimates[0]
-        self.data_start_estimate = self.preamble_start_estimate + preamble_total_length
+        self.data_start_estimate = self.preamble_start_estimate + self.preamble_total_length
         self.decode_start = self.data_start_estimate - self.early_samples
 
         self.key_start_estimates = []
@@ -192,7 +203,7 @@ class Rx:
         # Logic to choose which channel estimate to use (e.g just use the second. Could break if None)
         # Use the repeated chirp estimate for now
         
-        self.H = channel_estimates[1]
+        self.H = channel_estimates[0]
 
 
 
@@ -205,12 +216,12 @@ class Rx:
 
             if type(equaliser) is GolayPairs:
                 self.sfo_rad_per_index_per_block = equaliser.initial_SFO_estimate(self.signal, key_start_idx, self.bin_low, self.bin_high, True)
-                
                 pass
 
             if type(equaliser) is RepeatedChirp:
-                print("Using chirps to estimate SFO...")
-                self.sfo_rad_per_index_per_block = equaliser.initial_SFO_estimate(self.signal, key_start_idx, self.bin_low, self.bin_high, True)
+                #print("Using chirps to estimate SFO...")
+                #self.sfo_rad_per_index_per_block = equaliser.initial_SFO_estimate(self.signal, key_start_idx, self.bin_low, self.bin_high, True)
+                pass
 
         # To convert to sample drift / sec, consider the largest carrier 4096 (48000 Hz)
         # Multiplying the slope by 4096 leaves phase offset per block for 48000
@@ -218,13 +229,14 @@ class Rx:
         # Therefore, SFO (in sample drift / sec) = slope * 4096 * 48000/4096 = slope * 48000
 
         self.sfo_samples_per_second = self.sfo_rad_per_index_per_block * 48000
+        print("SFO in rad per carrier per block: ", self.sfo_rad_per_index_per_block)
         print("SFO in samples per second: ", self.sfo_samples_per_second)
 
     def decode(self):
 
         self.sync()
         self.estimate()
-        #self.initial_SFO_estimate()
+        self.initial_SFO_estimate()
         #self.SFO_correct()
         self.extract_ofdm_blocks()
         self.decode_symbols()

@@ -110,7 +110,7 @@ class RepeatedChirp(Equaliser):
         H_list = np.array(H_list)
 
         if plot:
-            #plot_multiple_channel_estimates(H_list)
+            plot_multiple_channel_estimates(H_list)
             pass
 
         # H_avg = np.mean(H_list, axis = 0)

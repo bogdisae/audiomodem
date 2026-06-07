@@ -56,7 +56,6 @@ def generate_standard_sig(standard = True):
         )
 
     transmitter.encode()
-    plot_constellation(transmitter.data_symbols[:200])
 
 
     sig = transmitter.transmitted_signal
@@ -85,10 +84,10 @@ def receive_standard_sig():
         print("Recording mode selected")
         sig = record_audio(sampleRate)
         sig = normalise_signal(sig)
-        
+    
     
     repeatedChirp = RepeatedChirp(10, 4096, 0, 750, 18000, sync = True, est = True, fs = sampleRate)
-    golayPairs = GolayPairs(12, silence = 2048, numPairs=4, seed = (1,1), est = False, fs = sampleRate) #2**12 = 4096
+    golayPairs = GolayPairs(12, silence = 2048, numPairs=4, seed = (1,1), est = True, fs = sampleRate) #2**12 = 4096
     whiteNoise = WhiteNoise(4096, constellation, sync = False, est = False, fs = sampleRate)
 
     # LIST SHOULD ONLY CONTAIN THE INITIAL REPEATED CHIRP AND GOLAY SEQUENCE!!
@@ -106,22 +105,28 @@ def receive_standard_sig():
     
 
 
-    # print ("Number of coefficients:", len(receiver.H))
-    # print("First 10 estimated coefficients:\n", receiver.H[:10])
+    print("Number of symbols", len(receiver.data_symbols))
 
     # print(receiver.data_bits[:200])
-    plot_constellation_colour(receiver.data_symbols[:200], "First 200", True, True)
-    plot_constellation_colour(receiver.data_symbols[0:4000], "First 4000", True, True)
-    plot_constellation_colour(receiver.data_symbols[4000:8000], "4000-8000", True, True)
-    plot_constellation_colour(receiver.data_symbols[8000:12000], "8000-12000", True, True)
-    plot_constellation_colour(receiver.data_symbols[12000:16000], "12000-16000", True, True)
-    plot_constellation_colour(receiver.data_symbols[16000:20000], "16000-20000", True, True)
-    # print("Number of data symbols:", len(receiver.data_symbols))
+    start_symbols = 2000
+    growth_factor = 2
+    num_plots = 7
+
+    for i in range(num_plots):
+        end_idx = start_symbols * (growth_factor ** i)
+        plot_constellation_colour(
+            receiver.data_symbols[:end_idx],
+            f"First {end_idx}",
+            True,
+            True
+        )
 
 
 
-    shaqbits = csv_bytes_to_binary_sequence("Main Pipeline Final/Data Files/BIGSHAQ.txt")
-    ber, errors, min_len = calculate_ber(shaqbits, receiver.data_bits[:200])
+
+
+    shaqbits = csv_bytes_to_binary_sequence("Main Pipeline Final/Data Files/BIGSHAQ_repeated.txt")
+    ber, errors, min_len = calculate_ber(shaqbits, receiver.data_bits[:16000])
 
     print("BER:", ber)
     print("Errors:", errors)
@@ -129,6 +134,5 @@ def receive_standard_sig():
 
 
 #generate_standard_sig()
-
 receive_standard_sig()
 
