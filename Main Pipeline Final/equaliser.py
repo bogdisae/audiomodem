@@ -344,7 +344,7 @@ class GolayPairs(Equaliser):
                 #time_drift_per_sec = (-a_meas * N_fft / (2*np.pi)) / (self.synchroniser.fs*self.symbol_length * self.pilot_spacing)
                 #print(f"Corresponds to {time_drift_per_sec:.6g} s drift at sample rate {self.synchroniser.fs} Hz.")
 
-            phase_drift_per_block = a_meas * N_fft / ((j - i* self.blockLength))
+            phase_drift_per_block = a_meas * N_fft / (((j - i)* self.blockLength))
             phase_accum_per_block.append(phase_drift_per_block)
         #calculate the average phase accumulation across all pair combinations
         #apply the correction to the rest of the data stream by rotating the OFDM symbols in the next section by the negative of the measured phase drift with interpolated in time
