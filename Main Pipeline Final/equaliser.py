@@ -370,17 +370,12 @@ class WhiteNoise(Equaliser):
         print(f'Generated white noise of length {len(noise)} samples, duration {self.lengthInSeconds:.2f} seconds')
 
         self.noise_bit_stream = noise.astype(int)
-        print(len(noise))
-        print(self.lengthInSamples)
         assert len(noise) == self.lengthInSamples
         #No normalisation needed since 1s and 0s rn
         
     def make_OFDM_block(self, symbols):
         X = np.zeros(self.lengthInSamples, dtype=complex)
         
-
-
-        # --------------- FOLLOWING CODE IS WRONG!!! --------------
         # Positive-frequency active bins
         X[:self.lengthInSamples // 2] = symbols
         # Hermitian symmetry
@@ -392,6 +387,9 @@ class WhiteNoise(Equaliser):
         if self.cyclic_prefix_length > 0:
             cp = ofdm_block[-self.cyclic_prefix_length:]
             ofdm_block = np.concatenate([cp, ofdm_block])
+
+        normalisation_factor = np.max(np.abs(ofdm_block))
+        ofdm_block = ofdm_block / normalisation_factor
 
         return ofdm_block
 

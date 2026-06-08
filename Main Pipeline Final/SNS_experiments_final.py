@@ -44,6 +44,7 @@ def generate_standard_sig(standard = True):
     golayPairs = GolayPairs(12, silence = 2048, numPairs=4, seed = (1,1), est = True, fs = 48000) #2**12 = 4096
     whiteNoise = WhiteNoise(4096, 2048, constellation, sync = False, est = True, fs = sampleRate)
     transmitter = Tx(
+        header_filename = text_file.split("\\")[-1],
         constellation=constellation,
         data_bytes = data_bytes,
         equaliser1 = repeatedChirp,
@@ -301,9 +302,9 @@ def receive_standard_sig_ldpc():
     print("Errors:", errors)
     print("Min Len", min_len)
 
-#generate_standard_sig()
+generate_standard_sig()
 #generate_standard_sig_ldpc()
-receive_standard_sig()
+#receive_standard_sig()
 #receive_standard_sig()
 
 
