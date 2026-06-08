@@ -146,8 +146,8 @@ class Rx:
                 for i in range(len(interleaved_block)):
                     ldpc_block.append(interleaved_block[(i*ldpc_skip_factor)%thirty_ofdm_block_length])
                 decoded_symbols.extend(ldpc_block)
-        else:
-            self.data_symbols = decoded_symbols
+        
+        self.data_symbols = decoded_symbols
 
 
     def decode_symbols(self):
@@ -164,8 +164,10 @@ class Rx:
 
     def ldpc(self):
         if self.use_ldpc:
-            ldpc_shaped = self.ldpc_bits.reshape(-1, self.c.K*self.constellation.bits_per_symbol)
-            llrs = self.c.decode(ldpc_shaped)
+            ldpc_shaped = np.array(self.ldpc_bits).reshape(-1, self.c.K*self.constellation.bits_per_symbol).astype(int)
+            lut = np.array([25, -25])
+            ldpc_shaped_weighted = lut[ldpc_shaped]
+            llrs = np.concatenate([self.c.decode(ldpc_block)[0] for ldpc_block in ldpc_shaped_weighted])
             self.data_bits = np.array(['0' if llr > 0 else '1' for llr in llrs])
 
 
@@ -214,7 +216,7 @@ class Rx:
         # Logic to choose which channel estimate to use (e.g just use the second. Could break if None)
         # Use the repeated chirp estimate for now
         
-        self.H = channel_estimates[1]
+        self.H = channel_estimates[0]
 
 
 
@@ -304,8 +306,6 @@ class Rx:
         #self.SFO_correct()
         self.extract_ofdm_blocks()
         self.decode_symbols()
-        #self.ldpc()
+        self.ldpc()
         self.bits_to_bytes()
-        self.extract_header()
-
-
+        # self.extract_header()
