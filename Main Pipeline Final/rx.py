@@ -3,6 +3,7 @@ from constellation import Constellation
 from equaliser import Equaliser, RepeatedChirp, GolayPairs
 from helper import plot_complex_arrays_separate
 from ldpc import ldpc
+import matplotlib.pyplot as plt
 
 class Rx:
     signal: np.ndarray
@@ -80,7 +81,7 @@ class Rx:
         self.bin_high = int(np.floor(f_high * block_length / self.fs))
         self.active_bins = np.arange(self.bin_low, self.bin_high + 1)
 
-        #self.c = ldpc.code('802.16', z=61)
+        self.c = ldpc.code('802.16', z=61)
         self.use_ldpc = use_ldpc
         self.preamble_start_estimates = []
         self.key_start_estimates = []
@@ -211,7 +212,7 @@ class Rx:
             if equaliser.est:
                 key_start_index = self.key_start_estimates[idx]
                 # (Note RepeatedChirp also plots its estimate in the function)
-                channel_estimates.append(equaliser.estimate(self.signal, key_start_index))
+                channel_estimates.append(equaliser.estimate(self.signal, key_start_index, False))
             else:
                 channel_estimates.append(None)
 
@@ -299,13 +300,97 @@ class Rx:
 
         print(f"Extracted header - filename: {self.filename}, header length: {self.header_length}, data length: {self.data_length} bytes")
 
+    def SFO_pilot_estimate(self):
+
+        pilot_ffts = []
+        for symbol in self.noise_symbols:
+            pilot_ffts.append(np.fft.fft(symbol, n=4096))
+
+        pilot_ffts = np.array(pilot_ffts)
+
+        phase_curves = []
+
+        for i in range(len(pilot_ffts)):
+            for j in range(i + 1, len(pilot_ffts)):
+
+                separation = j - i
+
+                ratio = pilot_ffts[j] / (pilot_ffts[i] + 1e-12)
+                phase = np.unwrap(np.angle(ratio))
+
+                # Normalize to one pilot interval
+                phase /= separation
+
+                phase_curves.append(phase)
+
+                # ---- Individual plot ----
+                k = np.arange(len(phase))
+                slope, intercept = np.polyfit(k, phase, 1)
+
+                plt.figure(figsize=(12, 6))
+                plt.plot(k, phase, label="Phase")
+
+                plt.plot(
+                    k,
+                    slope * k + intercept,
+                    "--",
+                    label=f"Fit (slope={slope:.3e})"
+                )
+
+                plt.xlabel("FFT bin")
+                plt.ylabel("Phase difference per pilot interval (rad)")
+                plt.title(
+                    f"Pilot {i} → {j} (separation={separation})"
+                )
+                plt.grid(True)
+                plt.legend()
+
+        # Show all individual figures
+        plt.show()
+
+        # ---- Average plot (your original one) ----
+        phase_curves = np.array(phase_curves)
+
+        mean_phase = np.mean(phase_curves, axis=0)
+
+        k = np.arange(len(mean_phase))
+        slope, intercept = np.polyfit(k, mean_phase, 1)
+
+        plt.figure(figsize=(12, 8))
+
+        for phase in phase_curves:
+            plt.plot(k, phase, alpha=0.5)
+
+        plt.plot(
+            k,
+            mean_phase,
+            linewidth=3,
+            label=f"Average (slope={slope:.3e} rad/bin/pilot)"
+        )
+
+        plt.plot(
+            k,
+            slope * k + intercept,
+            "--",
+            linewidth=2,
+            label="Linear fit"
+        )
+
+        plt.xlabel("FFT bin")
+        plt.ylabel("Phase difference per pilot interval (rad)")
+        plt.title("Average phase drift per pilot interval")
+        plt.grid(True)
+        plt.legend()
+
+        plt.show()
+        
     def decode(self):
 
         self.sync()
         self.estimate()
         self.separate_noise_symbols()
         self.initial_SFO_estimate()
-        # self.SFO_block_correct()
+        self.SFO_pilot_estimate()
         self.extract_ofdm_blocks()
         self.decode_symbols()
         self.ldpc()
