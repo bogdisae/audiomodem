@@ -74,7 +74,7 @@ class Rx:
         self.bin_high = int(np.floor(f_high * block_length / self.fs))
         self.active_bins = np.arange(self.bin_low, self.bin_high + 1)
 
-        self.c = ldpc.code('802.16', z=61)
+        #self.c = ldpc.code('802.16', z=61)
         self.use_ldpc = use_ldpc
         self.preamble_start_estimates = []
         self.key_start_estimates = []
@@ -248,20 +248,20 @@ class Rx:
 
         while pos < len(self.ofdm_blocks):
 
-            # 20 data symbols
-            data_end = pos + 20 * symbol_length
+            # 19 data symbols - BAD CODING PRACTICE I FUCKING KNOW
+            data_end = pos + 19 * symbol_length
             data_chunks.append(self.ofdm_blocks[pos:data_end])
 
             # noise symbol
             noise_start = data_end
-            # HERE WE ARE ASSUMING THE NOISE HAS LENGTH 4096 WITH NO CYCLIC PREFIX
-            noise_end = noise_start + self.block_length
+            # HERE WE ARE ASSUMING THE NOISE HAS LENGTH 4096 WITH 2048 CYCLIC PREFIX
+            noise_end = noise_start + symbol_length
             if noise_start < len(self.ofdm_blocks):
                 self.noise_symbols.append(
                     self.ofdm_blocks[noise_start:noise_end]
                 )
 
-            pos += 20 * symbol_length + self.block_length # AGAIN ASSUMES NO CYCLIC PREFIX FOR NOISE
+            pos += 20 * symbol_length  # ASSUMES CYCLIC PREFIX FOR NOISE
 
         self.ofdm_blocks = np.concatenate(data_chunks)
 
@@ -271,7 +271,7 @@ class Rx:
         self.estimate()
         self.separate_noise_symbols()
         self.initial_SFO_estimate()
-        #self.SFO_correct()
+        # self.SFO_block_correct()
         self.extract_ofdm_blocks()
         self.decode_symbols()
         #self.ldpc()

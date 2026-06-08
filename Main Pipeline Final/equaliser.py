@@ -354,11 +354,12 @@ class GolayPairs(Equaliser):
         return slope
 
 class WhiteNoise(Equaliser):
-    def __init__(self, lengthInSamples, constellation, sync=False, est=False, fs=48000):
+    def __init__(self, lengthInSamples, cyclic_prefix_length, constellation, sync=False, est=False, fs=48000):
         super().__init__(fs, sync, est)
         self.lengthInSamples = lengthInSamples
         self.lengthInSeconds = lengthInSamples / fs
         self.constellation = constellation
+        self.cyclic_prefix_length = cyclic_prefix_length
 
     def extract_noise_stream(self):
         #Read the file named WN_symbol.txt which contains the 4096 WN.
@@ -376,20 +377,30 @@ class WhiteNoise(Equaliser):
         
     def make_OFDM_block(self, symbols):
         X = np.zeros(self.lengthInSamples, dtype=complex)
+        
 
+
+        # --------------- FOLLOWING CODE IS WRONG!!! --------------
         # Positive-frequency active bins
-        X[:self.lengthInSamples//2] = symbols
-
+        X[:self.lengthInSamples // 2] = symbols
         # Hermitian symmetry
-        X[-self.lengthInSamples//2:] = np.conj(symbols)
-
+        X[-self.lengthInSamples // 2:] = np.conj(symbols)
+        # ---------------------------------------------------------
         ofdm_block = np.fft.ifft(X).real
+
+        # Add cyclic prefix
+        if self.cyclic_prefix_length > 0:
+            cp = ofdm_block[-self.cyclic_prefix_length:]
+            ofdm_block = np.concatenate([cp, ofdm_block])
+
         return ofdm_block
 
     def generate(self):
         self.extract_noise_stream()
 
-        self.symbols = self.constellation.bits_to_symbols(self.noise_bit_stream.astype(str))
+        self.symbols = self.constellation.bits_to_symbols(
+            self.noise_bit_stream.astype(str)
+        )
 
         OFDM_block = self.make_OFDM_block(self.symbols)
         return OFDM_block

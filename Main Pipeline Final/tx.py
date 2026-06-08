@@ -67,7 +67,7 @@ class Tx:
 
         self.pilot_spacing = pilot_spacing
         
-        #self.c = ldpc.code('802.16', z=61)
+        self.c = ldpc.code('802.16', z=61)
         self.use_ldpc = use_ldpc
 
 
@@ -157,7 +157,8 @@ class Tx:
         sections.append(chirp_seq)
         sections.append(Golay_seq)
         for i, block in enumerate(ofdm_blocks):
-            if i % self.pilot_spacing == 0 and i != 0:
+            # ADD IN THE -1 TO ADHERE TO STANDARD AKA 19 INSTEAD OF 20
+            if i % (self.pilot_spacing - 1) == 0 and i != 0:
                 sections.append(pilot_symbol)
                 print(f'Pilot inserted before block {i}')
             sections.append(block)
