@@ -10,6 +10,7 @@ from ldpc import ldpc
 from helper import plot_constellation
 
 class Tx:
+    header_filename: str
     data_bytes: np.ndarray
     constellation: Constellation
     cp_length: int
@@ -37,7 +38,9 @@ class Tx:
     key_pilot_samples_spacing : int
 
 
-    def __init__(self, constellation: Constellation, 
+    def __init__(self, 
+                 header_filename: str,
+                 constellation: Constellation, 
                  data_bytes: np.ndarray, 
                  equaliser1 : Equaliser, 
                  equaliser2 : Equaliser, 
@@ -70,6 +73,7 @@ class Tx:
         self.c = ldpc.code('802.16', z=61)
         self.use_ldpc = use_ldpc
 
+        self.header_filename = header_filename
 
     # def create_noise_key(noise_samples, n_taps):
     #     n = np.random.uniform(-1.0, 1.0, noise_samples)
@@ -79,6 +83,23 @@ class Tx:
     #     key[-noise_samples:] = n
     #     return n, key
     
+    def assemble_header(self):
+        # B: length of data
+        data_length_bytes = len(self.data_bytes).to_bytes(4, byteorder='big')
+        print(f"Data length: {len(self.data_bytes)} bytes")
+        # C: filename
+        filename_bytes = self.header_filename.encode('utf-8')
+        print(f"Header filename: {self.header_filename}, length: {len(filename_bytes)} bytes")
+        # A: length of entire header = len(A) + len(B) + len(C)
+        header_length = 2 + 4 + len(filename_bytes)
+        header_length_bytes = header_length.to_bytes(2, byteorder='big')
+
+        # Complete header
+        header_bytes = header_length_bytes + data_length_bytes + filename_bytes
+        print(f"Header length: {header_length} bytes")
+        header_array = np.frombuffer(header_bytes, dtype=np.uint8)
+        self.data_bytes = np.concatenate([header_array, self.data_bytes])
+
     def bytes_to_bits(self):
         self.data_bits = np.unpackbits(self.data_bytes).astype(str)
     
@@ -165,6 +186,7 @@ class Tx:
         self.transmitted_signal = np.concatenate(sections)
     
     def encode(self):
+        # self.assemble_header()
         self.bytes_to_bits()
         self.ldpc()
         self.encode_symbols()

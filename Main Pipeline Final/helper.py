@@ -513,7 +513,7 @@ def plot_Golay_diagnostics(h_norm, h_norm_alt, corr_a, corr_b, H_norm, H_norm_al
     H_norm_alt = H_norm_alt[0:len(H_norm_alt)//2]
     import questionary
     plot_corr = False
-    plot_corr = questionary.select("Plot correlation results for first pair? (y/n)", choices=['y', 'n']).ask()
+    #plot_corr = questionary.select("Plot correlation results for first pair? (y/n)", choices=['y', 'n']).ask()
     if plot_corr == 'y':
         
         fig_norm, ax_alt = plt.subplots()

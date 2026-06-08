@@ -44,6 +44,12 @@ class Rx:
     data_start_estimate : int        # Sync logic predicts when the data block begins
     decode_start : int               # This accounts for first data cyclic prefix and going early
 
+    #Header handling
+    header_length: int
+    data_length: int
+    filename: str
+    payload: bytes
+
     def __init__(self, 
                  constellation: Constellation, 
                  signal:np.ndarray, 
@@ -140,8 +146,8 @@ class Rx:
                 for i in range(len(interleaved_block)):
                     ldpc_block.append(interleaved_block[(i*ldpc_skip_factor)%thirty_ofdm_block_length])
                 decoded_symbols.extend(ldpc_block)
-        else:
-            self.data_symbols = decoded_symbols
+        
+        self.data_symbols = decoded_symbols
 
 
     def decode_symbols(self):
@@ -158,8 +164,10 @@ class Rx:
 
     def ldpc(self):
         if self.use_ldpc:
-            ldpc_shaped = self.ldpc_bits.reshape(-1, self.c.K*self.constellation.bits_per_symbol)
-            llrs = self.c.decode(ldpc_shaped)
+            ldpc_shaped = np.array(self.ldpc_bits).reshape(-1, self.c.K*self.constellation.bits_per_symbol).astype(int)
+            lut = np.array([25, -25])
+            ldpc_shaped_weighted = lut[ldpc_shaped]
+            llrs = np.concatenate([self.c.decode(ldpc_block)[0] for ldpc_block in ldpc_shaped_weighted])
             self.data_bits = np.array(['0' if llr > 0 else '1' for llr in llrs])
 
 
@@ -265,6 +273,30 @@ class Rx:
 
         self.ofdm_blocks = np.concatenate(data_chunks)
 
+    def pop_symbols_from_filename(self):
+        self.filename = ''.join(c for c in self.filename if c.isprintable())
+
+
+    def extract_header(self):
+        # A: header length (2 bytes)
+        self.header_length = int.from_bytes(self.data_bytes[:2], byteorder='big')
+
+        # B: data length (4 bytes)
+        self.data_length = int.from_bytes(self.data_bytes[2:6], byteorder='big')
+
+        # C: filename (remaining bytes of header)
+        filename_bytes = self.data_bytes[6:self.header_length]
+        self.filename = bytes(filename_bytes).decode('utf-8')
+        print(f'Uncleaned filename from header: {self.filename}')
+
+
+        #Deal with corrupting symbols in filename - more rigerious
+        self.pop_symbols_from_filename()
+        # Extract payload
+        self.payload = self.data_bytes[self.header_length:self.header_length + self.data_length]
+
+        print(f"Extracted header - filename: {self.filename}, header length: {self.header_length}, data length: {self.data_length} bytes")
+
     def decode(self):
 
         self.sync()
@@ -274,7 +306,6 @@ class Rx:
         # self.SFO_block_correct()
         self.extract_ofdm_blocks()
         self.decode_symbols()
-        #self.ldpc()
+        self.ldpc()
         self.bits_to_bytes()
-
-
+        # self.extract_header()
