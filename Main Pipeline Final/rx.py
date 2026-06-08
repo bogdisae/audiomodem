@@ -108,7 +108,9 @@ class Rx:
         CORRECTION = 0 # Experiment with this for SNS reasons
         blocks_since_sync = (self.preamble_total_length - CORRECTION) / 6144
         time_correction = np.exp(-1j * rad_per_idx_per_cycblock * k * blocks_since_sync)
-        sfo_correction = np.exp(-1j * rad_per_idx_per_cycblock * k * block_index)
+
+        block_index_with_noise_accounted_for = block_index + block_index // 20
+        sfo_correction = np.exp(-1j * rad_per_idx_per_cycblock * k * block_index_with_noise_accounted_for)
         
         X *= time_correction
         X *= sfo_correction

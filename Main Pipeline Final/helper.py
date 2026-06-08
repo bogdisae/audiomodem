@@ -650,7 +650,7 @@ def plot_constellation_colour(symbols, title="Constellation Diagram", show=True,
 
     plt.figure(figsize=(6, 6))
     if index_colour:
-        sc = plt.scatter(symbols.real, symbols.imag, c=np.arange(len(symbols)), cmap='viridis', s=10)
+        sc = plt.scatter(symbols.real, symbols.imag, c=np.arange(len(symbols)), cmap='viridis', s=3)
         plt.colorbar(sc, label='Sample index')
     else:
         plt.scatter(symbols.real, symbols.imag, s=10)
@@ -675,7 +675,7 @@ import matplotlib.pyplot as plt
 def qpsk_find_centres(samples, plot=True):
 
 
-        samples = np.asarray(samples, dtype=np.complex128)
+    samples = np.asarray(samples, dtype=np.complex128)
 
     """
     Find QPSK constellation centres using:
