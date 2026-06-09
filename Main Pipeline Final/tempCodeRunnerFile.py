@@ -138,6 +138,8 @@ def no_estimation_ofdm_interleaving_test():
 #     r = data_symbols_received[i]
 #     print(f"{'match' if np.isclose(t, r) else 'error'} {t.real:.1f}+{t.imag:.1f} : {r.real:.1f}+{r.imag:.1f}")
 
+
+
 def full_transmission_test():
     tx = Tx("filename.txt", constellation, big_shaq_data, repeatedChirp, golayPairs, whiteNoise, 2048, 4096, 10, 2_000, 12_000)
     tx.encode()

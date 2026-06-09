@@ -109,7 +109,12 @@ class Tx:
 
     def ldpc(self):
         if self.use_ldpc:
-            bits_padded = np.pad(self.data_bits, (0, self.c.K-len(self.data_bits)%self.c.K))
+            # Pad bits to multiple of 35*K so LDPC output is exactly 35 blocks
+            # This ensures RX receives valid LDPC codewords with no garbage padding
+            pad_target = 35 * self.c.K
+            remainder = len(self.data_bits) % pad_target
+            pad_length = (pad_target - remainder) if remainder != 0 else 0
+            bits_padded = np.pad(self.data_bits, (0, pad_length))
             ldpc_shaped = np.reshape(bits_padded, (-1, self.c.K))
             self.ldpc_bits = np.array([self.c.encode(ldpc_block) for ldpc_block in ldpc_shaped]).flatten().astype(str)
 
@@ -131,19 +136,18 @@ class Tx:
         padding_symbols = np.array(self.constellation.bits_to_symbols(('0', '0')))
 
         if self.use_ldpc:
-            # we map 35 ldpc blocks to 30 ofdm blocks
+            # Bit-level padding in ldpc() ensures symbols are already correctly sized
+            # No symbol-level padding needed
             if (symbols_per_block != 854): raise Exception("Standard requres 854 active bins")
-            remainder = len(self.data_symbols) % (self.c.K*35)
-            pad_length = 35*self.c.K - remainder if remainder != 0 else 0
+            self.padded_data_symbols = self.data_symbols.copy()
         else:
             remainder = len(self.data_symbols) % symbols_per_block
             pad_length = symbols_per_block - remainder if remainder != 0 else 0
-
-        if pad_length > 0:
-            padding = np.resize(padding_symbols, pad_length)
-            self.padded_data_symbols = np.concatenate([self.data_symbols, padding])
-        else:
-            self.padded_data_symbols = self.data_symbols.copy()
+            if pad_length > 0:
+                padding = np.resize(padding_symbols, pad_length)
+                self.padded_data_symbols = np.concatenate([self.data_symbols, padding])
+            else:
+                self.padded_data_symbols = self.data_symbols.copy()
 
         if self.use_ldpc:
             ldpc_blocks = self.padded_data_symbols.reshape(-1, 35*self.c.K)

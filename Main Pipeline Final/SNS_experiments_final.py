@@ -44,6 +44,7 @@ def generate_standard_sig(standard = True):
     golayPairs = GolayPairs(12, silence = 2048, numPairs=4, seed = (1,1), est = True, fs = 48000) #2**12 = 4096
     whiteNoise = WhiteNoise(4096, 2048, constellation, sync = False, est = True, fs = sampleRate)
     transmitter = Tx(
+        "filename.txt",
         constellation=constellation,
         data_bytes = data_bytes,
         equaliser1 = repeatedChirp,
@@ -227,7 +228,7 @@ def receive_standard_sig_ldpc():
     
     repeatedChirp = RepeatedChirp(10, 4096, 0, 750, 18000, sync = True, est = True, fs = sampleRate)
     golayPairs = GolayPairs(12, silence = 2048, numPairs=4, seed = (1,1), est = True, fs = sampleRate) #2**12 = 4096
-    whiteNoise = WhiteNoise(4096, constellation, sync = False, est = False, fs = sampleRate)
+    whiteNoise = WhiteNoise(4096, 2048, constellation, sync = False, est = False, fs = sampleRate)
 
     # LIST SHOULD ONLY CONTAIN THE INITIAL REPEATED CHIRP AND GOLAY SEQUENCE!!
     equaliserList = [repeatedChirp, golayPairs]
@@ -255,7 +256,7 @@ def receive_standard_sig_ldpc():
     if plot_mode == "exponential":
 
         start_symbols = 2000
-        growth_factor = 2
+        growth_factor = 4
 
         end_idx = start_symbols
 
@@ -302,7 +303,7 @@ def receive_standard_sig_ldpc():
     print("Min Len", min_len)
 
 #generate_standard_sig()
-#generate_standard_sig_ldpc()
+#generate_standard_sig()
 receive_standard_sig()
 #receive_standard_sig()
 

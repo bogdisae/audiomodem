@@ -170,7 +170,14 @@ class Rx:
             ldpc_shaped = np.array(self.ldpc_bits).reshape(-1, self.c.K*self.constellation.bits_per_symbol).astype(int)
             lut = np.array([25, -25])
             ldpc_shaped_weighted = lut[ldpc_shaped]
-            llrs = np.concatenate([self.c.decode(ldpc_block)[0] for ldpc_block in ldpc_shaped_weighted])
+            # LDPC decoder returns LLRs for all N bits per block (information + parity)
+            # We only want the K information bits per block
+            info_bits_only = []
+            for ldpc_block in ldpc_shaped_weighted:
+                llrs_per_block, _ = self.c.decode(ldpc_block)
+                # Extract only the first K bits (information bits) from the N-bit codeword
+                info_bits_only.extend(llrs_per_block[:self.c.K])
+            llrs = np.array(info_bits_only)
             self.data_bits = np.array(['0' if llr > 0 else '1' for llr in llrs])
 
 
