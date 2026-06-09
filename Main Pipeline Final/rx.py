@@ -212,7 +212,7 @@ class Rx:
             if equaliser.est:
                 key_start_index = self.key_start_estimates[idx]
                 # (Note RepeatedChirp also plots its estimate in the function)
-                channel_estimates.append(equaliser.estimate(self.signal, key_start_index, True))
+                channel_estimates.append(equaliser.estimate(self.signal, key_start_index, False))
             else:
                 channel_estimates.append(None)
 
@@ -314,10 +314,12 @@ class Rx:
         num_tries = 5000
         slopes = np.linspace(-search_width, search_width, num_tries)
 
+        print("Length of individual noise symbol:", len(self.noise_symbols[0]))
+
         for pair_idx in range(len(self.noise_symbols)-2):
 
-            Y0 = np.fft.fft(self.noise_symbols[pair_idx], n=4096)
-            Y1 = np.fft.fft(self.noise_symbols[pair_idx+1], n=4096)
+            Y0 = np.fft.fft(self.noise_symbols[pair_idx][2048:], n = 4096)
+            Y1 = np.fft.fft(self.noise_symbols[pair_idx+1][2048:], n = 4096)
 
             R = (Y1 * np.conj(Y0))[:fit_bins]
             mag = np.abs(R)
