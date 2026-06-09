@@ -1,5 +1,8 @@
 print("Importing modules...")
 
+import tempfile
+
+from Week_1_Synchronisation_Aaron.file_functions import save_csv_file
 from equaliser import Equaliser, RepeatedChirp, GolayPairs, WhiteNoise
 from tx import Tx
 from rx import Rx
@@ -29,4 +32,116 @@ constellation = Constellation(2, {
 })
 
 def generate_final_sig(standard = True):
-    transmitted_file = 
+    transmitted_file = 0#pick_file("Not implemented yet")
+
+    data_bytes = 0
+
+    #Pass data_bytes to Tx, get transmitted signal
+    repeatedChirp = RepeatedChirp(10, 4096, 0, 750, 18000, sync = True, est = True, fs = sampleRate)
+    golayPairs = GolayPairs(12, silence = 2048, numPairs=4, seed = (1,1), est = True, fs = 48000) #2**12 = 4096
+    whiteNoise = WhiteNoise(4096, 2048,  constellation, sync = False, est = True, fs = sampleRate)
+    transmitter = Tx(
+        constellation=constellation,
+        header_filename = transmitted_file.split("\\")[-1],
+        data_bytes = data_bytes,
+        equaliser1 = repeatedChirp,
+        equaliser2 = golayPairs,
+        equaliser3 = whiteNoise,
+        cp_length = 2048,
+        block_length = 4096,
+        pilot_spacing = 20,
+        f_low = 2000,
+        f_high = 12000,
+        use_ldpc = True
+        )
+
+    transmitter.encode()
+
+
+    sig = transmitter.transmitted_signal
+
+    combined_int16 = np.int16(sig * 32767) # Convert to wav amplitudes
+    filename = questionary.text("Enter output filename (without extension):").ask()
+    if filename is None:
+        raise SystemExit("No filename provided")
+    write(f"Main Pipeline Final/Audio Files/{filename}.wav", sampleRate, combined_int16)
+
+def receive_standard_sig():
+
+    mode = questionary.select("Do you want to record audio or select an existing file?",
+        choices=["Record audio", "Select file"]
+    ).ask()
+
+    if mode is None: raise SystemExit("No option selected")
+
+    if mode == "Select file":
+        selected_path = pick_wav_file("Select a WAV file:", Path("./Main Pipeline Final/Audio Files"))
+        fs_rx, sig = wavfile.read(selected_path)
+        sig = normalise_signal(sig)
+
+    elif mode == "Record audio":
+        print("Recording mode selected")
+        sig = record_audio(sampleRate)
+        sig = normalise_signal(sig)
+    
+    
+    repeatedChirp = RepeatedChirp(10, 4096, 0, 750, 18000, sync = True, est = True, fs = sampleRate)
+    golayPairs = GolayPairs(12, silence = 2048, numPairs=4, seed = (1,1), est = True, fs = sampleRate) #2**12 = 4096
+    whiteNoise = WhiteNoise(4096, 2048,constellation, sync = False, est = False, fs = sampleRate)
+    
+    # LIST SHOULD ONLY CONTAIN THE INITIAL REPEATED CHIRP AND GOLAY SEQUENCE!!
+    equaliserList = [repeatedChirp, golayPairs]
+
+    # DON'T KNOW WHAT SFO EQUALISER ACTUALLY IS YET
+    receiver = Rx(
+        constellation = constellation,
+        sig = sig,
+        cp_length = 2048,
+        block_length = 4096,
+        equaliserList = equaliserList,
+        use_ldpc = True
+    )
+    receiver.decode()
+
+    #SAVE DECODED BYTES TO FILE
+    data_bytes = receiver.data_bytes
+    try:
+        temp_filename = receiver.filename
+
+    except:
+        temp_filename = "Output_Name_Unknown"
+
+
+    file_path = Path(f"Main Pipeline Final/Decoded Files/{temp_filename}")
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=file_path.suffix)
+    tmp.write(data_bytes.tobytes())
+    tmp.close()
+
+    print(f"Encoded '{file_path.name}': {len(data_bytes)} bytes → temp file: {tmp.name}")
+    
+    
+    file_type = receiver.filename.split('.')[-1]
+    if file_type == 'txt':
+        print("Saving as text file...")
+        save_Unicode_text(receiver.payload, receiver.data_length, receiver.filename)
+    elif file_type == 'wav':
+        print("Saving as WAV file...")
+        save_wav_file(receiver.payload, receiver.data_length, receiver.filename)
+    elif file_type == 'csv':
+        print("Saving as CSV file...")
+        save_csv_file(receiver.payload, receiver.data_length, receiver.filename)
+    elif file_type == 'tiff':
+        print("Rendering as TIFF image...")
+        '''ADJUST THESE'''
+        render_greyscale(receiver.payload, receiver.data_length, 256)
+        render_2byte_greyscale(receiver.payload, receiver.data_length, 256)
+        render_4byte_greyscale(receiver.payload, receiver.data_length, 256)
+        render_rgb(receiver.payload, receiver.data_length, 256)
+        render_rgba(receiver.payload, receiver.data_length, 256)
+
+    #Post receive stats
+    print("Number of symbols", len(receiver.data_symbols))
+
+        
+generate_final_sig()
+#receive_standard_sig()

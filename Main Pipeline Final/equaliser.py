@@ -125,8 +125,13 @@ class RepeatedChirp(Equaliser):
 
     def initial_SFO_estimate(self, rxSignal: np.ndarray, key_start_index : int, bin_low : int, bin_high : int, plot = True):
         
-        t = np.arange(self.chirpLength) / self.fs
-        singleChirp = chirp(t, f0=self.f0, t1=self.chirpLength / self.fs, f1=self.f1, method='linear')
+        #Old chirp
+        #t = np.arange(self.chirpLength) / self.fs
+        #singleChirp = chirp(t, f0=self.f0, t1=self.chirpLength / self.fs, f1=self.f1, method='linear')
+
+        #New chirp proposed in standard 
+        t = np.linspace(0, self.chirpLength / self.fs, self.chirpLength)
+        singleChirp = chirp(t, f0=self.f0, f1=self.f1, t1=(self.chirpLength / self.fs), method='linear')
 
         # FFT of known transmitted chirp
         X = np.fft.fft(singleChirp, n=self.chirpLength)
