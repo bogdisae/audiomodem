@@ -141,10 +141,12 @@ class Tx:
 
         if pad_length > 0:
             padding = np.resize(padding_symbols, pad_length)
-            self.data_symbols = np.concatenate([self.data_symbols, padding])
+            self.padded_data_symbols = np.concatenate([self.data_symbols, padding])
+        else:
+            self.padded_data_symbols = self.data_symbols.copy()
 
         if self.use_ldpc:
-            ldpc_blocks = self.data_symbols.reshape(-1, 35*self.c.K)
+            ldpc_blocks = self.padded_data_symbols.reshape(-1, 35*self.c.K)
             interleaved_blocks = np.array([], dtype=complex)
             ldpc_skip_factor = 15839
             thirty_ofdm_block_length = 25620 # 30x854
@@ -156,7 +158,7 @@ class Tx:
             blocks = np.array(interleaved_blocks).reshape(-1, symbols_per_block)
             self.interleaved_blocks = blocks
         else:
-            blocks = self.data_symbols.reshape(-1, symbols_per_block)
+            blocks = self.padded_data_symbols.reshape(-1, symbols_per_block)
 
         self.ofdm_symbol_blocks = [
             self.prep_ofdm_block(block)

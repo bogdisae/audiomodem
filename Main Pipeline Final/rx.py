@@ -121,7 +121,7 @@ class Rx:
         
         if self.use_ldpc:
             remainder = len(self.ofdm_blocks) % (ofdm_symbol_length*30)
-            self.ofdm_blocks = self.ofdm_blocks[:-remainder]
+            self.ofdm_blocks = self.ofdm_blocks[:-remainder] if remainder != 0 else self.ofdm_blocks
         else:
             remainder = len(self.ofdm_blocks) % ofdm_symbol_length
             pad_length = ofdm_symbol_length - remainder if remainder != 0 else 0
@@ -131,10 +131,10 @@ class Rx:
                 padding = np.resize(padding_symbols, pad_length)
                 self.ofdm_blocks = np.concatenate([self.ofdm_blocks, padding])
         
-        self.ofdm_blocks = self.ofdm_blocks.reshape(-1, ofdm_symbol_length)
+        self.ofdm_blocks_reshaped = self.ofdm_blocks.reshape(-1, ofdm_symbol_length)
 
         decoded_symbols = []
-        for idx, block in enumerate(self.ofdm_blocks):
+        for idx, block in enumerate(self.ofdm_blocks_reshaped):
             decoded_symbols.extend(self.decode_ofdm_block(block, idx))
         self.decoded_symbols = decoded_symbols
 
