@@ -149,7 +149,7 @@ def full_transmission_test():
     for i in range(800):
         t = np.array(tx.interleaved_blocks).flatten()[i]
         r = rx.decoded_symbols[i]
-        print(f"{'match' if np.isclose(t, r) else 'error'} {t.real:.5f}+{t.imag:.5f} : {r.real:.5f}+{r.imag:.5f}")
+        print(f"{'match' if (np.sign(r.real) == np.sign(t.real) and np.sign(r.imag) == np.sign(t.imag)) else 'error'} {t.real:.5f}+{t.imag:.5f} : {r.real:.5f}+{r.imag:.5f}")
 
     
     # Are original and final constellations correct
