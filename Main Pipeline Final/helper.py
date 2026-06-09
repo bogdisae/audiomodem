@@ -1,4 +1,5 @@
 import pickle
+from tkinter import filedialog
 import sounddevice as sd
 import numpy as np
 from scipy.io.wavfile import write
@@ -6,6 +7,8 @@ import matplotlib.pyplot as plt
 import questionary
 from constellation import Constellation
 from pathlib import Path
+import tkinter as tk
+
 
 def convert_text_to_utf8_bytes():
     text_file = Path(pick_text_file("Select message file:", Path("./Main Pipeline 2/Data Files")))
@@ -864,3 +867,19 @@ def save_csv_file(samples, length, filename):
 
     with open(out_path, 'w') as f:
         f.write(csv_data)
+
+def file_to_numpy(filepath: str) -> np.ndarray:
+    with open(filepath, 'rb') as f:
+        return np.frombuffer(f.read(), dtype=np.uint8)
+    
+def pick_file(prompt: str, initial_dir: Path) -> Path:
+    root = tk.Tk()
+    root.withdraw()
+    file_path = filedialog.askopenfilename(
+        title=prompt,
+        initialdir=initial_dir
+    )
+    root.destroy()
+    if not file_path:
+        raise FileNotFoundError("No file selected.")
+    return Path(file_path)

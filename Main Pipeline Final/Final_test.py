@@ -5,8 +5,7 @@ import tempfile
 from equaliser import Equaliser, RepeatedChirp, GolayPairs, WhiteNoise
 from tx import Tx
 from rx import Rx
-from helper import pick_text_file, csv_to_data_bytes, pick_wav_file, normalise_signal, record_audio, plot_constellation_colour_seq, pick_csv_file, gen_colour_seq
-from helper import csv_bytes_to_binary_sequence, calculate_ber, plot_constellation_colour, save_csv_file
+from helper import *
 from file_decode_func import *
 from pathlib import Path
 import numpy as np
@@ -31,9 +30,11 @@ constellation = Constellation(2, {
 })
 
 def generate_final_sig(standard = True):
-    transmitted_file = 0#pick_file("Not implemented yet")
-
-    data_bytes = 0
+    #Pick file path to desired file
+    transmitted_file = pick_file("Select file:", Path("./Main Pipeline Final/Data Files"))
+    file_name_tx = Path(transmitted_file).name  
+    print(f"Selected file: {transmitted_file}")
+    data_bytes = file_to_numpy(transmitted_file)
 
     #Pass data_bytes to Tx, get transmitted signal
     repeatedChirp = RepeatedChirp(10, 4096, 0, 750, 18000, sync = True, est = True, fs = sampleRate)
@@ -41,7 +42,7 @@ def generate_final_sig(standard = True):
     whiteNoise = WhiteNoise(4096, 2048,  constellation, sync = False, est = True, fs = sampleRate)
     transmitter = Tx(
         constellation=constellation,
-        header_filename = transmitted_file.split("\\")[-1],
+        header_filename = file_name_tx,
         data_bytes = data_bytes,
         equaliser1 = repeatedChirp,
         equaliser2 = golayPairs,
@@ -117,27 +118,27 @@ def receive_standard_sig():
     tmp.write(data_bytes.tobytes())
     tmp.close()
 
-    print(f"Encoded '{file_path.name}': {len(data_bytes)} bytes → temp file: {tmp.name}")
+    # print(f"Encoded '{file_path.name}': {len(data_bytes)} bytes → temp file: {tmp.name}")
     
     
-    file_type = receiver.filename.split('.')[-1]
-    if file_type == 'txt':
-        print("Saving as text file...")
-        save_Unicode_text(receiver.payload, receiver.data_length, receiver.filename)
-    elif file_type == 'wav':
-        print("Saving as WAV file...")
-        save_wav_file(receiver.payload, receiver.data_length, receiver.filename)
-    elif file_type == 'csv':
-        print("Saving as CSV file...")
-        save_csv_file(receiver.payload, receiver.data_length, receiver.filename)
-    elif file_type == 'tiff':
-        print("Rendering as TIFF image...")
-        '''ADJUST THESE'''
-        render_greyscale(receiver.payload, receiver.data_length, 256)
-        render_2byte_greyscale(receiver.payload, receiver.data_length, 256)
-        render_4byte_greyscale(receiver.payload, receiver.data_length, 256)
-        render_rgb(receiver.payload, receiver.data_length, 256)
-        render_rgba(receiver.payload, receiver.data_length, 256)
+    # file_type = receiver.filename.split('.')[-1]
+    # if file_type == 'txt':
+    #     print("Saving as text file...")
+    #     save_Unicode_text(receiver.payload, receiver.data_length, receiver.filename)
+    # elif file_type == 'wav':
+    #     print("Saving as WAV file...")
+    #     save_wav_file(receiver.payload, receiver.data_length, receiver.filename)
+    # elif file_type == 'csv':
+    #     print("Saving as CSV file...")
+    #     save_csv_file(receiver.payload, receiver.data_length, receiver.filename)
+    # elif file_type == 'tiff':
+    #     print("Rendering as TIFF image...")
+    #     '''ADJUST THESE'''
+    #     render_greyscale(receiver.payload, receiver.data_length, 256)
+    #     render_2byte_greyscale(receiver.payload, receiver.data_length, 256)
+    #     render_4byte_greyscale(receiver.payload, receiver.data_length, 256)
+    #     render_rgb(receiver.payload, receiver.data_length, 256)
+    #     render_rgba(receiver.payload, receiver.data_length, 256)
 
     #Post receive stats
     print("Number of symbols", len(receiver.data_symbols))
