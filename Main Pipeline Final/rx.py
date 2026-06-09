@@ -428,6 +428,6 @@ class Rx:
         self.decode_symbols()
         self.ldpc()
         self.bits_to_bytes()
-        #self.extract_header()
+        self.extract_header()
 
         print("Final bit at index:", len(self.data_bits))

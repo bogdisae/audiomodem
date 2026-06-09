@@ -2,12 +2,11 @@ print("Importing modules...")
 
 import tempfile
 
-from Week_1_Synchronisation_Aaron.file_functions import save_csv_file
 from equaliser import Equaliser, RepeatedChirp, GolayPairs, WhiteNoise
 from tx import Tx
 from rx import Rx
 from helper import pick_text_file, csv_to_data_bytes, pick_wav_file, normalise_signal, record_audio, plot_constellation_colour_seq, pick_csv_file, gen_colour_seq
-from helper import csv_bytes_to_binary_sequence, calculate_ber, plot_constellation_colour
+from helper import csv_bytes_to_binary_sequence, calculate_ber, plot_constellation_colour, save_csv_file
 from file_decode_func import *
 from pathlib import Path
 import numpy as np
@@ -95,10 +94,11 @@ def receive_standard_sig():
     # DON'T KNOW WHAT SFO EQUALISER ACTUALLY IS YET
     receiver = Rx(
         constellation = constellation,
-        sig = sig,
+        signal = sig,
         cp_length = 2048,
         block_length = 4096,
-        equaliserList = equaliserList,
+        equalisers = equaliserList,
+        sfoEqualiser = None,
         use_ldpc = True
     )
     receiver.decode()
@@ -143,5 +143,5 @@ def receive_standard_sig():
     print("Number of symbols", len(receiver.data_symbols))
 
         
-generate_final_sig()
-#receive_standard_sig()
+#generate_final_sig()
+receive_standard_sig()
