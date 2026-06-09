@@ -212,7 +212,7 @@ class Rx:
             if equaliser.est:
                 key_start_index = self.key_start_estimates[idx]
                 # (Note RepeatedChirp also plots its estimate in the function)
-                channel_estimates.append(equaliser.estimate(self.signal, key_start_index, False))
+                channel_estimates.append(equaliser.estimate(self.signal, key_start_index, True))
             else:
                 channel_estimates.append(None)
 

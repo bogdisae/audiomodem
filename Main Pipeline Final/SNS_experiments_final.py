@@ -2,7 +2,7 @@ from equaliser import Equaliser, RepeatedChirp, GolayPairs, WhiteNoise
 from tx import Tx
 from rx import Rx
 from helper import pick_text_file, csv_to_data_bytes, pick_wav_file, normalise_signal, record_audio, plot_constellation, pick_csv_file, gen_colour_seq
-from helper import csv_bytes_to_binary_sequence, calculate_ber, plot_constellation_colour, qpsk_find_centres
+from helper import csv_bytes_to_binary_sequence, calculate_ber, plot_constellation_colour
 from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
@@ -159,9 +159,6 @@ def receive_standard_sig():
             )
 
             start_idx += chunk_size
-
-    qpsk_find_centres(receiver.data_symbols)
-
 
     shaqbits = csv_bytes_to_binary_sequence("Main Pipeline Final/Data Files/BIGSHAQ_repeated.txt")
     ber, errors, min_len = calculate_ber(shaqbits, receiver.data_bits[:100000])
