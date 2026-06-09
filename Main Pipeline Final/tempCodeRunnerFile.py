@@ -142,14 +142,20 @@ def full_transmission_test():
     tx = Tx("filename.txt", constellation, big_shaq_data, repeatedChirp, golayPairs, whiteNoise, 2048, 4096, 10, 2_000, 12_000)
     tx.encode()
 
-    rx = Rx(constellation, tx.transmitted_signal, 2048, 4096, [repeatedChirp, golayPairs], None)
+    rx = Rx(constellation, tx.transmitted_signal, 2048, 4096, [repeatedChirp, golayPairs], whiteNoise)
     rx.decode()
 
-
-    for i in range(800):
+    print("interleaved")
+    for i in range(15839, 16839):
         t = np.array(tx.interleaved_blocks).flatten()[i]
         r = rx.decoded_symbols[i]
         print(f"{'match' if (np.sign(r.real) == np.sign(t.real) and np.sign(r.imag) == np.sign(t.imag)) else 'error'} {t.real:.5f}+{t.imag:.5f} : {r.real:.5f}+{r.imag:.5f}")
+
+    # print("pre and post interleaving")
+    # for i in range(800):
+    #     t = np.array(tx.padded_data_symbols)[i]
+    #     r = rx.data_symbols[i]
+    #     print(f"{'match' if (np.sign(r.real) == np.sign(t.real) and np.sign(r.imag) == np.sign(t.imag)) else 'error'} {t.real:.5f}+{t.imag:.5f} : {r.real:.5f}+{r.imag:.5f}")
 
     
     # Are original and final constellations correct

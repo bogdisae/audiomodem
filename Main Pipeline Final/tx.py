@@ -197,6 +197,18 @@ class Tx:
         self.assemble_signal()
 
 
-    
+# encoding test
+# c = ldpc.code('802.16', z=61) 
+# data_bits = np.random.randint(0, 2, 300).astype(str)
+# bits_padded = np.pad(data_bits, (0, c.K-len(data_bits)%c.K))
+# ldpc_shaped = np.reshape(bits_padded, (-1, c.K))
+# ldpc_bits = np.array([c.encode(ldpc_block) for ldpc_block in ldpc_shaped]).flatten().astype(str)
 
+# ldpc_shaped = np.array(ldpc_bits).reshape(-1, c.K*2).astype(int)
+# lut = np.array([25, -25])
+# ldpc_shaped_weighted = lut[ldpc_shaped]
+# llrs = np.concatenate([c.decode(ldpc_block)[0] for ldpc_block in ldpc_shaped_weighted])
+# data_bits = np.array(['0' if llr > 0 else '1' for llr in llrs])
 
+# for i in range(40):
+#     print(f"{'match' if ldpc_bits[i]==data_bits[i] else 'error'} : {ldpc_bits[i], data_bits[i]}")
