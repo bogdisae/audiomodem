@@ -40,6 +40,7 @@ constellation = Constellation(2, {
 
 def generate_standard_sig(standard = True):
     text_file = pick_text_file("Select message file:", Path("./Main Pipeline Final/Data Files"))
+    
     data_bytes = csv_to_data_bytes(text_file)
 
     repeatedChirp = RepeatedChirp(10, 4096, 0, 750, 18000, sync = True, est = True, fs = sampleRate)
@@ -57,7 +58,7 @@ def generate_standard_sig(standard = True):
         pilot_spacing = 20,
         f_low = 2000,
         f_high = 12000,
-        use_ldpc = False
+        use_ldpc = True
         )
 
     transmitter.encode()
@@ -217,7 +218,7 @@ def receive_standard_sig():
         pilot_spacing = 20,
         f_low = 2000,
         f_high = 12000,
-        use_ldpc = False
+        use_ldpc = True
         )
     
     transmitter.encode()

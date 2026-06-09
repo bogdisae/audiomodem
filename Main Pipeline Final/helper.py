@@ -22,6 +22,8 @@ def convert_text_to_utf8_bytes():
         f.write(csv_data)
     print(data_bytes[:100])
 
+    return data_bytes
+
 
 def auto_correlation(x, k):
     y = []
