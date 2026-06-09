@@ -51,7 +51,7 @@ class Tx:
                  f_low: int, 
                  f_high: int,
                  fs: int = 48_000,
-                 use_ldpc: bool = False):
+                 use_ldpc: bool = True):
         
         self.constellation = constellation
         self.data_bytes = data_bytes
@@ -111,7 +111,12 @@ class Tx:
 
     def ldpc(self):
         if self.use_ldpc:
-            bits_padded = np.pad(self.data_bits, (0, self.c.K-len(self.data_bits)%self.c.K))
+            # Pad bits to multiple of 35*K so LDPC output is exactly 35 blocks
+            # This ensures RX receives valid LDPC codewords with no garbage padding
+            pad_target = 35 * self.c.K
+            remainder = len(self.data_bits) % pad_target
+            pad_length = (pad_target - remainder) if remainder != 0 else 0
+            bits_padded = np.pad(self.data_bits, (0, pad_length))
             ldpc_shaped = np.reshape(bits_padded, (-1, self.c.K))
             self.ldpc_bits = np.array([self.c.encode(ldpc_block) for ldpc_block in ldpc_shaped]).flatten().astype(str)
 
@@ -133,31 +138,33 @@ class Tx:
         padding_symbols = np.array(self.constellation.bits_to_symbols(('0', '0')))
 
         if self.use_ldpc:
-            # we map 35 ldpc blocks to 30 ofdm blocks
+            # Bit-level padding in ldpc() ensures symbols are already correctly sized
+            # No symbol-level padding needed
             if (symbols_per_block != 854): raise Exception("Standard requres 854 active bins")
-            remainder = len(self.data_symbols) % (self.c.K*35)
-            pad_length = 35*self.c.K - remainder if remainder != 0 else 0
+            self.padded_data_symbols = self.data_symbols.copy()
         else:
             remainder = len(self.data_symbols) % symbols_per_block
             pad_length = symbols_per_block - remainder if remainder != 0 else 0
-
-        if pad_length > 0:
-            padding = np.resize(padding_symbols, pad_length)
-            self.data_symbols = np.concatenate([self.data_symbols, padding])
+            if pad_length > 0:
+                padding = np.resize(padding_symbols, pad_length)
+                self.padded_data_symbols = np.concatenate([self.data_symbols, padding])
+            else:
+                self.padded_data_symbols = self.data_symbols.copy()
 
         if self.use_ldpc:
-            ldpc_blocks = self.data_symbols.reshape(-1, 35*self.c.K)
-            interleaved_blocks = np.array([])
+            ldpc_blocks = self.padded_data_symbols.reshape(-1, 35*self.c.K)
+            interleaved_blocks = np.array([], dtype=complex)
             ldpc_skip_factor = 15839
             thirty_ofdm_block_length = 25620 # 30x854
             for ldpc_block in ldpc_blocks:
-                interleaved_block = np.zeros(thirty_ofdm_block_length)
+                interleaved_block = np.zeros(thirty_ofdm_block_length, dtype=complex)
                 for i in range(len(ldpc_block)):
                     interleaved_block[(i*ldpc_skip_factor)%thirty_ofdm_block_length]= ldpc_block[i]
                 interleaved_blocks=np.concatenate([interleaved_blocks ,interleaved_block])
             blocks = np.array(interleaved_blocks).reshape(-1, symbols_per_block)
+            self.interleaved_blocks = blocks
         else:
-            blocks = self.data_symbols.reshape(-1, symbols_per_block)
+            blocks = self.padded_data_symbols.reshape(-1, symbols_per_block)
 
         self.ofdm_symbol_blocks = [
             self.prep_ofdm_block(block)
@@ -196,6 +203,18 @@ class Tx:
         self.assemble_signal()
 
 
-    
+# encoding test
+# c = ldpc.code('802.16', z=61) 
+# data_bits = np.random.randint(0, 2, 300).astype(str)
+# bits_padded = np.pad(data_bits, (0, c.K-len(data_bits)%c.K))
+# ldpc_shaped = np.reshape(bits_padded, (-1, c.K))
+# ldpc_bits = np.array([c.encode(ldpc_block) for ldpc_block in ldpc_shaped]).flatten().astype(str)
 
+# ldpc_shaped = np.array(ldpc_bits).reshape(-1, c.K*2).astype(int)
+# lut = np.array([25, -25])
+# ldpc_shaped_weighted = lut[ldpc_shaped]
+# llrs = np.concatenate([c.decode(ldpc_block)[0] for ldpc_block in ldpc_shaped_weighted])
+# data_bits = np.array(['0' if llr > 0 else '1' for llr in llrs])
 
+# for i in range(40):
+#     print(f"{'match' if ldpc_bits[i]==data_bits[i] else 'error'} : {ldpc_bits[i], data_bits[i]}")

@@ -122,7 +122,7 @@ def receive_standard_sig():
     if plot_mode == "exponential":
 
         start_symbols = 2000
-        growth_factor = 2
+        growth_factor = 3
 
         end_idx = start_symbols
 
@@ -164,7 +164,7 @@ def receive_standard_sig():
 
 
     shaqbits = csv_bytes_to_binary_sequence("Main Pipeline Final/Data Files/BIGSHAQ_repeated.txt")
-    ber, errors, min_len = calculate_ber(shaqbits, receiver.data_bits[:100000])
+    ber, errors, min_len = calculate_ber(shaqbits, receiver.data_bits)
 
     print("BER:", ber)
     print("Errors:", errors)

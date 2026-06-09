@@ -4,6 +4,7 @@ from equaliser import Equaliser, RepeatedChirp, GolayPairs
 from helper import plot_complex_arrays_separate
 from ldpc import ldpc
 import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 class Rx:
     signal: np.ndarray
@@ -62,7 +63,7 @@ class Rx:
                  f_low = 2000,
                  f_high = 12000, 
                  fs: int = 48_000, 
-                 use_ldpc: bool = False):
+                 use_ldpc: bool = True):
         
         self.constellation = constellation
         self.signal = signal
@@ -81,7 +82,7 @@ class Rx:
         self.bin_high = int(np.floor(f_high * block_length / self.fs))
         self.active_bins = np.arange(self.bin_low, self.bin_high + 1)
 
-        #self.c = ldpc.code('802.16', z=61)
+        self.c = ldpc.code('802.16', z=61)
         self.use_ldpc = use_ldpc
         self.preamble_start_estimates = []
         self.key_start_estimates = []
@@ -121,36 +122,39 @@ class Rx:
 
     def extract_ofdm_blocks(self):
         ofdm_symbol_length = self.block_length + self.cp_length
-        padding_symbols = np.array(self.constellation.bits_to_symbols(('0', '0')))
         
         if self.use_ldpc:
             remainder = len(self.ofdm_blocks) % (ofdm_symbol_length*30)
-            pad_length = 30*ofdm_symbol_length - remainder if remainder != 0 else 0
+            self.ofdm_blocks = self.ofdm_blocks[:-remainder] if remainder != 0 else self.ofdm_blocks
         else:
             remainder = len(self.ofdm_blocks) % ofdm_symbol_length
             pad_length = ofdm_symbol_length - remainder if remainder != 0 else 0
+            padding_symbols = np.array(self.constellation.bits_to_symbols(('0', '0')))
    
-        if pad_length > 0:
-            padding = np.resize(padding_symbols, pad_length)
-            self.ofdm_blocks = np.concatenate([self.ofdm_blocks, padding])
+            if pad_length > 0:
+                padding = np.resize(padding_symbols, pad_length)
+                self.ofdm_blocks = np.concatenate([self.ofdm_blocks, padding])
         
-        self.ofdm_blocks = self.ofdm_blocks.reshape(-1, ofdm_symbol_length)
+        self.ofdm_blocks_reshaped = self.ofdm_blocks.reshape(-1, ofdm_symbol_length)
 
         decoded_symbols = []
-        for idx, block in enumerate(self.ofdm_blocks):
+        for idx, block in enumerate(self.ofdm_blocks_reshaped):
             decoded_symbols.extend(self.decode_ofdm_block(block, idx))
+        self.decoded_symbols = decoded_symbols
 
         if self.use_ldpc:
+            deinterleaved_symbols = []
             thirty_ofdm_block_length = 25620 # 30x854
             ldpc_skip_factor = 15839
             grouped_ofdm_blocks = np.array(decoded_symbols).reshape(-1, thirty_ofdm_block_length)
             for interleaved_block in grouped_ofdm_blocks:
-                ldpc_block = []
+                ldpc_block = np.zeros(len(interleaved_block), dtype=complex)
                 for i in range(len(interleaved_block)):
-                    ldpc_block.append(interleaved_block[(i*ldpc_skip_factor)%thirty_ofdm_block_length])
-                decoded_symbols.extend(ldpc_block)
-        
-        self.data_symbols = decoded_symbols
+                    ldpc_block[i]=interleaved_block[(i*ldpc_skip_factor)%thirty_ofdm_block_length]
+                deinterleaved_symbols.extend(ldpc_block)
+            self.data_symbols = deinterleaved_symbols
+        else:
+            self.data_symbols = self.decoded_symbols
 
 
     def decode_symbols(self):
@@ -170,7 +174,14 @@ class Rx:
             ldpc_shaped = np.array(self.ldpc_bits).reshape(-1, self.c.K*self.constellation.bits_per_symbol).astype(int)
             lut = np.array([25, -25])
             ldpc_shaped_weighted = lut[ldpc_shaped]
-            llrs = np.concatenate([self.c.decode(ldpc_block)[0] for ldpc_block in ldpc_shaped_weighted])
+            # LDPC decoder returns LLRs for all N bits per block (information + parity)
+            # We only want the K information bits per block
+            info_bits_only = []
+            for ldpc_block in ldpc_shaped_weighted:
+                llrs_per_block, _ = self.c.decode(ldpc_block)
+                # Extract only the first K bits (information bits) from the N-bit codeword
+                info_bits_only.extend(llrs_per_block[:self.c.K])
+            llrs = np.array(info_bits_only)
             self.data_bits = np.array(['0' if llr > 0 else '1' for llr in llrs])
 
 
@@ -307,89 +318,104 @@ class Rx:
 
         print(f"Extracted header - filename: {self.filename}, header length: {self.header_length}, data length: {self.data_length} bytes")
 
-    def SFO_pilot_estimate(self):
 
-        pilot_ffts = []
-        for symbol in self.noise_symbols:
-            pilot_ffts.append(np.fft.fft(symbol, n=4096))
+    def SFO_pilot_estimate(self, plot=True):
 
-        pilot_ffts = np.array(pilot_ffts)
+        fit_bins = 1706 # Use the first 20kHz of white noise
+        
+        pair_results = []
 
-        phase_curves = []
+        # Search over 4x the estimated slope (accounting for the 20 blocks and cyclic prefix 1.5 factor. Shit code ik)
+        initial_slope = self.sfo_rad_per_index_per_block * 20 * 1.5
+        search_width = 20 * initial_slope
 
-        for i in range(len(pilot_ffts)):
-            for j in range(i + 1, len(pilot_ffts)):
+        # Set up trial slopes
+        num_tries = 5000
+        slopes = np.linspace(-search_width, search_width, num_tries)
 
-                separation = j - i
+        print("Length of individual noise symbol:", len(self.noise_symbols[0]))
 
-                ratio = pilot_ffts[j] / (pilot_ffts[i] + 1e-12)
-                phase = np.unwrap(np.angle(ratio))
+        for pair_idx in range(len(self.noise_symbols)-2):
 
-                # Normalize to one pilot interval
-                phase /= separation
+            Y0 = np.fft.fft(self.noise_symbols[pair_idx][2048:], n = 4096)
+            Y1 = np.fft.fft(self.noise_symbols[pair_idx+1][2048:], n = 4096)
 
-                phase_curves.append(phase)
+            R = (Y1 * np.conj(Y0))[:fit_bins]
+            mag = np.abs(R)
 
-                # ---- Individual plot ----
-                k = np.arange(len(phase))
-                slope, intercept = np.polyfit(k, phase, 1)
+            # Use only the most reliable X% of carriers. Can experiment with this
+            threshold = np.percentile(mag, 0)
+            mask = mag > threshold
+            R = R[mask]
+            k = np.arange(fit_bins)[mask]
 
-                # plt.figure(figsize=(12, 6))
-                # plt.plot(k, phase, label="Phase")
+            scores = []
 
-                # plt.plot(
-                #     k,
-                #     slope * k + intercept,
-                #     "--",
-                #     label=f"Fit (slope={slope:.3e})"
-                # )
+            for slope in slopes:
 
-                # plt.xlabel("FFT bin")
-                # plt.ylabel("Phase difference per pilot interval (rad)")
-                # plt.title(
-                #     f"Pilot {i} → {j} (separation={separation})"
-                # )
-                # plt.grid(True)
-                # plt.legend()
+                # Try rotating all points by the slope and see if they line up well
+                corrected = (R * np.exp(-1j * slope * k))
+                score = np.abs(np.sum(corrected / np.abs(corrected)))
+                scores.append(score)
 
-        # Show all individual figures
-        #plt.show()
+            scores = np.array(scores)
+            best_idx = np.argmax(scores)
+            slope = slopes[best_idx]
 
-        # ---- Average plot (your original one) ----
-        phase_curves = np.array(phase_curves)
+            pair_results.append(slope)
 
-        mean_phase = np.mean(phase_curves, axis=0)
+            if plot:
 
-        k = np.arange(len(mean_phase))
-        slope, intercept = np.polyfit(k, mean_phase, 1)
+                corrected = (R * np.exp(-1j * slope * k))
 
-        plt.figure(figsize=(12, 8))
+                fig, ax = plt.subplots(1, 2, figsize=(14, 6))
 
-        for phase in phase_curves:
-            plt.plot(k, phase, alpha=0.5)
+                ax[0].plot(slopes, scores, marker='.', markersize=3)
 
-        plt.plot(
-            k,
-            mean_phase,
-            linewidth=3,
-            label=f"Average (slope={slope:.3e} rad/bin/pilot)"
-        )
+                ax[0].plot(slope, scores[best_idx], 'ro', markersize=10)
+                ax[0].axvline(slope, color="r", label="Estimated")
 
-        plt.plot(
-            k,
-            slope * k + intercept,
-            "--",
-            linewidth=2,
-            label="Linear fit"
-        )
+                initial_idx = np.argmin(np.abs(slopes - initial_slope))
 
-        plt.xlabel("FFT bin")
-        plt.ylabel("Phase difference per pilot interval (rad)")
-        plt.title("Average phase drift per pilot interval")
-        plt.grid(True)
-        plt.legend()
+                ax[0].plot(
+                    initial_slope,
+                    scores[initial_idx],
+                    'go',
+                    markersize=10
+                )
 
-        plt.show()
+                ax[0].axvline(
+                    initial_slope,
+                    color="g",
+                    linestyle="--",
+                    label="Initial"
+                )
+
+                ax[0].legend()
+                ax[0].set_title(f"Alignment score pair {pair_idx}")
+
+                ax[1].scatter(corrected.real, corrected.imag, s=3)
+                ax[1].set_title("Corrected vectors")
+                ax[1].axis("equal")
+
+        if plot:
+            plt.show()
+
+        latest_slope = np.median(pair_results)
+        calc = latest_slope / (20 * 1.5)
+
+        samp_per_sec = (calc * 48000)
+
+        print(f"Updating SFO "
+            f"{self.sfo_rad_per_index_per_block}"
+            f" -> {calc}")
+
+        print(f"Updating SPS "
+            f"{self.sfo_samples_per_second}"
+            f" -> {samp_per_sec}")
+
+        self.sfo_rad_per_index_per_block = calc
+        self.sfo_samples_per_second = samp_per_sec
         
     def decode(self):
 
