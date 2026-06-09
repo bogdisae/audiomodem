@@ -77,15 +77,16 @@ def receiveRepeated_chirp_plus_data():
     print("First 10 estimated coefficients:\n", receiver.H[:10])
 
     print(receiver.data_bits[:200])
-    plot_constellation(receiver.data_symbols[:200])
-    plot_constellation(receiver.data_symbols[0:2000])
-    plot_constellation(receiver.data_symbols[2000:4000])
-    plot_constellation(receiver.data_symbols[4000:6000])
-    plot_constellation(receiver.data_symbols[6000:8000])
-    plot_constellation(receiver.data_symbols[8000:10000])
-    plot_constellation(receiver.data_symbols[10000:12000])
-    plot_constellation(receiver.data_symbols[12000:14000])
-    plot_constellation(receiver.data_symbols[14000:16000])
+    plot_constellation(receiver.data_symbols[:200], "Symbols 0 - 200")
+
+    plot_constellation(receiver.data_symbols[0:2000], "Symbols 0 - 2000")
+    plot_constellation(receiver.data_symbols[2000:4000], "Symbols 2000 - 4000")
+    plot_constellation(receiver.data_symbols[4000:6000], "Symbols 4000 - 6000")
+    plot_constellation(receiver.data_symbols[6000:8000], "Symbols 6000 - 8000")
+    plot_constellation(receiver.data_symbols[8000:10000], "Symbols 8000 - 10000")
+    plot_constellation(receiver.data_symbols[10000:12000], "Symbols 10000 - 12000")
+    plot_constellation(receiver.data_symbols[12000:14000], "Symbols 12000 - 14000")
+    plot_constellation(receiver.data_symbols[14000:16000], "Symbols 14000 - 16000")
     print("Number of data symbols:", len(receiver.data_symbols))
 
 
