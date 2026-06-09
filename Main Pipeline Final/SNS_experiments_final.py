@@ -122,7 +122,7 @@ def receive_standard_sig():
     if plot_mode == "exponential":
 
         start_symbols = 2000
-        growth_factor = 2
+        growth_factor = 4
 
         end_idx = start_symbols
 

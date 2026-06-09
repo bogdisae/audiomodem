@@ -106,7 +106,7 @@ class Rx:
         rad_per_idx_per_cycblock = self.sfo_rad_per_index_per_block * 1.5 
 
         # Phase correction for elapsed time since sync (where block length is 4096+2048 = 6144)
-        CORRECTION = 0 # Experiment with this for SNS reasons
+        CORRECTION = 30000# Experiment with this for SNS reasons
         blocks_since_sync = (self.preamble_total_length - CORRECTION) / 6144
         time_correction = np.exp(-1j * rad_per_idx_per_cycblock * k * blocks_since_sync)
 
@@ -300,90 +300,102 @@ class Rx:
 
         print(f"Extracted header - filename: {self.filename}, header length: {self.header_length}, data length: {self.data_length} bytes")
 
-    def SFO_pilot_estimate(self):
+    def SFO_pilot_estimate(self, plot=True):
 
-        pilot_ffts = []
-        for symbol in self.noise_symbols:
-            pilot_ffts.append(np.fft.fft(symbol, n=4096))
-
-        pilot_ffts = np.array(pilot_ffts)
-
-        phase_curves = []
-
-        for i in range(len(pilot_ffts)):
-            for j in range(i + 1, len(pilot_ffts)):
-
-                separation = j - i
-
-                ratio = pilot_ffts[j] / (pilot_ffts[i] + 1e-12)
-                phase = np.unwrap(np.angle(ratio))
-
-                # Normalize to one pilot interval
-                phase /= separation
-
-                phase_curves.append(phase)
-
-                # ---- Individual plot ----
-                k = np.arange(len(phase))
-                slope, intercept = np.polyfit(k, phase, 1)
-
-                plt.figure(figsize=(12, 6))
-                plt.plot(k, phase, label="Phase")
-
-                plt.plot(
-                    k,
-                    slope * k + intercept,
-                    "--",
-                    label=f"Fit (slope={slope:.3e})"
-                )
-
-                plt.xlabel("FFT bin")
-                plt.ylabel("Phase difference per pilot interval (rad)")
-                plt.title(
-                    f"Pilot {i} → {j} (separation={separation})"
-                )
-                plt.grid(True)
-                plt.legend()
-
-        # Show all individual figures
-        plt.show()
-
-        # ---- Average plot (your original one) ----
-        phase_curves = np.array(phase_curves)
-
-        mean_phase = np.mean(phase_curves, axis=0)
-
-        k = np.arange(len(mean_phase))
-        slope, intercept = np.polyfit(k, mean_phase, 1)
-
-        plt.figure(figsize=(12, 8))
-
-        for phase in phase_curves:
-            plt.plot(k, phase, alpha=0.5)
-
-        plt.plot(
-            k,
-            mean_phase,
-            linewidth=3,
-            label=f"Average (slope={slope:.3e} rad/bin/pilot)"
-        )
-
-        plt.plot(
-            k,
-            slope * k + intercept,
-            "--",
-            linewidth=2,
-            label="Linear fit"
-        )
-
-        plt.xlabel("FFT bin")
-        plt.ylabel("Phase difference per pilot interval (rad)")
-        plt.title("Average phase drift per pilot interval")
-        plt.grid(True)
-        plt.legend()
-
-        plt.show()
+        fit_bins = 1706 # Use the first 20kHz of white noise
         
+        pair_results = []
+
+        # Search over 4x the estimated slope (accounting for the 20 blocks and cyclic prefix 1.5 factor. Shit code ik)
+        initial_slope = self.sfo_rad_per_index_per_block * 20 * 1.5
+        search_width = 20 * initial_slope
+
+        # Set up trial slopes
+        num_tries = 5000
+        slopes = np.linspace(-search_width, search_width, num_tries)
+
+        for pair_idx in range(len(self.noise_symbols)-2):
+
+            Y0 = np.fft.fft(self.noise_symbols[pair_idx], n=4096)
+            Y1 = np.fft.fft(self.noise_symbols[pair_idx+1], n=4096)
+
+            R = (Y1 * np.conj(Y0))[:fit_bins]
+            mag = np.abs(R)
+
+            # Use only the most reliable X% of carriers. Can experiment with this
+            threshold = np.percentile(mag, 0)
+            mask = mag > threshold
+            R = R[mask]
+            k = np.arange(fit_bins)[mask]
+
+            scores = []
+
+            for slope in slopes:
+
+                # Try rotating all points by the slope and see if they line up well
+                corrected = (R * np.exp(-1j * slope * k))
+                score = np.abs(np.sum(corrected / np.abs(corrected)))
+                scores.append(score)
+
+            scores = np.array(scores)
+            best_idx = np.argmax(scores)
+            slope = slopes[best_idx]
+
+            pair_results.append(slope)
+
+            if plot:
+
+                corrected = (R * np.exp(-1j * slope * k))
+
+                fig, ax = plt.subplots(1, 2, figsize=(14, 6))
+
+                ax[0].plot(slopes, scores, marker='.', markersize=3)
+
+                ax[0].plot(slope, scores[best_idx], 'ro', markersize=10)
+                ax[0].axvline(slope, color="r", label="Estimated")
+
+                initial_idx = np.argmin(np.abs(slopes - initial_slope))
+
+                ax[0].plot(
+                    initial_slope,
+                    scores[initial_idx],
+                    'go',
+                    markersize=10
+                )
+
+                ax[0].axvline(
+                    initial_slope,
+                    color="g",
+                    linestyle="--",
+                    label="Initial"
+                )
+
+                ax[0].legend()
+                ax[0].set_title(f"Alignment score pair {pair_idx}")
+
+                ax[1].scatter(corrected.real, corrected.imag, s=3)
+                ax[1].set_title("Corrected vectors")
+                ax[1].axis("equal")
+
+        if plot:
+            plt.show()
+
+        latest_slope = np.median(pair_results)
+        calc = latest_slope / (20 * 1.5)
+
+        samp_per_sec = (calc * 48000)
+
+        print(f"Updating SFO "
+            f"{self.sfo_rad_per_index_per_block}"
+            f" -> {calc}")
+
+        print(f"Updating SPS "
+            f"{self.sfo_samples_per_second}"
+            f" -> {samp_per_sec}")
+
+        self.sfo_rad_per_index_per_block = calc
+        self.sfo_samples_per_second = samp_per_sec
+
     def decode(self):
 
         self.sync()
