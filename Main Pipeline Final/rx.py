@@ -230,7 +230,7 @@ class Rx:
         # Logic to choose which channel estimate to use (e.g just use the second. Could break if None)
         # Use the repeated chirp estimate for now
         
-        self.H = channel_estimates[0]
+        self.H = channel_estimates[1]
 
 
 
@@ -426,8 +426,8 @@ class Rx:
         self.SFO_pilot_estimate()
         self.extract_ofdm_blocks()
         self.decode_symbols()
-        #self.ldpc()
+        self.ldpc()
         self.bits_to_bytes()
-        self.extract_header()
+        #self.extract_header()
 
         print("Final bit at index:", len(self.data_bits))
