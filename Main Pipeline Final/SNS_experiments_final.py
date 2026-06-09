@@ -170,6 +170,9 @@ def receive_standard_sig():
     print("Errors:", errors)
     print("Min Len", min_len)
 
+    with open("Main Pipeline Final/Received Files/joseph_received.txt", "w") as f:
+        f.write(",".join(str(x) for x in receiver.data_bytes))
+
 
     # text_file = pick_csv_file("Select message file:", Path("./Main Pipeline Final/Data Files"))
     # known_bit_seq = csv_bytes_to_binary_sequence(text_file)
@@ -180,6 +183,7 @@ def receive_standard_sig():
 
 #generate_standard_sig()
 receive_standard_sig()
+
 
 
 

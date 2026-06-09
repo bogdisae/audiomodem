@@ -223,7 +223,7 @@ class Rx:
             if equaliser.est:
                 key_start_index = self.key_start_estimates[idx]
                 # (Note RepeatedChirp also plots its estimate in the function)
-                channel_estimates.append(equaliser.estimate(self.signal, key_start_index, False))
+                channel_estimates.append(equaliser.estimate(self.signal, key_start_index, True))
             else:
                 channel_estimates.append(None)
 
@@ -423,11 +423,11 @@ class Rx:
         self.estimate()
         self.separate_noise_symbols()
         self.initial_SFO_estimate()
-        self.SFO_pilot_estimate()
+        #self.SFO_pilot_estimate()
         self.extract_ofdm_blocks()
         self.decode_symbols()
-        #self.ldpc()
+        self.ldpc()
         self.bits_to_bytes()
-        self.extract_header()
+        #self.extract_header()
 
         print("Final bit at index:", len(self.data_bits))
