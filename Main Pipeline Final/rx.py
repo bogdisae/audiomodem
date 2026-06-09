@@ -3,6 +3,7 @@ from constellation import Constellation
 from equaliser import Equaliser, RepeatedChirp, GolayPairs
 from helper import plot_complex_arrays_separate
 from ldpc import ldpc
+import matplotlib.pyplot as plt
 
 class Rx:
     signal: np.ndarray
@@ -307,13 +308,112 @@ class Rx:
 
         print(f"Extracted header - filename: {self.filename}, header length: {self.header_length}, data length: {self.data_length} bytes")
 
+
+    def SFO_pilot_estimate(self, plot=True):
+
+        fit_bins = 1706 # Use the first 20kHz of white noise
+        
+        pair_results = []
+
+        # Search over 4x the estimated slope (accounting for the 20 blocks and cyclic prefix 1.5 factor. Shit code ik)
+        initial_slope = self.sfo_rad_per_index_per_block * 20 * 1.5
+        search_width = 20 * initial_slope
+
+        # Set up trial slopes
+        num_tries = 5000
+        slopes = np.linspace(-search_width, search_width, num_tries)
+
+        print("Length of individual noise symbol:", len(self.noise_symbols[0]))
+
+        for pair_idx in range(len(self.noise_symbols)-2):
+
+            Y0 = np.fft.fft(self.noise_symbols[pair_idx][2048:], n = 4096)
+            Y1 = np.fft.fft(self.noise_symbols[pair_idx+1][2048:], n = 4096)
+
+            R = (Y1 * np.conj(Y0))[:fit_bins]
+            mag = np.abs(R)
+
+            # Use only the most reliable X% of carriers. Can experiment with this
+            threshold = np.percentile(mag, 0)
+            mask = mag > threshold
+            R = R[mask]
+            k = np.arange(fit_bins)[mask]
+
+            scores = []
+
+            for slope in slopes:
+
+                # Try rotating all points by the slope and see if they line up well
+                corrected = (R * np.exp(-1j * slope * k))
+                score = np.abs(np.sum(corrected / np.abs(corrected)))
+                scores.append(score)
+
+            scores = np.array(scores)
+            best_idx = np.argmax(scores)
+            slope = slopes[best_idx]
+
+            pair_results.append(slope)
+
+            if plot:
+
+                corrected = (R * np.exp(-1j * slope * k))
+
+                fig, ax = plt.subplots(1, 2, figsize=(14, 6))
+
+                ax[0].plot(slopes, scores, marker='.', markersize=3)
+
+                ax[0].plot(slope, scores[best_idx], 'ro', markersize=10)
+                ax[0].axvline(slope, color="r", label="Estimated")
+
+                initial_idx = np.argmin(np.abs(slopes - initial_slope))
+
+                ax[0].plot(
+                    initial_slope,
+                    scores[initial_idx],
+                    'go',
+                    markersize=10
+                )
+
+                ax[0].axvline(
+                    initial_slope,
+                    color="g",
+                    linestyle="--",
+                    label="Initial"
+                )
+
+                ax[0].legend()
+                ax[0].set_title(f"Alignment score pair {pair_idx}")
+
+                ax[1].scatter(corrected.real, corrected.imag, s=3)
+                ax[1].set_title("Corrected vectors")
+                ax[1].axis("equal")
+
+        if plot:
+            plt.show()
+
+        latest_slope = np.median(pair_results)
+        calc = latest_slope / (20 * 1.5)
+
+        samp_per_sec = (calc * 48000)
+
+        print(f"Updating SFO "
+            f"{self.sfo_rad_per_index_per_block}"
+            f" -> {calc}")
+
+        print(f"Updating SPS "
+            f"{self.sfo_samples_per_second}"
+            f" -> {samp_per_sec}")
+
+        self.sfo_rad_per_index_per_block = calc
+        self.sfo_samples_per_second = samp_per_sec
+        
     def decode(self):
 
         self.sync()
         self.estimate()
         self.separate_noise_symbols()
         self.initial_SFO_estimate()
-        # self.SFO_block_correct()
+        self.SFO_pilot_estimate()
         self.extract_ofdm_blocks()
         self.decode_symbols()
         self.ldpc()

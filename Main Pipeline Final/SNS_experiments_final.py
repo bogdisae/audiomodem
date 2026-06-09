@@ -59,7 +59,6 @@ def generate_standard_sig(standard = True):
 
     transmitter.encode()
 
-
     sig = transmitter.transmitted_signal
 
     combined_int16 = np.int16(sig * 32767) # Convert to wav amplitudes
@@ -150,7 +149,7 @@ def receive_standard_sig():
     if plot_mode == "exponential":
 
         start_symbols = 2000
-        growth_factor = 2
+        growth_factor = 3
 
         end_idx = start_symbols
 
@@ -192,7 +191,7 @@ def receive_standard_sig():
 
 
     shaqbits = csv_bytes_to_binary_sequence("Main Pipeline Final/Data Files/BIGSHAQ_repeated.txt")
-    ber, errors, min_len = calculate_ber(shaqbits, receiver.data_bits[:100000])
+    ber, errors, min_len = calculate_ber(shaqbits, receiver.data_bits)
 
     print("BER:", ber)
     print("Errors:", errors)
@@ -207,100 +206,7 @@ def receive_standard_sig():
     # plot_constellation(receiver.data_symbols[0:4000], colour_seq[0:4000], "Received Constellation with Known Bit Stream Colouring")
 
 
-def receive_standard_sig_ldpc():
 
-    mode = questionary.select("Do you want to record audio or select an existing file?",
-        choices=["Record audio", "Select file"]
-    ).ask()
-
-    if mode is None: raise SystemExit("No option selected")
-
-    if mode == "Select file":
-        selected_path = pick_wav_file("Select a WAV file:", Path("./Main Pipeline Final/Audio Files"))
-        fs_rx, sig = wavfile.read(selected_path)
-        sig = normalise_signal(sig)
-
-    elif mode == "Record audio":
-        print("Recording mode selected")
-        sig = record_audio(sampleRate)
-        sig = normalise_signal(sig)
-    
-    
-    repeatedChirp = RepeatedChirp(10, 4096, 0, 750, 18000, sync = True, est = True, fs = sampleRate)
-    golayPairs = GolayPairs(12, silence = 2048, numPairs=4, seed = (1,1), est = True, fs = sampleRate) #2**12 = 4096
-    whiteNoise = WhiteNoise(4096, 2048, constellation, sync = False, est = False, fs = sampleRate)
-
-    # LIST SHOULD ONLY CONTAIN THE INITIAL REPEATED CHIRP AND GOLAY SEQUENCE!!
-    equaliserList = [repeatedChirp, golayPairs]
-
-    # DON'T KNOW WHAT SFO EQUALISER ACTUALLY IS YET
-    receiver = Rx(constellation, sig, 2048, 4096, equaliserList, None, use_ldpc = True)
-    receiver.decode()
-
-    print("Receiver preamble start estimates:", receiver.preamble_start_estimates)
-    print("Receiver key start estimates:", receiver.key_start_estimates)
-    print("Data start estimate:" , receiver.data_start_estimate)
-    print("Index where decoding starts:", receiver.decode_start)
-
-    
-
-
-    print("Number of symbols", len(receiver.data_symbols))
-
-
-    plot_mode = "exponential"   # "exponential" or "linear"
-    
-
-    total_symbols = len(receiver.data_symbols)
-
-    if plot_mode == "exponential":
-
-        start_symbols = 2000
-        growth_factor = 4
-
-        end_idx = start_symbols
-
-        while True:
-
-            actual_end = min(int(end_idx), total_symbols)
-
-            plot_constellation_colour(
-                receiver.data_symbols[:actual_end],
-                f"First {actual_end}",
-                True,
-                True
-            )
-
-            if actual_end == total_symbols:
-                break
-
-            end_idx *= growth_factor
-
-    elif plot_mode == "linear":
-
-        chunk_size = 2000
-        start_idx = 0
-
-        while start_idx < total_symbols:
-
-            end_idx = min(start_idx + chunk_size, total_symbols)
-
-            plot_constellation_colour(
-                receiver.data_symbols[start_idx:end_idx],
-                f"Symbols {start_idx}-{end_idx}",
-                True,
-                True
-            )
-
-            start_idx += chunk_size
-
-
-    shaqbits = csv_bytes_to_binary_sequence("Main Pipeline Final/Data Files/BIGSHAQ_repeated.txt")
-    ber, errors, min_len = calculate_ber(shaqbits, receiver.data_bits[:100000])
-
-    print("BER:", ber)
-    print("Errors:", errors)
-    print("Min Len", min_len)
 
 #generate_standard_sig()
 #generate_standard_sig()
