@@ -114,10 +114,8 @@ def receive_standard_sig():
 
 
     file_path = Path(f"Main Pipeline Final/Decoded Files/{temp_filename}")
-    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=file_path.suffix)
-    tmp.write(data_bytes.tobytes())
-    tmp.close()
-
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    file_path.write_bytes(data_bytes.tobytes())
     # print(f"Encoded '{file_path.name}': {len(data_bytes)} bytes → temp file: {tmp.name}")
     
     
