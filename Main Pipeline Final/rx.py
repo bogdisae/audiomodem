@@ -223,7 +223,7 @@ class Rx:
             if equaliser.est:
                 key_start_index = self.key_start_estimates[idx]
                 # (Note RepeatedChirp also plots its estimate in the function)
-                channel_estimates.append(equaliser.estimate(self.signal, key_start_index, True))
+                channel_estimates.append(equaliser.estimate(self.signal, key_start_index, False))
             else:
                 channel_estimates.append(None)
 
@@ -319,7 +319,7 @@ class Rx:
         print(f"Extracted header - filename: {self.filename}, header length: {self.header_length}, data length: {self.data_length} bytes")
 
 
-    def SFO_pilot_estimate(self, plot=True):
+    def SFO_pilot_estimate(self, plot=False):
 
         fit_bins = 1706 # Use the first 20kHz of white noise
         

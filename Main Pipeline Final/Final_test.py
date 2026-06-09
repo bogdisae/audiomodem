@@ -111,32 +111,11 @@ def receive_standard_sig():
 
     except:
         temp_filename = "Output_Name_Unknown"
-
+    print(f"Decoded filename: {temp_filename}")
 
     file_path = Path(f"Main Pipeline Final/Decoded Files/{temp_filename}")
     file_path.parent.mkdir(parents=True, exist_ok=True)
     file_path.write_bytes(data_bytes.tobytes())
-    # print(f"Encoded '{file_path.name}': {len(data_bytes)} bytes → temp file: {tmp.name}")
-    
-    
-    # file_type = receiver.filename.split('.')[-1]
-    # if file_type == 'txt':
-    #     print("Saving as text file...")
-    #     save_Unicode_text(receiver.payload, receiver.data_length, receiver.filename)
-    # elif file_type == 'wav':
-    #     print("Saving as WAV file...")
-    #     save_wav_file(receiver.payload, receiver.data_length, receiver.filename)
-    # elif file_type == 'csv':
-    #     print("Saving as CSV file...")
-    #     save_csv_file(receiver.payload, receiver.data_length, receiver.filename)
-    # elif file_type == 'tiff':
-    #     print("Rendering as TIFF image...")
-    #     '''ADJUST THESE'''
-    #     render_greyscale(receiver.payload, receiver.data_length, 256)
-    #     render_2byte_greyscale(receiver.payload, receiver.data_length, 256)
-    #     render_4byte_greyscale(receiver.payload, receiver.data_length, 256)
-    #     render_rgb(receiver.payload, receiver.data_length, 256)
-    #     render_rgba(receiver.payload, receiver.data_length, 256)
 
     #Post receive stats
     print("Number of symbols", len(receiver.data_symbols))
@@ -144,3 +123,4 @@ def receive_standard_sig():
         
 #generate_final_sig()
 receive_standard_sig()
+
