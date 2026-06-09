@@ -309,7 +309,7 @@ def save_wav_file(signal, fs):
 
 
 
-def plot_constellation(symbols, colour_seq_or_title=None, title="Constellation Diagram", show=True):
+def plot_constellation_colour_seq(symbols, colour_seq_or_title=None, title="Constellation Diagram", show=True):
     """
     Flexible constellation plot. Accepts either:
       - plot_constellation(symbols, title_string)
@@ -381,6 +381,48 @@ def csv_bytes_to_binary_sequence(path):
 
     return binary_sequence
 
+def plot_error_indices(error_indices, n_bits=100000, chunk_size=1000):
+    error_indices = np.asarray(error_indices)
+    block_size = 4096
+    fig, axes = plt.subplots(2, 1, figsize=(12, 7))
+
+    # --- Panel 1: Error density per chunk ---
+    n_chunks = int(np.ceil(n_bits / chunk_size))
+    chunk_ids = np.clip(error_indices // chunk_size, 0, n_chunks - 1)
+    chunk_counts = np.bincount(chunk_ids, minlength=n_chunks)
+    error_rate = chunk_counts / chunk_size * 100
+    mean_ber = len(error_indices) / n_bits * 100
+
+    axes[0].bar(np.arange(n_chunks) * chunk_size, error_rate,
+                width=chunk_size, align='edge', color='steelblue')
+    axes[0].axhline(mean_ber, color='tomato', linestyle='--',
+                    label=f'Mean BER = {mean_ber:.1f}%')
+    axes[0].set_xlabel('Bit Position')
+    axes[0].set_ylabel('Error Rate (%)')
+    axes[0].set_title(f'Error Density per {chunk_size}-bit Chunk')
+    axes[0].set_xlim(0, n_bits)
+    axes[0].legend()
+
+    # --- Panel 2: Accumulated errors per position within 4096-block ---
+    n_blocks = int(np.ceil(n_bits / block_size))
+    padded_len = n_blocks * block_size
+
+    error_array = np.zeros(padded_len, dtype=np.uint8)
+    error_array[error_indices] = 1  # indices beyond n_bits remain zero (padding)
+
+    accumulated = error_array.reshape(n_blocks, block_size).sum(axis=0)
+
+    axes[1].bar(np.arange(block_size), accumulated, width=1, color='steelblue')
+    axes[1].axhline(accumulated.mean(), color='tomato', linestyle='--',
+                    label=f'Mean = {accumulated.mean():.2f} errors/position')
+    axes[1].set_xlabel('Position within 4096-block')
+    axes[1].set_ylabel(f'Error count ({n_blocks} blocks)')
+    axes[1].set_title('Accumulated Errors by Position within 4096-block')
+    axes[1].legend()
+
+    plt.tight_layout()
+    plt.show()
+
 def calculate_ber(seq1, seq2):
     """
     Calculates BER between two binary sequences.
@@ -404,12 +446,17 @@ def calculate_ber(seq1, seq2):
     seq2 = seq2[:min_len]
 
     # Count errors
-    errors = sum(b1 != b2 for b1, b2 in zip(seq1, seq2))
+   
+    error_indices = [i for i, (b1, b2) in enumerate(zip(seq1, seq2)) if b1 != b2]
+    errors = len(error_indices)
+
     if min_len != 0:
         ber = errors / min_len
     else:
         print(f'Sequence with zero length is: {1 if len(seq1) == 0 else 2}')
         raise ValueError("Sequences are empty, cannot compute BER")
+    
+    #plot_error_indices(error_indices)
 
     return ber, errors, min_len
 

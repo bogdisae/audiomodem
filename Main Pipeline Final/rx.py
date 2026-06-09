@@ -81,7 +81,7 @@ class Rx:
         self.bin_high = int(np.floor(f_high * block_length / self.fs))
         self.active_bins = np.arange(self.bin_low, self.bin_high + 1)
 
-        self.c = ldpc.code('802.16', z=61)
+        #self.c = ldpc.code('802.16', z=61)
         self.use_ldpc = use_ldpc
         self.preamble_start_estimates = []
         self.key_start_estimates = []
@@ -224,7 +224,6 @@ class Rx:
 
 
     def initial_SFO_estimate(self):
-
         slope = 0 # Slope represents the phase offset PER carrier index PER block
 
         for idx, equaliser in enumerate(self.equalisers):
@@ -287,13 +286,15 @@ class Rx:
 
         # B: data length (4 bytes)
         self.data_length = int.from_bytes(self.data_bytes[2:6], byteorder='big')
-        print(f"Extracted data length: {self.data_length} bytes")
+        print(f"Extracted data length: {self.data_length} bytes (Not including header)")
+        print(f'Need to extract the following No. Symbols: {(self.header_length + self.data_length) * 8 / self.constellation.bits_per_symbol} symbols after decode start')
+        
 
         # C: filename (remaining bytes of header)
         filename_bytes = self.data_bytes[6:self.header_length]
-        print(f"Raw filename bytes: {list(filename_bytes)[:100]}")
-        print(f"As hex: {bytes(filename_bytes).hex()[:100]}")
-        print(f"Lossy decode: {bytes(filename_bytes).decode('utf-8', errors='replace')[:100]}")
+        #print(f"Raw filename bytes: {list(filename_bytes)[:100]}")
+        #print(f"As hex: {bytes(filename_bytes).hex()[:100]}")
+        #print(f"Lossy decode: {bytes(filename_bytes).decode('utf-8', errors='replace')[:100]}")
         
         self.filename = bytes(filename_bytes).decode('utf-8')
         print(f'Uncleaned filename from header: {self.filename}')
@@ -399,6 +400,8 @@ class Rx:
         self.SFO_pilot_estimate()
         self.extract_ofdm_blocks()
         self.decode_symbols()
-        self.ldpc()
+        #self.ldpc()
         self.bits_to_bytes()
-        #self.extract_header()
+        self.extract_header()
+
+        print("Final bit at index:", len(self.data_bits))

@@ -19,7 +19,7 @@ class Tx:
     equaliser2: Equaliser
     equalisere3: Equaliser
 
-    data_bits: np.ndarray
+    data_bits: np.ndarray #Does not include header! Sorry Aaron
     ldpc_bits: np.ndarray
     data_symbols: np.ndarray
     ofdm_symbol_blocks: np.ndarray
@@ -86,7 +86,7 @@ class Tx:
     def assemble_header(self):
         # B: length of data
         data_length_bytes = len(self.data_bytes).to_bytes(4, byteorder='big')
-        print(f"Data length: {len(self.data_bytes)} bytes")
+        print(f"Data length: {len(self.data_bytes)} bytes, {data_length_bytes} in bytes")
         # C: filename
         filename_bytes = self.header_filename.encode('utf-8')
         print(f"Header filename: {self.header_filename}, length: {len(filename_bytes)} bytes")
@@ -102,10 +102,12 @@ class Tx:
 
     def bytes_to_bits(self):
         self.data_bits = np.unpackbits(self.data_bytes).astype(str)
+        #DOES NOT INCLUDE HEADER, JUST DATA BYTES
     
     def encode_symbols(self):
         bits = self.ldpc_bits if self.use_ldpc else self.data_bits
         self.data_symbols = self.constellation.bits_to_symbols(bits)
+
 
     def ldpc(self):
         if self.use_ldpc:
@@ -186,7 +188,7 @@ class Tx:
         self.transmitted_signal = np.concatenate(sections)
     
     def encode(self):
-        # self.assemble_header()
+        self.assemble_header()
         self.bytes_to_bits()
         self.ldpc()
         self.encode_symbols()
