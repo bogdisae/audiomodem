@@ -58,3 +58,7 @@ def synchronisation_plot(recording, correlation, windowed, h, start_index = None
         ax[1, 0].axvline(x=start_index, color='red', linestyle='--', label='start')
 
     plt.show()
+
+def file_to_numpy(filepath: str) -> np.ndarray:
+    with open(filepath, 'rb') as f:
+        return np.frombuffer(f.read(), dtype=np.uint8)
