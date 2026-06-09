@@ -51,7 +51,7 @@ class Tx:
                  f_low: int, 
                  f_high: int,
                  fs: int = 48_000,
-                 use_ldpc: bool = False):
+                 use_ldpc: bool = True):
         
         self.constellation = constellation
         self.data_bytes = data_bytes
@@ -145,15 +145,16 @@ class Tx:
 
         if self.use_ldpc:
             ldpc_blocks = self.data_symbols.reshape(-1, 35*self.c.K)
-            interleaved_blocks = np.array([])
+            interleaved_blocks = np.array([], dtype=complex)
             ldpc_skip_factor = 15839
             thirty_ofdm_block_length = 25620 # 30x854
             for ldpc_block in ldpc_blocks:
-                interleaved_block = np.zeros(thirty_ofdm_block_length)
+                interleaved_block = np.zeros(thirty_ofdm_block_length, dtype=complex)
                 for i in range(len(ldpc_block)):
                     interleaved_block[(i*ldpc_skip_factor)%thirty_ofdm_block_length]= ldpc_block[i]
                 interleaved_blocks=np.concatenate([interleaved_blocks ,interleaved_block])
             blocks = np.array(interleaved_blocks).reshape(-1, symbols_per_block)
+            self.interleaved_blocks = blocks
         else:
             blocks = self.data_symbols.reshape(-1, symbols_per_block)
 

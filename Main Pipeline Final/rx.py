@@ -61,7 +61,7 @@ class Rx:
                  f_low = 2000,
                  f_high = 12000, 
                  fs: int = 48_000, 
-                 use_ldpc: bool = False):
+                 use_ldpc: bool = True):
         
         self.constellation = constellation
         self.signal = signal
@@ -80,7 +80,7 @@ class Rx:
         self.bin_high = int(np.floor(f_high * block_length / self.fs))
         self.active_bins = np.arange(self.bin_low, self.bin_high + 1)
 
-        #self.c = ldpc.code('802.16', z=61)
+        self.c = ldpc.code('802.16', z=61)
         self.use_ldpc = use_ldpc
         self.preamble_start_estimates = []
         self.key_start_estimates = []
@@ -118,36 +118,39 @@ class Rx:
 
     def extract_ofdm_blocks(self):
         ofdm_symbol_length = self.block_length + self.cp_length
-        padding_symbols = np.array(self.constellation.bits_to_symbols(('0', '0')))
         
         if self.use_ldpc:
             remainder = len(self.ofdm_blocks) % (ofdm_symbol_length*30)
-            pad_length = 30*ofdm_symbol_length - remainder if remainder != 0 else 0
+            self.ofdm_blocks = self.ofdm_blocks[:-remainder]
         else:
             remainder = len(self.ofdm_blocks) % ofdm_symbol_length
             pad_length = ofdm_symbol_length - remainder if remainder != 0 else 0
+            padding_symbols = np.array(self.constellation.bits_to_symbols(('0', '0')))
    
-        if pad_length > 0:
-            padding = np.resize(padding_symbols, pad_length)
-            self.ofdm_blocks = np.concatenate([self.ofdm_blocks, padding])
+            if pad_length > 0:
+                padding = np.resize(padding_symbols, pad_length)
+                self.ofdm_blocks = np.concatenate([self.ofdm_blocks, padding])
         
         self.ofdm_blocks = self.ofdm_blocks.reshape(-1, ofdm_symbol_length)
 
         decoded_symbols = []
         for idx, block in enumerate(self.ofdm_blocks):
             decoded_symbols.extend(self.decode_ofdm_block(block, idx))
+        self.decoded_symbols = decoded_symbols
 
         if self.use_ldpc:
+            deinterleaved_symbols = []
             thirty_ofdm_block_length = 25620 # 30x854
             ldpc_skip_factor = 15839
             grouped_ofdm_blocks = np.array(decoded_symbols).reshape(-1, thirty_ofdm_block_length)
             for interleaved_block in grouped_ofdm_blocks:
-                ldpc_block = []
+                ldpc_block = np.zeros(len(interleaved_block), dtype=complex)
                 for i in range(len(interleaved_block)):
-                    ldpc_block.append(interleaved_block[(i*ldpc_skip_factor)%thirty_ofdm_block_length])
-                decoded_symbols.extend(ldpc_block)
-        
-        self.data_symbols = decoded_symbols
+                    ldpc_block[i]=interleaved_block[(i*ldpc_skip_factor)%thirty_ofdm_block_length]
+                deinterleaved_symbols.extend(ldpc_block)
+            self.data_symbols = deinterleaved_symbols
+        else:
+            self.data_symbols = self.decoded_symbols
 
 
     def decode_symbols(self):

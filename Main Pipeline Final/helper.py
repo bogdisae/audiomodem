@@ -675,7 +675,7 @@ import matplotlib.pyplot as plt
 def qpsk_find_centres(samples, plot=True):
 
 
-        samples = np.asarray(samples, dtype=np.complex128)
+    samples = np.asarray(samples, dtype=np.complex128)
 
     """
     Find QPSK constellation centres using:
