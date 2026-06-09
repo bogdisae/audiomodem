@@ -283,12 +283,18 @@ class Rx:
     def extract_header(self):
         # A: header length (2 bytes)
         self.header_length = int.from_bytes(self.data_bytes[:2], byteorder='big')
+        print(f"Extracted header length: {self.header_length} bytes")
 
         # B: data length (4 bytes)
         self.data_length = int.from_bytes(self.data_bytes[2:6], byteorder='big')
+        print(f"Extracted data length: {self.data_length} bytes")
 
         # C: filename (remaining bytes of header)
         filename_bytes = self.data_bytes[6:self.header_length]
+        print(f"Raw filename bytes: {list(filename_bytes)[:100]}")
+        print(f"As hex: {bytes(filename_bytes).hex()[:100]}")
+        print(f"Lossy decode: {bytes(filename_bytes).decode('utf-8', errors='replace')[:100]}")
+        
         self.filename = bytes(filename_bytes).decode('utf-8')
         print(f'Uncleaned filename from header: {self.filename}')
 
@@ -327,26 +333,26 @@ class Rx:
                 k = np.arange(len(phase))
                 slope, intercept = np.polyfit(k, phase, 1)
 
-                plt.figure(figsize=(12, 6))
-                plt.plot(k, phase, label="Phase")
+                # plt.figure(figsize=(12, 6))
+                # plt.plot(k, phase, label="Phase")
 
-                plt.plot(
-                    k,
-                    slope * k + intercept,
-                    "--",
-                    label=f"Fit (slope={slope:.3e})"
-                )
+                # plt.plot(
+                #     k,
+                #     slope * k + intercept,
+                #     "--",
+                #     label=f"Fit (slope={slope:.3e})"
+                # )
 
-                plt.xlabel("FFT bin")
-                plt.ylabel("Phase difference per pilot interval (rad)")
-                plt.title(
-                    f"Pilot {i} → {j} (separation={separation})"
-                )
-                plt.grid(True)
-                plt.legend()
+                # plt.xlabel("FFT bin")
+                # plt.ylabel("Phase difference per pilot interval (rad)")
+                # plt.title(
+                #     f"Pilot {i} → {j} (separation={separation})"
+                # )
+                # plt.grid(True)
+                # plt.legend()
 
         # Show all individual figures
-        plt.show()
+        #plt.show()
 
         # ---- Average plot (your original one) ----
         phase_curves = np.array(phase_curves)
@@ -395,4 +401,4 @@ class Rx:
         self.decode_symbols()
         self.ldpc()
         self.bits_to_bytes()
-        # self.extract_header()
+        #self.extract_header()

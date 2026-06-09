@@ -44,7 +44,7 @@ def generate_standard_sig(standard = True):
 
     repeatedChirp = RepeatedChirp(10, 4096, 0, 750, 18000, sync = True, est = True, fs = sampleRate)
     golayPairs = GolayPairs(12, silence = 2048, numPairs=4, seed = (1,1), est = True, fs = 48000) #2**12 = 4096
-    whiteNoise = WhiteNoise(4096, constellation, sync = False, est = True, fs = sampleRate)
+    whiteNoise = WhiteNoise(4096, 2048,  constellation, sync = False, est = True, fs = sampleRate)
     transmitter = Tx(
         constellation=constellation,
         header_filename = text_file.split("\\")[-1],
@@ -92,7 +92,7 @@ def receive_standard_sig():
     
     repeatedChirp = RepeatedChirp(10, 4096, 0, 750, 18000, sync = True, est = True, fs = sampleRate)
     golayPairs = GolayPairs(12, silence = 2048, numPairs=4, seed = (1,1), est = True, fs = sampleRate) #2**12 = 4096
-    whiteNoise = WhiteNoise(4096, constellation, sync = False, est = False, fs = sampleRate)
+    whiteNoise = WhiteNoise(4096, 2048,constellation, sync = False, est = False, fs = sampleRate)
 
     # LIST SHOULD ONLY CONTAIN THE INITIAL REPEATED CHIRP AND GOLAY SEQUENCE!!
     equaliserList = [repeatedChirp, golayPairs]
