@@ -848,3 +848,19 @@ def qpsk_find_centres(samples, plot=True):
         plt.show()
 
     return centres_mean, centres_median, centres_log
+
+
+def save_csv_file(samples, length, filename):
+    csv_data = ','.join(str(b) for b in samples[:length])
+
+    f_name = filename.split('/')[-1]
+    print(f_name)
+    
+    # Determine output path: same folder as this script
+    out_path = Path(__file__).parent / f_name
+
+    # Ensure parent exists
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with open(out_path, 'w') as f:
+        f.write(csv_data)
