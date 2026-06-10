@@ -230,7 +230,7 @@ class Rx:
         # Logic to choose which channel estimate to use (e.g just use the second. Could break if None)
         # Use the repeated chirp estimate for now
         
-        self.H = channel_estimates[0]
+        self.H = channel_estimates[1]
 
 
 

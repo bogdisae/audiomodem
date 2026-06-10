@@ -120,6 +120,7 @@ def receive_standard_sig():
     #Post receive stats
     print("Number of symbols", len(receiver.data_symbols))
 
+
         
 #generate_final_sig()
 receive_standard_sig()
