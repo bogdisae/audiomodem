@@ -37,7 +37,7 @@ def generate_final_sig(standard = True):
     data_bytes = file_to_numpy(transmitted_file)
 
     #Pass data_bytes to Tx, get transmitted signal
-    repeatedChirp = RepeatedChirp(10, 4096, 0, 750, 18000, sync = True, est = True, fs = sampleRate)
+    repeatedChirp = RepeatedChirp(10, 4096, 0, 750, 18000, sync = True, est = False, fs = sampleRate)
     golayPairs = GolayPairs(12, silence = 2048, numPairs=4, seed = (1,1), est = True, fs = 48000) #2**12 = 4096
     whiteNoise = WhiteNoise(4096, 2048,  constellation, sync = False, est = True, fs = sampleRate)
     transmitter = Tx(
@@ -105,7 +105,7 @@ def receive_standard_sig():
     receiver.decode()
 
     #SAVE DECODED BYTES TO FILE
-    data_bytes = receiver.data_bytes
+    data_bytes = receiver.payload
     try:
         temp_filename = receiver.filename
 
@@ -123,5 +123,7 @@ def receive_standard_sig():
 
         
 #generate_final_sig()
+
 receive_standard_sig()
+
 

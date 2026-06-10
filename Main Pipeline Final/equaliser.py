@@ -67,7 +67,7 @@ class RepeatedChirp(Equaliser):
         return signal / m if m != 0 else signal
 
     # override parent method
-    def synchronise(self, signal: np.ndarray, plot=True):
+    def synchronise(self, signal: np.ndarray, plot=False):
         print("Synchronising using repeated chirp")
         print("Sync signal length", len(signal))
 
@@ -77,9 +77,9 @@ class RepeatedChirp(Equaliser):
         key_start_index = np.argmax(np.abs(corr))
 
         if plot:
-            #plot_signal("Received signal", signal, -1)
-            #plot_signal("Correlation plot", corr, key_start_index, True)
-            pass
+            plot_signal("Received signal", signal, -1)
+            plot_signal("Correlation plot", corr, key_start_index, True)
+            #pass
 
         return key_start_index
     
@@ -288,7 +288,9 @@ class GolayPairs(Equaliser):
 
             H_norm_alt = (Y_a * np.conj(A) + Y_b * np.conj(B)) / (2*self.indivLength)
             
+            plot = False
             if i == 0 and plot:
+               
                 h_norm_alt = np.fft.ifft(H_norm_alt)
                 plot_Golay_diagnostics(h_norm, h_norm_alt, corr_a, corr_b, H_norm, H_norm_alt)
             self.H_list.append(H_norm_alt)
