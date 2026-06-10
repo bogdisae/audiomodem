@@ -565,7 +565,7 @@ def plot_Golay_diagnostics(h_norm, h_norm_alt, corr_a, corr_b, H_norm, H_norm_al
     H_norm_alt = H_norm_alt[0:len(H_norm_alt)//2]
     import questionary
     plot_corr = False
-    #plot_corr = questionary.select("Plot correlation results for first pair? (y/n)", choices=['y', 'n']).ask()
+    plot_corr = questionary.select("Plot correlation results for first pair? (y/n)", choices=['y', 'n']).ask()
     if plot_corr == 'y':
         
         fig_norm, ax_alt = plt.subplots()
@@ -593,14 +593,14 @@ def plot_Golay_diagnostics(h_norm, h_norm_alt, corr_a, corr_b, H_norm, H_norm_al
         ax_a.set_xlabel('Lag')
         ax_a.set_ylabel('Correlation')
         ax_a.legend()
-        ax_a.set_title('Autocorrelation of a')
+        ax_a.set_title('Correlation of a_ref and a_rx')
 
         fig_b, ax_b = plt.subplots()
         ax_b.stem(corr_b, label='C_bb', basefmt=' ')
         ax_b.set_xlabel('Lag')
         ax_b.set_ylabel('Correlation')
         ax_b.legend()
-        ax_b.set_title('Autocorrelation of b')
+        ax_b.set_title('Correlation of b_ref and b_rx')
         plt.show()
 
 
